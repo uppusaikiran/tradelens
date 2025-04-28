@@ -2,7 +2,6 @@
 
 A Flask web application to analyze stock transactions from a CSV file.
 
-![Screenshot](screenshot.png)
 
 ## Features
 
@@ -62,3 +61,5 @@ The application expects a CSV file with the following columns:
 - State: Transaction state (e.g., filled, rejected)
 - Date: Transaction date (MM/DD/YYYY)
 - Time: Transaction time 
+
+![Screenshot](screenshot.png)
