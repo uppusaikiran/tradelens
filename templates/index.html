@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Transactions Analyzer</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <!-- Modern Navbar with Title and Upload Form -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top" style="padding: 0.7rem 2vw; z-index: 100;">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center" href="/">
+                <img src="https://cdn-icons-png.flaticon.com/512/2103/2103633.png" alt="Stock Icon" class="title-icon mr-2" style="width:1.8rem;height:1.8rem;">
+                Stock Transactions Analyzer
+            </a>
+            <form action="/upload_csv" method="post" enctype="multipart/form-data" class="form-inline ml-auto d-flex align-items-center" style="gap: 0.5rem;">
+                <input type="file" name="csvfile" id="csvfile" accept=".csv" class="form-control form-control-sm" required style="max-width: 180px;">
+                <button type="submit" class="btn btn-primary btn-sm">Upload CSV</button>
+            </form>
+        </div>
+    </nav>
+    <div class="container mt-5">
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="stock-boxes">
+                    <a href="{{ url_for('index') }}#transactions" class="stock-box {% if not current_filter %}active{% endif %}" data-scroll-to="transactions">
+                        <img src="https://cdn-icons-png.flaticon.com/512/2103/2103633.png" 
+                             alt="All Stocks" 
+                             class="stock-logo">
+                        <div class="stock-symbol">All</div>
+                        <div class="stock-name">Stocks</div>
+                    </a>
+                    {% for stock in stocks %}
+                    <a href="{{ url_for('stock_detail', symbol=stock[0]) }}#transactions" 
+                       class="stock-box {% if current_filter == stock[0] %}active{% endif %}"
+                       data-scroll-to="transactions">
+                        <img src="https://storage.googleapis.com/iex/api/logos/{{ stock[0] }}.png" 
+                             alt="{{ stock[0] }} logo" 
+                             class="stock-logo"
+                             onerror="this.onerror=null;this.src='https://g.foolcdn.com/art/companylogos/mark/{{ stock[0]|lower }}.png';">
+                        <div class="stock-symbol">{{ stock[0] }}</div>
+                        <div class="stock-name">{{ stock[1] }}</div>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        {% if current_filter %}
+        <div class="row mb-2">
+            <div class="col-12 d-flex flex-wrap align-items-center justify-content-between">
+                <div class="btn-group mb-2" role="group" aria-label="Transaction Side Filter">
+                    <a href="{{ url_for('stock_detail', symbol=current_filter, side='all', range=selected_range) }}#transactions" class="btn btn-outline-primary {% if selected_side == 'all' %}active{% endif %}">All</a>
+                    <a href="{{ url_for('stock_detail', symbol=current_filter, side='buy', range=selected_range) }}#transactions" class="btn btn-outline-success {% if selected_side == 'buy' %}active{% endif %}">Buy</a>
+                    <a href="{{ url_for('stock_detail', symbol=current_filter, side='sell', range=selected_range) }}#transactions" class="btn btn-outline-danger {% if selected_side == 'sell' %}active{% endif %}">Sell</a>
+                </div>
+                <div class="btn-group mb-2" role="group" aria-label="Time Range Filter">
+                    <a href="{{ url_for('stock_detail', symbol=current_filter, side=selected_side, range='all') }}#transactions" class="btn btn-outline-secondary {% if selected_range == 'all' %}active{% endif %}">All</a>
+                    <a href="{{ url_for('stock_detail', symbol=current_filter, side=selected_side, range='ytd') }}#transactions" class="btn btn-outline-secondary {% if selected_range == 'ytd' %}active{% endif %}">YTD</a>
+                    <a href="{{ url_for('stock_detail', symbol=current_filter, side=selected_side, range='1y') }}#transactions" class="btn btn-outline-secondary {% if selected_range == '1y' %}active{% endif %}">1Y</a>
+                    <a href="{{ url_for('stock_detail', symbol=current_filter, side=selected_side, range='2y') }}#transactions" class="btn btn-outline-secondary {% if selected_range == '2y' %}active{% endif %}">2Y</a>
+                    <a href="{{ url_for('stock_detail', symbol=current_filter, side=selected_side, range='5y') }}#transactions" class="btn btn-outline-secondary {% if selected_range == '5y' %}active{% endif %}">5Y</a>
+                    <a href="{{ url_for('stock_detail', symbol=current_filter, side=selected_side, range='max') }}#transactions" class="btn btn-outline-secondary {% if selected_range == 'max' %}active{% endif %}">MAX</a>
+                    <a href="{{ url_for('stock_detail', symbol=current_filter, side=selected_side, range='1mo') }}#transactions" class="btn btn-outline-secondary {% if selected_range == '1mo' %}active{% endif %}">1M</a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if current_filter and price_data %}
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <h3 class="mb-0">{{ current_filter }}</h3>
+                                <p class="text-muted">{{ stock_name }}</p>
+                                {% if price_data.error %}
+                                    <div class="alert alert-warning text-center" role="alert">
+                                        Price data unavailable.<br>
+                                        <small>{{ price_data.error }}</small>
+                                    </div>
+                                {% else %}
+                                    <h2 class="mb-0">
+                                        {% if price_data.current_price is not none %}
+                                            ${{ "%.2f"|format(price_data.current_price) }}
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
+                                    </h2>
+                                    <p class="{% if price_data.change is not none and price_data.change >= 0 %}text-success{% else %}text-danger{% endif %} mb-0">
+                                        {% if price_data.change is not none and price_data.change_percent is not none %}
+                                            {{ "%+.2f"|format(price_data.change) }} ({{ "%+.2f"|format(price_data.change_percent) }}%)
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
+                                    </p>
+                                    <small class="text-muted">Previous Close:
+                                        {% if price_data.previous_close is not none %}
+                                            ${{ "%.2f"|format(price_data.previous_close) }}
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
+                                    </small>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-8">
+                                <div id="chart-container" style="height:400px; min-height:300px;">
+                                    <div id="stockChartApex"></div>
+                                    <div id="chart-loading" style="display:flex;align-items:center;justify-content:center;height:100%;">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="sr-only">Loading...</span>
+                                        </div>
+                                    </div>
+                                    <div id="chart-error" class="alert alert-warning text-center mt-2" style="display:none;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <div class="row mb-4">
+            <div class="col-12">
+                <h2 id="transactions">
+                    {% if current_filter %}
+                        Transactions for {{ current_filter }} ({{ stock_name }})
+                    {% else %}
+                        All Transactions
+                    {% endif %}
+                </h2>
+            </div>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead class="thead-dark">
+                    <tr>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Symbol</th>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Side</th>
+                        <th>Price</th>
+                        <th>Quantity</th>
+                        <th>State</th>
+                        <th>Fees</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for transaction in transactions %}
+                    <tr data-transaction-id="{{ transaction.Id }}">
+                        <td>{{ transaction.Date.strftime('%m/%d/%Y') }}</td>
+                        <td>{{ transaction.Time }}</td>
+                        <td>
+                            <a href="{{ url_for('stock_detail', symbol=transaction.Symbol) }}#transactions">
+                                {{ transaction.Symbol }}
+                            </a>
+                        </td>
+                        <td>{{ transaction.Name }}</td>
+                        <td>{{ transaction.Type }}</td>
+                        <td class="{% if transaction.Side == 'buy' %}text-success{% else %}text-danger{% endif %}">
+                            {{ transaction.Side|upper }}
+                        </td>
+                        <td>${{ transaction.AveragePrice }}</td>
+                        <td>{{ transaction.Qty }}</td>
+                        <td>{{ transaction.State }}</td>
+                        <td>${{ transaction.Fees }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        <nav aria-label="Page navigation">
+            <ul class="pagination justify-content-center">
+                {% if page > 1 %}
+                <li class="page-item">
+                    {% if current_filter %}
+                    <a class="page-link" href="{{ url_for('stock_detail', symbol=current_filter, page=page-1) }}#transactions">Previous</a>
+                    {% else %}
+                    <a class="page-link" href="{{ url_for('index', page=page-1) }}#transactions">Previous</a>
+                    {% endif %}
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">Previous</span>
+                </li>
+                {% endif %}
+                
+                {% for i in range(1, total_pages + 1) %}
+                  {% if i == page %}
+                  <li class="page-item active">
+                    <span class="page-link">{{ i }}</span>
+                  </li>
+                  {% elif i <= 5 or i >= total_pages - 4 or (i >= page - 2 and i <= page + 2) %}
+                  <li class="page-item">
+                    {% if current_filter %}
+                    <a class="page-link" href="{{ url_for('stock_detail', symbol=current_filter, page=i) }}#transactions">{{ i }}</a>
+                    {% else %}
+                    <a class="page-link" href="{{ url_for('index', page=i) }}#transactions">{{ i }}</a>
+                    {% endif %}
+                  </li>
+                  {% elif i == 6 or i == total_pages - 5 %}
+                  <li class="page-item disabled">
+                    <span class="page-link">...</span>
+                  </li>
+                  {% endif %}
+                {% endfor %}
+                
+                {% if page < total_pages %}
+                <li class="page-item">
+                    {% if current_filter %}
+                    <a class="page-link" href="{{ url_for('stock_detail', symbol=current_filter, page=page+1) }}#transactions">Next</a>
+                    {% else %}
+                    <a class="page-link" href="{{ url_for('index', page=page+1) }}#transactions">Next</a>
+                    {% endif %}
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">Next</span>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    
+    <script>
+    // Improved scrolling function with prevention of page jumping
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set a flag to track if we've scrolled
+        let hasScrolled = false;
+        
+        function scrollToTransactions() {
+            if (hasScrolled) return; // Don't scroll again if we've already scrolled
+            
+            const targetElement = document.getElementById('transactions');
+            if (targetElement) {
+                hasScrolled = true; // Mark that we've scrolled
+                
+                // Wait longer to ensure all content is loaded before scrolling
+                setTimeout(function() {
+                    const offset = targetElement.getBoundingClientRect().top + window.pageYOffset - 80;
+                    window.scrollTo({
+                        top: offset,
+                        behavior: 'smooth'
+                    });
+                    
+                    // Prevent any automatic browser scroll after our custom scroll
+                    setTimeout(function() {
+                        // This will prevent any native browser scroll behavior
+                        history.scrollRestoration = 'manual';
+                    }, 100);
+                }, 500);
+            }
+        }
+        
+        // Check if URL contains hash for scrolling
+        if (window.location.hash) {
+            scrollToTransactions();
+        }
+        
+        // Add click event listeners to stock boxes
+        const stockBoxes = document.querySelectorAll('.stock-box');
+        stockBoxes.forEach(box => {
+            box.addEventListener('click', function(e) {
+                // Ensure the links include #transactions
+                if (!box.href.includes('#transactions')) {
+                    box.href = box.href + '#transactions';
+                }
+            });
+        });
+        
+        // For stock detail pages, always scroll
+        if (document.getElementById('stockChartApex')) {
+            scrollToTransactions();
+        }
+    });
+    </script>
+    
+    {% if current_filter %}
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <script>
+    function showChartError(msg) {
+        document.getElementById('chart-error').innerText = msg;
+        document.getElementById('chart-error').style.display = 'block';
+        document.getElementById('chart-loading').style.display = 'none';
+        document.getElementById('stockChartApex').innerHTML = '';
+    }
+    function renderApexChart(dates, prices, symbol, buyTransactions, sellTransactions) {
+        console.log("Chart data:", { 
+            dates: dates.length,
+            prices: prices.length,
+            buyTransactions: buyTransactions.length, 
+            sellTransactions: sellTransactions.length
+        });
+        
+        // Create the series data
+        var seriesData = [{
+            name: symbol + ' Price',
+            type: 'line',
+            data: prices
+        }];
+        
+        // Create buy transactions markers as separate series
+        if (buyTransactions && buyTransactions.length > 0) {
+            console.log("Processing buy transactions:", buyTransactions);
+            var buyData = buyTransactions.map(function(tx) {
+                // Find the closest date in our chart dates
+                var closestDateIndex = findClosestDateIndex(dates, tx.date);
+                if (closestDateIndex !== -1) {
+                    return {
+                        x: new Date(dates[closestDateIndex]).getTime(),
+                        y: tx.price,
+                        transaction_id: tx.id,
+                        qty: tx.qty,
+                        date: tx.date,
+                        time: tx.time
+                    };
+                }
+                return null;
+            }).filter(Boolean); // Remove nulls
+            
+            console.log("Buy data points:", buyData.length);
+            
+            if (buyData.length > 0) {
+                seriesData.push({
+                    name: 'Buy Orders',
+                    type: 'scatter',
+                    data: buyData
+                });
+            }
+        }
+        
+        // Create sell transactions markers as separate series
+        if (sellTransactions && sellTransactions.length > 0) {
+            console.log("Processing sell transactions:", sellTransactions);
+            var sellData = sellTransactions.map(function(tx) {
+                // Find the closest date in our chart dates
+                var closestDateIndex = findClosestDateIndex(dates, tx.date);
+                if (closestDateIndex !== -1) {
+                    return {
+                        x: new Date(dates[closestDateIndex]).getTime(),
+                        y: tx.price,
+                        transaction_id: tx.id,
+                        qty: tx.qty,
+                        date: tx.date,
+                        time: tx.time
+                    };
+                }
+                return null;
+            }).filter(Boolean); // Remove nulls
+            
+            console.log("Sell data points:", sellData.length);
+            
+            if (sellData.length > 0) {
+                seriesData.push({
+                    name: 'Sell Orders',
+                    type: 'scatter',
+                    data: sellData
+                });
+            }
+        }
+        
+        // Helper function to find closest date
+        function findClosestDateIndex(dates, targetDate) {
+            // If exact match
+            var exactIndex = dates.indexOf(targetDate);
+            if (exactIndex !== -1) return exactIndex;
+            
+            // Convert target date to timestamp
+            var targetTimestamp = new Date(targetDate).getTime();
+            
+            // Find closest date by timestamp
+            var closestIndex = -1;
+            var minDiff = Number.MAX_VALUE;
+            
+            dates.forEach(function(date, index) {
+                var timestamp = new Date(date).getTime();
+                var diff = Math.abs(timestamp - targetTimestamp);
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    closestIndex = index;
+                }
+            });
+            
+            return closestIndex;
+        }
+        
+        var options = {
+            chart: {
+                height: 400,
+                toolbar: { 
+                    show: true,
+                    tools: {
+                        download: true,
+                        selection: false,
+                        zoom: true,
+                        zoomin: true,
+                        zoomout: true,
+                        pan: true,
+                        reset: true
+                    }
+                },
+                zoom: { 
+                    enabled: false,
+                    type: 'none',
+                    autoScaleYaxis: false
+                },
+                animations: { enabled: false },
+                parentHeightOffset: 0,
+                offsetX: 0,
+                offsetY: 0,
+                selection: {
+                    enabled: false
+                },
+                events: {
+                    dataPointSelection: function(event, chartContext, config) {
+                        // Prevent default zoom behavior
+                        event.preventDefault();
+                        
+                        // Check if it's a buy or sell point
+                        if (config.seriesIndex > 0) {
+                            var selectedPoint = config.w.config.series[config.seriesIndex].data[config.dataPointIndex];
+                            if (selectedPoint && selectedPoint.transaction_id) {
+                                highlightTransaction(selectedPoint.transaction_id);
+                            }
+                        }
+                        // Explicitly tell chart not to zoom
+                        return false;
+                    },
+                    markerClick: function(event, chartContext, config) {
+                        // Prevent default behavior which causes zoom
+                        event.stopPropagation();
+                        return false;
+                    },
+                    click: function(event, chartContext, config) {
+                        // Only handle clicks on data points
+                        if (event.target.classList.contains('apexcharts-marker')) {
+                            event.stopPropagation();
+                            return false;
+                        }
+                    }
+                }
+            },
+            series: seriesData,
+            colors: ['#007bff', '#2ecc71', '#e74c3c'],
+            xaxis: {
+                type: 'datetime',
+                labels: { 
+                    datetimeUTC: false,
+                    format: 'yyyy-MM-dd',
+                    style: {
+                        fontSize: '11px'
+                    }
+                }
+            },
+            yaxis: {
+                labels: { 
+                    formatter: function(val) { return '$' + val.toFixed(2); },
+                    style: {
+                        fontSize: '11px'
+                    }
+                },
+                forceNiceScale: true,
+                tickAmount: 5
+            },
+            tooltip: {
+                shared: false,
+                intersect: true,
+                x: { format: 'yyyy-MM-dd' },
+                y: { formatter: function(val) { return '$' + val.toFixed(2); } },
+                fixed: {
+                    enabled: true,
+                    position: 'topRight',
+                    offsetX: 0,
+                    offsetY: 0
+                },
+                custom: function({ series, seriesIndex, dataPointIndex, w }) {
+                    // Only customize for buy/sell points
+                    if (seriesIndex === 0) return;
+                    
+                    const point = w.config.series[seriesIndex].data[dataPointIndex];
+                    if (!point || !point.qty) return;
+                    
+                    const seriesName = w.config.series[seriesIndex].name;
+                    const price = point.y.toFixed(2);
+                    const date = new Date(point.x).toLocaleDateString();
+                    
+                    return '<div class="custom-tooltip">' +
+                        '<div class="tooltip-title">' + seriesName + '</div>' +
+                        '<div class="tooltip-date">Date: ' + date + '</div>' +
+                        '<div class="tooltip-time">Time: ' + (point.time || 'N/A') + '</div>' +
+                        '<div class="tooltip-price">Price: $' + price + '</div>' +
+                        '<div class="tooltip-qty">Quantity: ' + point.qty + '</div>' +
+                        '</div>';
+                }
+            },
+            stroke: { 
+                curve: 'smooth', 
+                width: [2, 0, 0]  // Line width for price series, 0 for scatter series
+            },
+            grid: { 
+                borderColor: '#e9ecef',
+                padding: {
+                    left: 15,
+                    right: 15,
+                    top: 10,
+                    bottom: 10
+                }
+            },
+            noData: { text: 'No chart data available.' },
+            markers: {
+                size: [0, 8, 8], // No markers for line series, markers for buy/sell
+                colors: ['#007bff', '#2ecc71', '#e74c3c'],
+                strokeWidth: 2,
+                strokeColors: '#ffffff',
+                hover: {
+                    size: 10
+                },
+                onClick: function(e) {
+                    e.stopPropagation();
+                },
+                discrete: [
+                    {
+                        seriesIndex: 1,
+                        dataPointIndex: 0,
+                        fillColor: '#2ecc71',
+                        strokeColor: '#fff',
+                        size: 8,
+                        shape: "circle" // Solid marker for buys
+                    },
+                    {
+                        seriesIndex: 2,
+                        dataPointIndex: 0,
+                        fillColor: '#e74c3c',
+                        strokeColor: '#fff',
+                        size: 8,
+                        shape: "circle" // Solid marker for sells
+                    }
+                ]
+            },
+            legend: {
+                show: true,
+                position: 'top',
+                horizontalAlign: 'right'
+            },
+            dataLabels: {
+                enabled: false
+            }
+        };
+        
+        // Convert line series data to timestamp format
+        seriesData[0].data = dates.map(function(date, index) {
+            return {
+                x: new Date(date).getTime(),
+                y: prices[index]
+            };
+        });
+        
+        console.log("Final series data:", seriesData);
+        
+        var chart = new ApexCharts(document.querySelector("#stockChartApex"), options);
+        chart.render();
+        document.getElementById('chart-loading').style.display = 'none';
+    }
+    
+    // Function to highlight transaction row
+    function highlightTransaction(transactionId) {
+        // First, remove any existing highlights
+        document.querySelectorAll('tr.highlighted-row').forEach(function(el) {
+            el.classList.remove('highlighted-row');
+        });
+        
+        // Find and highlight the row with matching transaction ID
+        const row = document.querySelector('tr[data-transaction-id="' + transactionId + '"]');
+        if (row) {
+            row.classList.add('highlighted-row');
+            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        if (!document.getElementById('stockChartApex')) return;
+        
+        // No need to scroll here, handled by the main function above
+        
+        setTimeout(function() {
+            fetch(`/api/stock_chart/{{ current_filter }}?range={{ selected_range }}`)
+                .then(resp => resp.json())
+                .then(data => {
+                    if (data.error) {
+                        showChartError('Price data temporarily unavailable. Please try again in a few minutes.');
+                    } else if (data.dates && data.dates.length && data.prices && data.prices.length) {
+                        renderApexChart(
+                            data.dates, 
+                            data.prices, 
+                            '{{ current_filter }}',
+                            data.buy_transactions || [],
+                            data.sell_transactions || []
+                        );
+                        
+                        // Prevent zoom on marker click by adding custom event listeners
+                        setTimeout(function() {
+                            // Add click event listeners to scatter points to prevent default behavior
+                            const markers = document.querySelectorAll('.apexcharts-series-scatter .apexcharts-marker');
+                            markers.forEach(marker => {
+                                marker.addEventListener('click', function(e) {
+                                    e.stopPropagation();
+                                });
+                            });
+                            
+                            // Disable chart zooming when marker is clicked
+                            document.querySelector('.apexcharts-zoomable').addEventListener('click', function(e) {
+                                if (e.target.classList.contains('apexcharts-marker')) {
+                                    e.stopPropagation();
+                                    return false;
+                                }
+                            }, true);
+                        }, 1000);
+                    } else {
+                        showChartError('No chart data available.');
+                    }
+                })
+                .catch(() => showChartError('Error loading chart. Please try again.'));
+        }, 800); // Faster load
+    });
+    </script>
+    {% endif %}
+</body>
+</html> 
