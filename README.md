@@ -62,4 +62,4 @@ The application expects a CSV file with the following columns:
 - Date: Transaction date (MM/DD/YYYY)
 - Time: Transaction time 
 
-![Screenshot](screenshot.png)
+![Screenshot](Screenshot.png)
