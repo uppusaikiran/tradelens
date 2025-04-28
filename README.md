@@ -2,6 +2,8 @@
 
 A Flask web application to analyze stock transactions from a CSV file.
 
+![Screenshot](screenshot.png)
+
 ## Features
 
 1. View all transactions with pagination (10 per page)
