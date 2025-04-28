@@ -1,0 +1,4 @@
+flask==2.3.3
+numpy
+pandas
+yfinance==0.2.54
