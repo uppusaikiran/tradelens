@@ -19,6 +19,80 @@ MAG7_STOCKS = {
     'TSLA': 'Tesla Inc.'
 }
 
+# Cache for stock splits
+split_cache = {}
+SPLIT_CACHE_TIMEOUT = 86400  # 24 hours
+
+def get_stock_splits(symbol, start_date=None):
+    """
+    Fetch stock split history for a given symbol.
+    Returns a list of tuples (date, ratio) sorted by date.
+    """
+    cache_key = f"{symbol}:{start_date}"
+    
+    # Check cache
+    if cache_key in split_cache:
+        cached_data = split_cache[cache_key]
+        if time.time() - cached_data['timestamp'] < SPLIT_CACHE_TIMEOUT:
+            return cached_data['data']
+    
+    try:
+        stock = yf.Ticker(symbol)
+        
+        # Get stock split data
+        if start_date:
+            splits = stock.splits[start_date:]
+        else:
+            splits = stock.splits
+        
+        # Convert to list of tuples (date, ratio)
+        split_data = [(date.strftime('%Y-%m-%d'), ratio) for date, ratio in splits.items()]
+        split_data.sort(key=lambda x: x[0])  # Sort by date
+        
+        # Cache the result
+        split_cache[cache_key] = {
+            'data': split_data,
+            'timestamp': time.time()
+        }
+        
+        return split_data
+    except Exception as e:
+        print(f"Error fetching stock splits for {symbol}: {e}")
+        return []
+
+def adjust_for_splits(price, quantity, transaction_date, splits):
+    """
+    Adjust price and quantity based on stock splits.
+    Since yfinance returns split-adjusted prices, we need to:
+    - For transactions BEFORE a split: Leave them as is (they're already adjusted by yfinance)
+    - For transactions AFTER a split: Multiply price by split ratio, divide quantity by split ratio
+    This ensures consistency with yfinance's adjusted prices
+    """
+    if not splits:
+        return price, quantity
+    
+    transaction_date = datetime.strptime(transaction_date, '%Y-%m-%d').date()
+    adjustment_ratio = 1.0
+    
+    # Sort splits by date to process them in chronological order
+    splits.sort(key=lambda x: datetime.strptime(x[0], '%Y-%m-%d').date())
+    
+    # Only adjust for splits that happened before the transaction
+    for split_date, split_ratio in splits:
+        split_date = datetime.strptime(split_date, '%Y-%m-%d').date()
+        if split_date < transaction_date:
+            adjustment_ratio *= split_ratio
+    
+    if adjustment_ratio != 1.0:
+        # For transactions after splits:
+        # - Multiply the price by the split ratio (to match historical prices)
+        # - Divide the quantity by the split ratio (to reflect historical shares)
+        adjusted_price = price * adjustment_ratio
+        adjusted_quantity = quantity / adjustment_ratio
+        return adjusted_price, adjusted_quantity
+    
+    return price, quantity
+
 def categorize_stock(symbol, name):
     try:
         # Check if it's a MAG7 stock first (no API call needed)
@@ -177,18 +251,93 @@ def get_stock_price(symbol, start_date=None, end_date=None):
     return result
 
 def get_stock_chart(symbol, start_date, end_date):
+    """
+    Get stock chart data and adjust prices to show historical prices.
+    yfinance returns split-adjusted prices, so we need to unadjust older prices
+    to show the actual historical prices that were seen at the time.
+    """
     try:
         stock = yf.Ticker(symbol)
-        hist = stock.history(start=start_date, end=end_date)
+        
+        # Get historical data
+        hist = stock.history(
+            start=start_date,
+            end=end_date,
+            auto_adjust=True  # This gives us split-adjusted prices
+        )
+        
+        if hist.empty:
+            print(f"No historical data found for {symbol}")
+            return {
+                'dates': [],
+                'prices': [],
+                'error': 'No historical data found'
+            }
+        
+        # Get the dates and prices
         dates = hist.index.strftime('%Y-%m-%d').tolist()
         prices = hist['Close'].tolist()
+        
+        # Get splits that occurred in our date range
+        splits = get_stock_splits(symbol, start_date.strftime('%Y-%m-%d'))
+        print(f"Found splits for {symbol}: {splits}")
+        
+        if splits:
+            # Calculate cumulative split ratio for each date
+            # For dates before a split, we need to multiply the price by the split ratio
+            # to show the actual historical price
+            cumulative_ratios = []
+            
+            for date in dates:
+                date_dt = datetime.strptime(date, '%Y-%m-%d').date()
+                # Start with ratio 1
+                current_ratio = 1.0
+                # For each split that happened after this date,
+                # multiply by the split ratio to get the historical price
+                for split_date, ratio in splits:
+                    split_dt = datetime.strptime(split_date, '%Y-%m-%d').date()
+                    if date_dt < split_dt:
+                        current_ratio *= ratio
+                cumulative_ratios.append(current_ratio)
+            
+            # Multiply prices by their cumulative ratios to get historical prices
+            prices = [price * ratio for price, ratio in zip(prices, cumulative_ratios)]
+            
+            # Debug output
+            print("Sample of price adjustments:")
+            for i in range(min(5, len(dates))):
+                print(f"Date: {dates[i]}, Ratio: {cumulative_ratios[i]}, Price: {prices[i]}")
+        
+        # Ensure we have valid data
+        if not dates or not prices or len(dates) != len(prices):
+            print(f"Invalid data for {symbol}: dates={len(dates)}, prices={len(prices)}")
+            return {
+                'dates': [],
+                'prices': [],
+                'error': 'Invalid data received'
+            }
+        
+        # Debug output
+        print(f"Chart data for {symbol}:")
+        print(f"Date range: {dates[0]} to {dates[-1]}")
+        print(f"Price range: ${min(prices):.2f} to ${max(prices):.2f}")
+        print(f"Number of points: {len(dates)}")
+        
         return {
             'dates': dates,
             'prices': prices,
-            'error': None
+            'error': None,
+            'split_events': [{
+                'date': split_date,
+                'ratio': ratio,
+                'price': next((p for d, p in zip(dates, prices) 
+                             if d == split_date), None)
+            } for split_date, ratio in splits]
         }
     except Exception as e:
-        print(f"Error fetching stock chart: {e}")
+        print(f"Error fetching stock chart for {symbol}: {e}")
+        import traceback
+        traceback.print_exc()
         return {
             'dates': [],
             'prices': [],
@@ -196,22 +345,45 @@ def get_stock_chart(symbol, start_date, end_date):
         }
 
 def process_transactions(transactions):
+    """Process transactions without any split adjustments"""
     processed = []
     for t in transactions:
-        date_obj = datetime.strptime(t['Date'], '%Y-%m-%d')
-        processed.append({
-            'Id': t['Id'],
-            'Date': date_obj,
-            'Time': t['Time'],
-            'Symbol': t['Symbol'],
-            'Name': t['Name'],
-            'Type': t['Type'],
-            'Side': t['Side'],
-            'AveragePrice': t['AveragePrice'],
-            'Qty': t['Qty'],
-            'State': t['State'],
-            'Fees': t['Fees']
-        })
+        try:
+            date_obj = datetime.strptime(t['Date'], '%Y-%m-%d')
+            price = float(t['AveragePrice'])
+            qty = float(t['Qty'])
+            
+            processed.append({
+                'Id': t['Id'],
+                'Date': date_obj,
+                'Time': t['Time'],
+                'Symbol': t['Symbol'],
+                'Name': t['Name'],
+                'Type': t['Type'],
+                'Side': t['Side'],
+                'AveragePrice': price,
+                'Qty': qty,
+                'State': t['State'],
+                'Fees': t['Fees'],
+                'HasSplitAdjustment': False
+            })
+        except (ValueError, TypeError) as e:
+            print(f"Error processing transaction: {t}, Error: {e}")
+            processed.append({
+                'Id': t['Id'],
+                'Date': date_obj,
+                'Time': t['Time'],
+                'Symbol': t['Symbol'],
+                'Name': t['Name'],
+                'Type': t['Type'],
+                'Side': t['Side'],
+                'AveragePrice': t['AveragePrice'],
+                'Qty': t['Qty'],
+                'State': t['State'],
+                'Fees': t['Fees'],
+                'HasSplitAdjustment': False
+            })
+    
     return processed
 
 def calculate_transaction_stats(transactions):
@@ -224,8 +396,10 @@ def calculate_transaction_stats(transactions):
     
     for tx in transactions:
         try:
+            # Use adjusted quantities and prices for calculations
             qty = float(tx['Qty'])
-            amount = float(tx['AveragePrice']) * qty
+            price = float(tx['AveragePrice'])
+            amount = price * qty
             
             if tx['Side'].lower() == 'buy':
                 stats['total_stocks_bought'] += qty
@@ -330,6 +504,29 @@ def api_stock_chart(symbol):
     
     # Get chart data for the specified date range
     chart_data = get_stock_chart(symbol, start_date, end_date)
+    
+    # Get split data
+    splits = get_stock_splits(symbol, start_date.strftime('%Y-%m-%d'))
+    split_events = []
+    
+    # Process splits for chart annotations
+    for split_date, split_ratio in splits:
+        split_date_obj = datetime.strptime(split_date, '%Y-%m-%d')
+        if start_date <= split_date_obj <= end_date:
+            # Find the closest price to the split date
+            closest_date_index = min(range(len(chart_data['dates'])), 
+                                   key=lambda i: abs(datetime.strptime(chart_data['dates'][i], '%Y-%m-%d') - split_date_obj))
+            
+            if closest_date_index < len(chart_data['prices']):
+                price = chart_data['prices'][closest_date_index]
+                split_events.append({
+                    'date': split_date,
+                    'ratio': split_ratio,
+                    'price': price
+                })
+    
+    # Add split events to chart data
+    chart_data['split_events'] = split_events
     
     # Add transaction data
     chart_data['buy_transactions'] = buy_transactions

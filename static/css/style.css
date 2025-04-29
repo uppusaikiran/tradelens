@@ -482,4 +482,40 @@ tr.highlighted-row td {
 
 .stats-value.text-danger {
     color: #e74c3c !important;
+}
+
+/* Split Adjustment Styles */
+.split-adjusted {
+    background-color: rgba(79, 140, 255, 0.05) !important;
+}
+
+.split-info {
+    margin-top: 4px;
+    font-size: 0.85em;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.split-indicator {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1em;
+    color: #4f8cff;
+    cursor: help;
+}
+
+.split-info small.text-muted {
+    color: #6c757d !important;
+    font-style: italic;
+}
+
+/* Ensure split rows maintain style in striped table */
+.table-striped tbody tr.split-adjusted:nth-of-type(odd) {
+    background-color: rgba(79, 140, 255, 0.08) !important;
+}
+
+.table-hover tbody tr.split-adjusted:hover {
+    background-color: rgba(79, 140, 255, 0.15) !important;
 } 

@@ -431,7 +431,7 @@
                 </thead>
                 <tbody>
                     {% for transaction in transactions %}
-                    <tr data-transaction-id="{{ transaction.Id }}">
+                    <tr data-transaction-id="{{ transaction.Id }}" {% if transaction.HasSplitAdjustment %}class="split-adjusted"{% endif %}>
                         <td>{{ transaction.Date.strftime('%m/%d/%Y') }}</td>
                         <td>{{ transaction.Time }}</td>
                         <td>
@@ -444,8 +444,27 @@
                         <td class="{% if transaction.Side == 'buy' %}text-success{% else %}text-danger{% endif %}">
                             {{ transaction.Side|upper }}
                         </td>
-                        <td>${{ transaction.AveragePrice }}</td>
-                        <td>{{ transaction.Qty }}</td>
+                        <td>
+                            ${{ "%.2f"|format(transaction.AveragePrice) }}
+                            {% if transaction.HasSplitAdjustment %}
+                            <div class="split-info">
+                                <small class="text-muted">
+                                    Original: ${{ "%.2f"|format(transaction.OriginalPrice) }}
+                                </small>
+                                <span class="split-indicator" title="Split Adjusted">📊</span>
+                            </div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {{ "%.2f"|format(transaction.Qty) }}
+                            {% if transaction.HasSplitAdjustment %}
+                            <div class="split-info">
+                                <small class="text-muted">
+                                    Original: {{ "%.2f"|format(transaction.OriginalQty) }}
+                                </small>
+                            </div>
+                            {% endif %}
+                        </td>
                         <td>{{ transaction.State }}</td>
                         <td>${{ transaction.Fees }}</td>
                     </tr>
@@ -576,268 +595,174 @@
         document.getElementById('chart-loading').style.display = 'none';
         document.getElementById('stockChartApex').innerHTML = '';
     }
-    function renderApexChart(dates, prices, symbol, buyTransactions, sellTransactions) {
-        console.log("Chart data:", { 
-            dates: dates.length,
-            prices: prices.length,
-            buyTransactions: buyTransactions.length, 
-            sellTransactions: sellTransactions.length
-        });
+    function renderApexChart(dates, prices, symbol, buyTransactions, sellTransactions, splitEvents) {
+        // Validate input data
+        if (!dates || !prices || dates.length === 0 || prices.length === 0) {
+            showChartError('No chart data available');
+            return;
+        }
+        
+        if (dates.length !== prices.length) {
+            console.error('Data mismatch:', { dates: dates.length, prices: prices.length });
+            showChartError('Invalid chart data');
+            return;
+        }
+        
+        // Convert data to chart format
+        const chartData = dates.map((date, index) => ({
+            x: new Date(date).getTime(),
+            y: prices[index]
+        })).filter(point => !isNaN(point.y));
+        
+        if (chartData.length === 0) {
+            showChartError('No valid price data available');
+            return;
+        }
         
         // Create the series data
         var seriesData = [{
             name: symbol + ' Price',
             type: 'line',
-            data: prices
+            data: chartData
         }];
         
-        // Create buy transactions markers as separate series
+        // Process buy transactions
         if (buyTransactions && buyTransactions.length > 0) {
-            console.log("Processing buy transactions:", buyTransactions);
-            var buyData = buyTransactions.map(function(tx, txIndex) {
-                // Find the closest date in our chart dates
-                var closestDateIndex = findClosestDateIndex(dates, tx.date);
-                if (closestDateIndex !== -1) {
-                    // Create a timestamp that includes time if available
-                    var baseTimestamp = new Date(dates[closestDateIndex]).getTime();
-                    var hours = 0, minutes = 0;
-                    
-                    // Parse time if available
-                    if (tx.time) {
-                        var timeParts = tx.time.split(':');
-                        if (timeParts.length >= 2) {
-                            hours = parseInt(timeParts[0], 10);
-                            minutes = parseInt(timeParts[1], 10);
-                        }
-                    } else {
-                        // If no time provided, use small offset to prevent overlap
-                        minutes = txIndex * 5; // 5 minutes offset per transaction
+            const buyData = buyTransactions
+                .map(tx => {
+                    try {
+                        return {
+                            x: new Date(tx.date + ' ' + (tx.time || '00:00:00')).getTime(),
+                            y: parseFloat(tx.price),
+                            transaction_id: tx.id,
+                            qty: tx.qty,
+                            date: tx.date,
+                            time: tx.time,
+                            fillColor: '#2ecc71'
+                        };
+                    } catch (e) {
+                        console.error('Error processing buy transaction:', e, tx);
+                        return null;
                     }
-                    
-                    // Create timestamp with time component
-                    var timestamp = baseTimestamp + (hours * 3600000) + (minutes * 60000);
-                    
-                    return {
-                        x: timestamp,
-                        y: tx.price,
-                        transaction_id: tx.id,
-                        qty: tx.qty,
-                        date: tx.date,
-                        time: tx.time,
-                        fillColor: '#2ecc71', // GREEN color for buy orders
-                        marker: {
-                            fillColor: '#2ecc71',
-                            strokeColor: '#fff'
-                        }
-                    };
-                }
-                return null;
-            }).filter(Boolean); // Remove nulls
-            
-            console.log("Buy data points:", buyData.length);
+                })
+                .filter(point => point !== null && !isNaN(point.y));
             
             if (buyData.length > 0) {
                 seriesData.push({
                     name: 'Buy Orders',
                     type: 'scatter',
-                    color: '#2ecc71', // GREEN color for buy orders
                     data: buyData
                 });
             }
         }
         
-        // Create sell transactions markers as separate series
+        // Process sell transactions
         if (sellTransactions && sellTransactions.length > 0) {
-            console.log("Processing sell transactions:", sellTransactions);
-            var sellData = sellTransactions.map(function(tx, txIndex) {
-                // Find the closest date in our chart dates
-                var closestDateIndex = findClosestDateIndex(dates, tx.date);
-                if (closestDateIndex !== -1) {
-                    // Create a timestamp that includes time if available
-                    var baseTimestamp = new Date(dates[closestDateIndex]).getTime();
-                    var hours = 0, minutes = 0;
-                    
-                    // Parse time if available
-                    if (tx.time) {
-                        var timeParts = tx.time.split(':');
-                        if (timeParts.length >= 2) {
-                            hours = parseInt(timeParts[0], 10);
-                            minutes = parseInt(timeParts[1], 10);
-                        }
-                    } else {
-                        // If no time provided, use small offset to prevent overlap
-                        minutes = txIndex * 5; // 5 minutes offset per transaction
+            const sellData = sellTransactions
+                .map(tx => {
+                    try {
+                        return {
+                            x: new Date(tx.date + ' ' + (tx.time || '00:00:00')).getTime(),
+                            y: parseFloat(tx.price),
+                            transaction_id: tx.id,
+                            qty: tx.qty,
+                            date: tx.date,
+                            time: tx.time,
+                            fillColor: '#e74c3c'
+                        };
+                    } catch (e) {
+                        console.error('Error processing sell transaction:', e, tx);
+                        return null;
                     }
-                    
-                    // Create timestamp with time component
-                    var timestamp = baseTimestamp + (hours * 3600000) + (minutes * 60000);
-                    
-                    return {
-                        x: timestamp,
-                        y: tx.price,
-                        transaction_id: tx.id,
-                        qty: tx.qty,
-                        date: tx.date,
-                        time: tx.time,
-                        fillColor: '#e74c3c', // RED color for sell orders
-                        marker: {
-                            fillColor: '#e74c3c',
-                            strokeColor: '#fff'
-                        }
-                    };
-                }
-                return null;
-            }).filter(Boolean); // Remove nulls
-            
-            console.log("Sell data points:", sellData.length);
+                })
+                .filter(point => point !== null && !isNaN(point.y));
             
             if (sellData.length > 0) {
                 seriesData.push({
                     name: 'Sell Orders',
                     type: 'scatter',
-                    color: '#e74c3c', // RED color for sell orders
                     data: sellData
                 });
             }
         }
         
-        // Helper function to find closest date
-        function findClosestDateIndex(dates, targetDate) {
-            // If exact match
-            var exactIndex = dates.indexOf(targetDate);
-            if (exactIndex !== -1) return exactIndex;
-            
-            // Convert target date to timestamp
-            var targetTimestamp = new Date(targetDate).getTime();
-            
-            // Find closest date by timestamp
-            var closestIndex = -1;
-            var minDiff = Number.MAX_VALUE;
-            
-            dates.forEach(function(date, index) {
-                var timestamp = new Date(date).getTime();
-                var diff = Math.abs(timestamp - targetTimestamp);
-                if (diff < minDiff) {
-                    minDiff = diff;
-                    closestIndex = index;
+        // Process split events
+        let annotations = {
+            xaxis: [],
+            points: []
+        };
+        
+        if (splitEvents && splitEvents.length > 0) {
+            splitEvents.forEach(split => {
+                if (split.date && split.ratio) {
+                    // Add vertical line annotation
+                    annotations.xaxis.push({
+                        x: new Date(split.date).getTime(),
+                        borderColor: '#4f8cff',
+                        strokeDashArray: 5,
+                        label: {
+                            borderColor: '#4f8cff',
+                            style: {
+                                color: '#fff',
+                                background: '#4f8cff',
+                                fontSize: '12px',
+                                padding: {
+                                    left: 8,
+                                    right: 8,
+                                    top: 4,
+                                    bottom: 4
+                                }
+                            },
+                            text: `${split.ratio}:1 Split`,
+                            orientation: 'horizontal',
+                            offsetY: 20
+                        }
+                    });
+                    
+                    // Add point annotation if we have a price
+                    if (split.price) {
+                        annotations.points.push({
+                            x: new Date(split.date).getTime(),
+                            y: split.price,
+                            marker: {
+                                size: 8,
+                                fillColor: '#4f8cff',
+                                strokeColor: '#fff',
+                                strokeWidth: 2
+                            },
+                            label: {
+                                borderColor: '#4f8cff',
+                                style: {
+                                    color: '#fff',
+                                    background: '#4f8cff'
+                                },
+                                text: 'Split Point'
+                            }
+                        });
+                    }
                 }
             });
-            
-            return closestIndex;
         }
         
+        // Create chart options
         var options = {
+            series: seriesData,
             chart: {
                 height: 400,
-                toolbar: { 
-                    show: true,
-                    tools: {
-                        download: true,
-                        selection: true,
-                        zoom: true,
-                        zoomin: true,
-                        zoomout: true,
-                        pan: true,
-                        reset: true
-                    },
-                    export: {
-                        csv: {
-                            filename: '{{ current_filter }}_chart_data',
-                        },
-                        svg: {
-                            filename: '{{ current_filter }}_chart',
-                        },
-                        png: {
-                            filename: '{{ current_filter }}_chart',
-                        }
-                    },
-                    autoSelected: 'zoom',
-                    position: 'top',
-                    offsetX: 0,
-                    offsetY: 0
-                },
-                zoom: { 
-                    enabled: true,
-                    type: 'xy',
-                    autoScaleYaxis: true
-                },
+                type: 'line',
                 animations: { enabled: false },
-                parentHeightOffset: 0,
-                offsetX: 0,
-                offsetY: 0,
-                selection: {
-                    enabled: false
-                },
-                events: {
-                    dataPointSelection: function(event, chartContext, config) {
-                        // Prevent default zoom behavior
-                        event.preventDefault();
-                        
-                        // Check if it's a buy or sell point
-                        if (config.seriesIndex > 0) {
-                            var selectedPoint = config.w.config.series[config.seriesIndex].data[config.dataPointIndex];
-                            if (selectedPoint && selectedPoint.transaction_id) {
-                                highlightTransaction(selectedPoint.transaction_id);
-                            }
-                        }
-                        // Explicitly tell chart not to zoom
-                        return false;
-                    },
-                    markerClick: function(event, chartContext, config) {
-                        // Prevent default behavior which causes zoom
-                        event.stopPropagation();
-                        return false;
-                    },
-                    click: function(event, chartContext, config) {
-                        // Only handle clicks on data points
-                        if (event.target.classList.contains('apexcharts-marker')) {
-                            event.stopPropagation();
-                            return false;
-                        }
-                    }
-                }
+                zoom: { enabled: true },
+                toolbar: { show: true }
             },
-            series: seriesData,
-            colors: ['#007bff', '#2ecc71', '#e74c3c'],
-            xaxis: {
-                type: 'datetime',
-                labels: { 
-                    datetimeUTC: false,
-                    format: 'yyyy-MM-dd',
-                    style: {
-                        fontSize: '11px'
-                    }
-                },
-                axisBorder: {
-                    show: true,
-                    color: '#e3e9f7'
-                },
-                axisTicks: {
-                    show: true,
-                    color: '#e3e9f7'
-                },
-                title: {
-                    text: 'Date',
-                    offsetY: 10
-                }
+            stroke: {
+                curve: 'straight',
+                width: [2, 0, 0]
             },
-            yaxis: {
-                labels: { 
-                    formatter: function(val) { return '$' + val.toFixed(2); },
-                    style: {
-                        fontSize: '11px'
-                    },
-                    align: 'left',
-                    offsetX: 0
-                },
-                forceNiceScale: true,
-                tickAmount: 5,
-                opposite: false,  // This ensures axis appears on left side
-                title: {
-                    text: 'Price ($)',
-                    offsetX: -10
-                }
+            markers: {
+                size: [0, 8, 8],
+                hover: { size: 11 }
             },
+            annotations: annotations,
             tooltip: {
                 shared: false,
                 intersect: true,
@@ -845,7 +770,7 @@
                 y: { formatter: function(val) { return '$' + val.toFixed(2); } },
                 fixed: {
                     enabled: true,
-                    position: 'topLeft',  // Changed from topRight to topLeft
+                    position: 'topLeft',
                     offsetX: 90,
                     offsetY: 0
                 },
@@ -859,6 +784,7 @@
                     const seriesName = w.config.series[seriesIndex].name;
                     const price = point.y.toFixed(2);
                     const date = new Date(point.x).toLocaleDateString();
+                    const time = point.time || 'N/A';
                     
                     // Determine color based on transaction type
                     const bgColor = seriesName.toLowerCase().includes('buy') ? '#e6f7ed' : '#fae9e8';
@@ -867,115 +793,50 @@
                     return '<div class="custom-tooltip" style="background-color: ' + bgColor + '; border: 1px solid ' + textColor + '; padding: 8px; border-radius: 4px;">' +
                         '<div class="tooltip-title" style="font-weight: bold; color: ' + textColor + ';">' + seriesName + '</div>' +
                         '<div class="tooltip-date">Date: ' + date + '</div>' +
-                        '<div class="tooltip-time">Time: ' + (point.time || 'N/A') + '</div>' +
+                        '<div class="tooltip-time">Time: ' + time + '</div>' +
                         '<div class="tooltip-price">Price: $' + price + '</div>' +
                         '<div class="tooltip-qty">Quantity: ' + point.qty + '</div>' +
                         '</div>';
                 }
             },
-            stroke: { 
-                curve: 'smooth', 
-                width: [2, 0, 0]  // Line width for price series, 0 for scatter series
+            grid: {
+                show: true
             },
-            grid: { 
-                borderColor: '#e9ecef',
-                padding: {
-                    left: 15,
-                    right: 15,
-                    top: 50,  // Increased top padding to prevent overlap
-                    bottom: 10
-                },
-                xaxis: {
-                    lines: {
-                        show: true
-                    }
-                },
-                yaxis: {
-                    lines: {
-                        show: true
-                    }
+            xaxis: {
+                type: 'datetime',
+                labels: {
+                    datetimeUTC: false,
+                    format: 'yyyy-MM-dd'
                 }
             },
-            noData: { text: 'No chart data available.' },
-            markers: {
-                size: [0, 8, 8], // No markers for line series, markers for buy/sell
-                colors: ['#007bff', '#2ecc71', '#e74c3c'],
-                strokeWidth: 2,
-                strokeColors: '#ffffff',
-                hover: {
-                    size: 10
-                },
-                onClick: function(e) {
-                    e.stopPropagation();
-                },
-                discrete: [
-                    {
-                        seriesIndex: 1,
-                        dataPointIndex: 0,
-                        fillColor: '#2ecc71', // GREEN for buys
-                        strokeColor: '#fff',
-                        size: 8,
-                        shape: "circle" // Solid marker for buys
-                    },
-                    {
-                        seriesIndex: 2,
-                        dataPointIndex: 0,
-                        fillColor: '#e74c3c', // RED for sells
-                        strokeColor: '#fff',
-                        size: 8,
-                        shape: "circle" // Solid marker for sells
+            yaxis: {
+                labels: {
+                    formatter: function(val) {
+                        return '$' + val.toFixed(2);
                     }
-                ]
-            },
-            legend: {
-                show: true,
-                position: 'top',
-                horizontalAlign: 'right',
-                floating: true,
-                offsetY: -5,
-                offsetX: -5,
-                itemMargin: {
-                    horizontal: 10,
-                    vertical: 0
                 },
-                onItemClick: {
-                    toggleDataSeries: false
-                },
-                onItemHover: {
-                    highlightDataSeries: true
-                },
-                markers: {
-                    width: 12,
-                    height: 12,
-                    strokeWidth: 0,
-                    strokeColor: '#fff',
-                    radius: 12,
-                    offsetX: 0,
-                    offsetY: 0
-                },
-                formatter: function(seriesName, opts) {
-                    // Add extra spacing between legend items
-                    return ['   ' + seriesName + '   '];
-                }
-            },
-            dataLabels: {
-                enabled: false
+                tickAmount: 8
             }
         };
         
-        // Convert line series data to timestamp format
-        seriesData[0].data = dates.map(function(date, index) {
-            return {
-                x: new Date(date).getTime(),
-                y: prices[index]
-            };
-        });
-        
-        console.log("Final series data:", seriesData);
-        
-        var chart = new ApexCharts(document.querySelector("#stockChartApex"), options);
-        chart.render();
-        document.getElementById('chart-loading').style.display = 'none';
+        try {
+            const chartElement = document.querySelector("#stockChartApex");
+            if (!chartElement) {
+                console.error('Chart element not found');
+                return;
+            }
+            
+            const chart = new ApexCharts(chartElement, options);
+            chart.render().then(() => {
+                document.getElementById('chart-loading').style.display = 'none';
+            }).catch(e => {
+                console.error('Error rendering chart:', e);
+                showChartError('Error rendering chart: ' + e.message);
+            });
+        } catch (e) {
+            console.error('Error creating chart:', e);
+            showChartError('Error creating chart: ' + e.message);
+        }
     }
     
     // Function to highlight transaction row
@@ -994,11 +855,10 @@
     }
     
     document.addEventListener('DOMContentLoaded', function() {
-        if (!document.getElementById('stockChartApex')) return;
+        const chartElement = document.getElementById('stockChartApex');
+        if (!chartElement) return;
         
-        // No need to scroll here, handled by the main function above
-        
-        setTimeout(function() {
+        const loadChart = () => {
             fetch(`/api/stock_chart/{{ current_filter }}?range={{ selected_range }}`)
                 .then(resp => resp.json())
                 .then(data => {
@@ -1010,33 +870,21 @@
                             data.prices, 
                             '{{ current_filter }}',
                             data.buy_transactions || [],
-                            data.sell_transactions || []
+                            data.sell_transactions || [],
+                            data.split_events || []
                         );
-                        
-                        // Prevent zoom on marker click by adding custom event listeners
-                        setTimeout(function() {
-                            // Add click event listeners to scatter points to prevent default behavior
-                            const markers = document.querySelectorAll('.apexcharts-series-scatter .apexcharts-marker');
-                            markers.forEach(marker => {
-                                marker.addEventListener('click', function(e) {
-                                    e.stopPropagation();
-                                });
-                            });
-                            
-                            // Disable chart zooming when marker is clicked
-                            document.querySelector('.apexcharts-zoomable').addEventListener('click', function(e) {
-                                if (e.target.classList.contains('apexcharts-marker')) {
-                                    e.stopPropagation();
-                                    return false;
-                                }
-                            }, true);
-                        }, 1000);
                     } else {
                         showChartError('No chart data available.');
                     }
                 })
-                .catch(() => showChartError('Error loading chart. Please try again.'));
-        }, 800); // Faster load
+                .catch(error => {
+                    console.error('Error loading chart:', error);
+                    showChartError('Error loading chart. Please try again.');
+                });
+        };
+        
+        // Load chart with a slight delay to ensure DOM is ready
+        setTimeout(loadChart, 100);
     });
     </script>
     {% endif %}
