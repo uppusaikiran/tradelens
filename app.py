@@ -214,6 +214,37 @@ def process_transactions(transactions):
         })
     return processed
 
+def calculate_transaction_stats(transactions):
+    stats = {
+        'total_stocks_bought': 0,
+        'total_stocks_sold': 0,
+        'total_amount_bought': 0,
+        'total_amount_sold': 0
+    }
+    
+    for tx in transactions:
+        try:
+            qty = float(tx['Qty'])
+            amount = float(tx['AveragePrice']) * qty
+            
+            if tx['Side'].lower() == 'buy':
+                stats['total_stocks_bought'] += qty
+                stats['total_amount_bought'] += amount
+            elif tx['Side'].lower() == 'sell':
+                stats['total_stocks_sold'] += qty
+                stats['total_amount_sold'] += amount
+        except (ValueError, TypeError) as e:
+            print(f"Error processing transaction stats: {tx}, Error: {e}")
+            continue
+    
+    # Round the values for display
+    stats['total_stocks_bought'] = round(stats['total_stocks_bought'], 2)
+    stats['total_stocks_sold'] = round(stats['total_stocks_sold'], 2)
+    stats['total_amount_bought'] = round(stats['total_amount_bought'], 2)
+    stats['total_amount_sold'] = round(stats['total_amount_sold'], 2)
+    
+    return stats
+
 @app.route('/api/stock_chart/<symbol>')
 def api_stock_chart(symbol):
     range_ = request.args.get('range', 'ytd')
@@ -436,8 +467,17 @@ def stock_detail(symbol):
     elif page > total_pages and total_pages > 0:
         page = total_pages
     
-    # Add pagination to the query
+    # Calculate offset for pagination
     offset = (page - 1) * per_page
+    
+    # First get all transactions for stats (without pagination)
+    cursor.execute(base_query, params)
+    all_transactions = cursor.fetchall()
+    
+    # Calculate stats from all transactions
+    transaction_stats = calculate_transaction_stats(all_transactions)
+    
+    # Add pagination to the query for display
     final_query = f'{base_query} ORDER BY Date DESC, Time DESC LIMIT ? OFFSET ?'
     params += [per_page, offset]
     
@@ -456,7 +496,7 @@ def stock_detail(symbol):
     if range_ == 'all':
         # For 'all' filter, we want to show price data for transaction dates only
         # Get unique transaction dates
-        transaction_dates = sorted(set(t['Date'] for t in transactions))
+        transaction_dates = sorted(set(t['Date'] for t in all_transactions))
         if transaction_dates:
             start_date = datetime.strptime(transaction_dates[0], '%Y-%m-%d')
             end_date = datetime.strptime(transaction_dates[-1], '%Y-%m-%d')
@@ -476,7 +516,8 @@ def stock_detail(symbol):
                          price_data=price_data,
                          selected_side=side,
                          selected_range=range_,
-                         active_tab=active_tab)
+                         active_tab=active_tab,
+                         transaction_stats=transaction_stats)
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
