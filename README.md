@@ -1,65 +1,123 @@
-# Stock Transactions Analyzer
+# Robinhood Transaction Analyzer
 
-A Flask web application to analyze stock transactions from a CSV file.
+A web-based tool to analyze and visualize your Robinhood stock transactions. Upload your stock orders CSV file and get detailed insights with interactive charts and transaction history.
 
+## 📸 Screenshot
+
+![Application Screenshot](Screenshot.png)
 
 ## Features
 
-1. View all transactions with pagination (10 per page)
-2. Sort transactions by date (newest first)
-3. Filter transactions by stock ticker
-4. Responsive UI with Bootstrap
+- 📊 Interactive stock price charts with buy/sell indicators
+- 📈 Transaction history visualization
+- 🔍 Filter transactions by:
+  - Stock symbol (MAG7 stocks, Other stocks, Unlisted)
+  - Transaction type (Buy/Sell)
+  - Time range (YTD, 1Y, 2Y, 5Y, MAX)
+- 📱 Responsive design for desktop and mobile
+- 🎯 Click on chart markers to highlight corresponding transactions
+- 📂 Easy CSV file upload
+- 💼 MAG7 stocks categorization
 
-## Installation
+## Getting Started
 
-1. Clone this repository:
-```
-git clone <repository-url>
-cd robinhood_analyze
+### Prerequisites
+
+- Python 3.8 or higher
+- pip (Python package installer)
+
+### Installation
+
+1. Clone the repository
+```bash
+git clone https://github.com/yourusername/robinhood-transaction-analyzer.git
+cd robinhood-transaction-analyzer
 ```
 
-2. Create a virtual environment and activate it:
-```
+2. Create and activate a virtual environment
+```bash
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate  # On Windows, use: venv\Scripts\activate
 ```
 
-3. Install the required dependencies:
-```
+3. Install dependencies
+```bash
 pip install -r requirements.txt
 ```
 
-## Usage
+### Running the Application
 
-1. Make sure your stock transaction data is in the `stock_orders.csv` file in the root directory.
-
-2. Run the application:
-```
-python app.py
+1. Start the server
+```bash
+./run_server.sh
 ```
 
-3. Open your browser and navigate to `http://127.0.0.1:5000`.
+2. Open your browser and navigate to:
+```
+http://localhost:5000
+```
 
-## File Structure
+### Data Format
 
-- `app.py`: Main Flask application
-- `stock_orders.csv`: CSV file containing stock transaction data
-- `templates/`: Directory containing HTML templates
-- `static/css/`: Directory containing CSS files
-- `requirements.txt`: List of Python dependencies
+Upload your Robinhood stock orders CSV file with the following columns:
+- Symbol
+- Name
+- AveragePrice
+- Qty
+- Type
+- Side
+- Fees
+- State
+- Date (MM/DD/YYYY)
+- Time
 
-## CSV Format
+### Clean Up
 
-The application expects a CSV file with the following columns:
-- Symbol: Stock ticker symbol
-- Name: Company name
-- AveragePrice: Purchase/sale price
-- Qty: Quantity of shares
-- Type: Transaction type (e.g., market, limit)
-- Side: Buy or sell
-- Fees: Transaction fees
-- State: Transaction state (e.g., filled, rejected)
-- Date: Transaction date (MM/DD/YYYY)
-- Time: Transaction time 
+To clean the environment and start fresh:
+```bash
+./clean.sh
+```
+This will remove:
+- Database file
+- Uploaded CSV file
+- Python cache files
+- Log files
 
-![Screenshot](Screenshot.png)
+## Features in Detail
+
+### Stock Categories
+- **MAG7 Stocks**: Meta, Apple, Amazon, Alphabet, Microsoft, NVIDIA, Tesla
+- **Other Stocks**: All other listed stocks
+- **Unlisted**: Stocks no longer trading or delisted
+
+### Chart Features
+- Interactive price history
+- Buy/Sell markers
+- Zoom and pan controls
+- Custom tooltips with transaction details
+- Responsive design
+- Time range selection
+
+### Transaction Table
+- Sortable columns
+- Transaction highlighting
+- Pagination
+- Responsive layout
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Acknowledgments
+
+- [ApexCharts.js](https://apexcharts.com/) for the interactive charts
+- [Bootstrap](https://getbootstrap.com/) for the responsive design
+- [Flask](https://flask.palletsprojects.com/) for the web framework
