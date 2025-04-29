@@ -1,5 +1,9 @@
 # Robinhood Transaction Analyzer
 
+<div align="center">
+  <img src="logo.png" alt="Robinhood Transaction Analyzer Logo" width="150" height="150">
+</div>
+
 A web-based tool to analyze and visualize your Robinhood stock transactions. Upload your stock orders CSV file and get detailed insights with interactive charts and transaction history.
 
 ## 📸 Screenshot

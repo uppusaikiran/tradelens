@@ -13,7 +13,7 @@
     <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top" style="padding: 0.7rem 2vw; z-index: 100;">
         <div class="container-fluid">
             <a class="navbar-brand d-flex align-items-center" href="/">
-                <img src="https://cdn-icons-png.flaticon.com/512/2103/2103633.png" alt="Stock Icon" class="title-icon mr-2" style="width:1.8rem;height:1.8rem;">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="App Logo" class="title-icon mr-2" style="width:1.8rem;height:1.8rem;">
                 Stock Transactions Analyzer
             </a>
             <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data" class="form-inline ml-auto d-flex align-items-center" style="gap: 0.5rem;">
