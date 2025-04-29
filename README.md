@@ -1,6 +1,6 @@
 # Robinhood Transaction Analyzer
 
-<div align="center">
+<div align="left">
   <img src="static/logo.png" alt="Robinhood Transaction Analyzer Logo" width="150" height="150">
 </div>
 
