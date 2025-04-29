@@ -25,26 +25,101 @@
     <div class="container mt-5">
         <div class="row mb-4">
             <div class="col-12">
-                <div class="stock-boxes">
-                    <a href="{{ url_for('index') }}#transactions" class="stock-box {% if not current_filter %}active{% endif %}" data-scroll-to="transactions">
-                        <img src="https://cdn-icons-png.flaticon.com/512/2103/2103633.png" 
-                             alt="All Stocks" 
-                             class="stock-logo">
-                        <div class="stock-symbol">All</div>
-                        <div class="stock-name">Stocks</div>
-                    </a>
-                    {% for stock in stocks %}
-                    <a href="{{ url_for('stock_detail', symbol=stock[0]) }}#transactions" 
-                       class="stock-box {% if current_filter == stock[0] %}active{% endif %}"
-                       data-scroll-to="transactions">
-                        <img src="https://storage.googleapis.com/iex/api/logos/{{ stock[0] }}.png" 
-                             alt="{{ stock[0] }} logo" 
-                             class="stock-logo"
-                             onerror="this.onerror=null;this.src='https://g.foolcdn.com/art/companylogos/mark/{{ stock[0]|lower }}.png';">
-                        <div class="stock-symbol">{{ stock[0] }}</div>
-                        <div class="stock-name">{{ stock[1] }}</div>
-                    </a>
-                    {% endfor %}
+                <!-- Stock Categories Tabs -->
+                <ul class="nav nav-tabs mb-3" id="stockTabs" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link {% if active_tab == 'mag7' %}active{% endif %}" 
+                           id="mag7-tab" 
+                           data-toggle="tab" 
+                           href="#mag7" 
+                           role="tab" 
+                           aria-controls="mag7" 
+                           aria-selected="{{ 'true' if active_tab == 'mag7' else 'false' }}">MAG7 Stocks</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if active_tab == 'other' %}active{% endif %}" 
+                           id="other-tab" 
+                           data-toggle="tab" 
+                           href="#other" 
+                           role="tab" 
+                           aria-controls="other" 
+                           aria-selected="{{ 'true' if active_tab == 'other' else 'false' }}">Other Stocks</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if active_tab == 'unlisted' %}active{% endif %}" 
+                           id="unlisted-tab" 
+                           data-toggle="tab" 
+                           href="#unlisted" 
+                           role="tab" 
+                           aria-controls="unlisted" 
+                           aria-selected="{{ 'true' if active_tab == 'unlisted' else 'false' }}">Unlisted Stocks</a>
+                    </li>
+                </ul>
+
+                <!-- Tab Content -->
+                <div class="tab-content" id="stockTabsContent">
+                    <!-- MAG7 Stocks Tab -->
+                    <div class="tab-pane fade {% if active_tab == 'mag7' %}show active{% endif %}" 
+                         id="mag7" 
+                         role="tabpanel" 
+                         aria-labelledby="mag7-tab">
+                        <div class="stock-boxes">
+                            {% for stock in stocks.mag7 %}
+                            <a href="{{ url_for('stock_detail', symbol=stock.symbol, tab='mag7') }}#transactions" 
+                               class="stock-box {% if current_filter == stock.symbol %}active{% endif %}"
+                               data-scroll-to="transactions">
+                                <img src="https://storage.googleapis.com/iex/api/logos/{{ stock.symbol }}.png" 
+                                     alt="{{ stock.symbol }} logo" 
+                                     class="stock-logo"
+                                     onerror="this.onerror=null;this.src='https://g.foolcdn.com/art/companylogos/mark/{{ stock.symbol|lower }}.png';">
+                                <div class="stock-symbol">{{ stock.symbol }}</div>
+                                <div class="stock-name">{{ stock.name }}</div>
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Other Stocks Tab -->
+                    <div class="tab-pane fade {% if active_tab == 'other' %}show active{% endif %}" 
+                         id="other" 
+                         role="tabpanel" 
+                         aria-labelledby="other-tab">
+                        <div class="stock-boxes">
+                            {% for stock in stocks.other %}
+                            <a href="{{ url_for('stock_detail', symbol=stock.symbol, tab='other') }}#transactions" 
+                               class="stock-box {% if current_filter == stock.symbol %}active{% endif %}"
+                               data-scroll-to="transactions">
+                                <img src="https://storage.googleapis.com/iex/api/logos/{{ stock.symbol }}.png" 
+                                     alt="{{ stock.symbol }} logo" 
+                                     class="stock-logo"
+                                     onerror="this.onerror=null;this.src='https://g.foolcdn.com/art/companylogos/mark/{{ stock.symbol|lower }}.png';">
+                                <div class="stock-symbol">{{ stock.symbol }}</div>
+                                <div class="stock-name">{{ stock.name }}</div>
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Unlisted Stocks Tab -->
+                    <div class="tab-pane fade {% if active_tab == 'unlisted' %}show active{% endif %}" 
+                         id="unlisted" 
+                         role="tabpanel" 
+                         aria-labelledby="unlisted-tab">
+                        <div class="stock-boxes">
+                            {% for stock in stocks.unlisted %}
+                            <a href="{{ url_for('stock_detail', symbol=stock.symbol, tab='unlisted') }}#transactions" 
+                               class="stock-box {% if current_filter == stock.symbol %}active{% endif %}"
+                               data-scroll-to="transactions">
+                                <img src="https://storage.googleapis.com/iex/api/logos/{{ stock.symbol }}.png" 
+                                     alt="{{ stock.symbol }} logo" 
+                                     class="stock-logo"
+                                     onerror="this.onerror=null;this.src='https://g.foolcdn.com/art/companylogos/mark/{{ stock.symbol|lower }}.png';">
+                                <div class="stock-symbol">{{ stock.symbol }}</div>
+                                <div class="stock-name">{{ stock.name }}</div>
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -64,7 +139,6 @@
                     <a href="{{ url_for('stock_detail', symbol=current_filter, side=selected_side, range='2y') }}#transactions" class="btn btn-outline-secondary {% if selected_range == '2y' %}active{% endif %}">2Y</a>
                     <a href="{{ url_for('stock_detail', symbol=current_filter, side=selected_side, range='5y') }}#transactions" class="btn btn-outline-secondary {% if selected_range == '5y' %}active{% endif %}">5Y</a>
                     <a href="{{ url_for('stock_detail', symbol=current_filter, side=selected_side, range='max') }}#transactions" class="btn btn-outline-secondary {% if selected_range == 'max' %}active{% endif %}">MAX</a>
-                    <a href="{{ url_for('stock_detail', symbol=current_filter, side=selected_side, range='1mo') }}#transactions" class="btn btn-outline-secondary {% if selected_range == '1mo' %}active{% endif %}">1M</a>
                 </div>
             </div>
         </div>
@@ -185,7 +259,7 @@
                 {% if page > 1 %}
                 <li class="page-item">
                     {% if current_filter %}
-                    <a class="page-link" href="{{ url_for('stock_detail', symbol=current_filter, page=page-1) }}#transactions">Previous</a>
+                    <a class="page-link" href="{{ url_for('stock_detail', symbol=current_filter, page=page-1, range=selected_range, side=selected_side) }}#transactions">Previous</a>
                     {% else %}
                     <a class="page-link" href="{{ url_for('index', page=page-1) }}#transactions">Previous</a>
                     {% endif %}
@@ -204,7 +278,7 @@
                   {% elif i <= 5 or i >= total_pages - 4 or (i >= page - 2 and i <= page + 2) %}
                   <li class="page-item">
                     {% if current_filter %}
-                    <a class="page-link" href="{{ url_for('stock_detail', symbol=current_filter, page=i) }}#transactions">{{ i }}</a>
+                    <a class="page-link" href="{{ url_for('stock_detail', symbol=current_filter, page=i, range=selected_range, side=selected_side) }}#transactions">{{ i }}</a>
                     {% else %}
                     <a class="page-link" href="{{ url_for('index', page=i) }}#transactions">{{ i }}</a>
                     {% endif %}
@@ -219,7 +293,7 @@
                 {% if page < total_pages %}
                 <li class="page-item">
                     {% if current_filter %}
-                    <a class="page-link" href="{{ url_for('stock_detail', symbol=current_filter, page=page+1) }}#transactions">Next</a>
+                    <a class="page-link" href="{{ url_for('stock_detail', symbol=current_filter, page=page+1, range=selected_range, side=selected_side) }}#transactions">Next</a>
                     {% else %}
                     <a class="page-link" href="{{ url_for('index', page=page+1) }}#transactions">Next</a>
                     {% endif %}
@@ -317,17 +391,41 @@
         // Create buy transactions markers as separate series
         if (buyTransactions && buyTransactions.length > 0) {
             console.log("Processing buy transactions:", buyTransactions);
-            var buyData = buyTransactions.map(function(tx) {
+            var buyData = buyTransactions.map(function(tx, txIndex) {
                 // Find the closest date in our chart dates
                 var closestDateIndex = findClosestDateIndex(dates, tx.date);
                 if (closestDateIndex !== -1) {
+                    // Create a timestamp that includes time if available
+                    var baseTimestamp = new Date(dates[closestDateIndex]).getTime();
+                    var hours = 0, minutes = 0;
+                    
+                    // Parse time if available
+                    if (tx.time) {
+                        var timeParts = tx.time.split(':');
+                        if (timeParts.length >= 2) {
+                            hours = parseInt(timeParts[0], 10);
+                            minutes = parseInt(timeParts[1], 10);
+                        }
+                    } else {
+                        // If no time provided, use small offset to prevent overlap
+                        minutes = txIndex * 5; // 5 minutes offset per transaction
+                    }
+                    
+                    // Create timestamp with time component
+                    var timestamp = baseTimestamp + (hours * 3600000) + (minutes * 60000);
+                    
                     return {
-                        x: new Date(dates[closestDateIndex]).getTime(),
+                        x: timestamp,
                         y: tx.price,
                         transaction_id: tx.id,
                         qty: tx.qty,
                         date: tx.date,
-                        time: tx.time
+                        time: tx.time,
+                        fillColor: '#2ecc71', // GREEN color for buy orders
+                        marker: {
+                            fillColor: '#2ecc71',
+                            strokeColor: '#fff'
+                        }
                     };
                 }
                 return null;
@@ -339,6 +437,7 @@
                 seriesData.push({
                     name: 'Buy Orders',
                     type: 'scatter',
+                    color: '#2ecc71', // GREEN color for buy orders
                     data: buyData
                 });
             }
@@ -347,17 +446,41 @@
         // Create sell transactions markers as separate series
         if (sellTransactions && sellTransactions.length > 0) {
             console.log("Processing sell transactions:", sellTransactions);
-            var sellData = sellTransactions.map(function(tx) {
+            var sellData = sellTransactions.map(function(tx, txIndex) {
                 // Find the closest date in our chart dates
                 var closestDateIndex = findClosestDateIndex(dates, tx.date);
                 if (closestDateIndex !== -1) {
+                    // Create a timestamp that includes time if available
+                    var baseTimestamp = new Date(dates[closestDateIndex]).getTime();
+                    var hours = 0, minutes = 0;
+                    
+                    // Parse time if available
+                    if (tx.time) {
+                        var timeParts = tx.time.split(':');
+                        if (timeParts.length >= 2) {
+                            hours = parseInt(timeParts[0], 10);
+                            minutes = parseInt(timeParts[1], 10);
+                        }
+                    } else {
+                        // If no time provided, use small offset to prevent overlap
+                        minutes = txIndex * 5; // 5 minutes offset per transaction
+                    }
+                    
+                    // Create timestamp with time component
+                    var timestamp = baseTimestamp + (hours * 3600000) + (minutes * 60000);
+                    
                     return {
-                        x: new Date(dates[closestDateIndex]).getTime(),
+                        x: timestamp,
                         y: tx.price,
                         transaction_id: tx.id,
                         qty: tx.qty,
                         date: tx.date,
-                        time: tx.time
+                        time: tx.time,
+                        fillColor: '#e74c3c', // RED color for sell orders
+                        marker: {
+                            fillColor: '#e74c3c',
+                            strokeColor: '#fff'
+                        }
                     };
                 }
                 return null;
@@ -369,6 +492,7 @@
                 seriesData.push({
                     name: 'Sell Orders',
                     type: 'scatter',
+                    color: '#e74c3c', // RED color for sell orders
                     data: sellData
                 });
             }
@@ -406,7 +530,7 @@
                     show: true,
                     tools: {
                         download: true,
-                        selection: false,
+                        selection: true,
                         zoom: true,
                         zoomin: true,
                         zoomout: true,
@@ -415,9 +539,9 @@
                     }
                 },
                 zoom: { 
-                    enabled: false,
-                    type: 'none',
-                    autoScaleYaxis: false
+                    enabled: true,
+                    type: 'xy',
+                    autoScaleYaxis: true
                 },
                 animations: { enabled: false },
                 parentHeightOffset: 0,
@@ -472,10 +596,13 @@
                     formatter: function(val) { return '$' + val.toFixed(2); },
                     style: {
                         fontSize: '11px'
-                    }
+                    },
+                    align: 'left',
+                    offsetX: 0
                 },
                 forceNiceScale: true,
-                tickAmount: 5
+                tickAmount: 5,
+                opposite: false  // This ensures axis appears on left side
             },
             tooltip: {
                 shared: false,
@@ -484,8 +611,8 @@
                 y: { formatter: function(val) { return '$' + val.toFixed(2); } },
                 fixed: {
                     enabled: true,
-                    position: 'topRight',
-                    offsetX: 0,
+                    position: 'topLeft',  // Changed from topRight to topLeft
+                    offsetX: 90,
                     offsetY: 0
                 },
                 custom: function({ series, seriesIndex, dataPointIndex, w }) {
@@ -499,8 +626,12 @@
                     const price = point.y.toFixed(2);
                     const date = new Date(point.x).toLocaleDateString();
                     
-                    return '<div class="custom-tooltip">' +
-                        '<div class="tooltip-title">' + seriesName + '</div>' +
+                    // Determine color based on transaction type
+                    const bgColor = seriesName.toLowerCase().includes('buy') ? '#e6f7ed' : '#fae9e8';
+                    const textColor = seriesName.toLowerCase().includes('buy') ? '#2ecc71' : '#e74c3c';
+                    
+                    return '<div class="custom-tooltip" style="background-color: ' + bgColor + '; border: 1px solid ' + textColor + '; padding: 8px; border-radius: 4px;">' +
+                        '<div class="tooltip-title" style="font-weight: bold; color: ' + textColor + ';">' + seriesName + '</div>' +
                         '<div class="tooltip-date">Date: ' + date + '</div>' +
                         '<div class="tooltip-time">Time: ' + (point.time || 'N/A') + '</div>' +
                         '<div class="tooltip-price">Price: $' + price + '</div>' +
@@ -537,7 +668,7 @@
                     {
                         seriesIndex: 1,
                         dataPointIndex: 0,
-                        fillColor: '#2ecc71',
+                        fillColor: '#2ecc71', // GREEN for buys
                         strokeColor: '#fff',
                         size: 8,
                         shape: "circle" // Solid marker for buys
@@ -545,7 +676,7 @@
                     {
                         seriesIndex: 2,
                         dataPointIndex: 0,
-                        fillColor: '#e74c3c',
+                        fillColor: '#e74c3c', // RED for sells
                         strokeColor: '#fff',
                         size: 8,
                         shape: "circle" // Solid marker for sells
