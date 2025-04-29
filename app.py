@@ -6,6 +6,7 @@ import pandas as pd
 import sqlite3
 import yfinance as yf
 import time
+from init_db import init_db
 
 # Define MAG7 stocks
 MAG7_STOCKS = {
@@ -477,14 +478,34 @@ def stock_detail(symbol):
                          selected_range=range_,
                          active_tab=active_tab)
 
-@app.route('/upload_csv', methods=['POST'])
-def upload_csv():
-    file = request.files['csvfile']
-    if file and file.filename.endswith('.csv'):
-        file.save('stock_orders.csv')
-        flash('CSV uploaded successfully!', 'success')
-    else:
-        flash('Invalid file type.', 'danger')
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    if 'file' not in request.files:
+        flash('No file selected', 'error')
+        return redirect(url_for('index'))
+    
+    file = request.files['file']
+    if file.filename == '':
+        flash('No file selected', 'error')
+        return redirect(url_for('index'))
+    
+    if not file.filename.endswith('.csv'):
+        flash('Please upload a CSV file', 'error')
+        return redirect(url_for('index'))
+    
+    # Save the file
+    file.save('stock_orders.csv')
+    
+    try:
+        # Reinitialize the database with the new file
+        init_db()
+        flash('File uploaded and processed successfully!', 'success')
+    except Exception as e:
+        flash(f'Error processing file: {str(e)}', 'error')
+        # Clean up the uploaded file
+        if os.path.exists('stock_orders.csv'):
+            os.remove('stock_orders.csv')
+    
     return redirect(url_for('index'))
 
 if __name__ == '__main__':

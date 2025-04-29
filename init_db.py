@@ -33,34 +33,37 @@ def init_db():
     # Clear existing data
     cursor.execute('DELETE FROM transactions')
     
-    # Import data from CSV
-    with open('stock_orders.csv', 'r') as file:
-        csv_reader = csv.DictReader(file)
-        for row in csv_reader:
-            try:
-                # Convert date string to SQLite date format
-                date_obj = datetime.strptime(row['Date'], '%m/%d/%Y')
-                date_str = date_obj.strftime('%Y-%m-%d')
-                
-                cursor.execute('''
-                INSERT INTO transactions (Date, Time, Symbol, Name, Type, Side, AveragePrice, Qty, State, Fees)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ''', (
-                    date_str,
-                    row['Time'],
-                    row['Symbol'],
-                    row['Name'],
-                    row['Type'],
-                    row['Side'],
-                    safe_float(row['AveragePrice']),
-                    safe_float(row['Qty']),
-                    row['State'],
-                    safe_float(row['Fees'])
-                ))
-            except Exception as e:
-                print(f"Error processing row: {row}")
-                print(f"Error: {e}")
-                continue
+    # Try to import data if CSV exists
+    try:
+        with open('stock_orders.csv', 'r') as file:
+            csv_reader = csv.DictReader(file)
+            for row in csv_reader:
+                try:
+                    # Convert date string to SQLite date format
+                    date_obj = datetime.strptime(row['Date'], '%m/%d/%Y')
+                    date_str = date_obj.strftime('%Y-%m-%d')
+                    
+                    cursor.execute('''
+                    INSERT INTO transactions (Date, Time, Symbol, Name, Type, Side, AveragePrice, Qty, State, Fees)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ''', (
+                        date_str,
+                        row['Time'],
+                        row['Symbol'],
+                        row['Name'],
+                        row['Type'],
+                        row['Side'],
+                        safe_float(row['AveragePrice']),
+                        safe_float(row['Qty']),
+                        row['State'],
+                        safe_float(row['Fees'])
+                    ))
+                except Exception as e:
+                    print(f"Error processing row: {row}")
+                    print(f"Error: {e}")
+                    continue
+    except FileNotFoundError:
+        print("No CSV file found. Created empty database.")
     
     # Commit changes and close connection
     conn.commit()

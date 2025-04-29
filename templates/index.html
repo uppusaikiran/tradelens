@@ -16,13 +16,27 @@
                 <img src="https://cdn-icons-png.flaticon.com/512/2103/2103633.png" alt="Stock Icon" class="title-icon mr-2" style="width:1.8rem;height:1.8rem;">
                 Stock Transactions Analyzer
             </a>
-            <form action="/upload_csv" method="post" enctype="multipart/form-data" class="form-inline ml-auto d-flex align-items-center" style="gap: 0.5rem;">
-                <input type="file" name="csvfile" id="csvfile" accept=".csv" class="form-control form-control-sm" required style="max-width: 180px;">
+            <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data" class="form-inline ml-auto d-flex align-items-center" style="gap: 0.5rem;">
+                <input type="file" name="file" accept=".csv" class="form-control form-control-sm" required style="max-width: 180px;">
                 <button type="submit" class="btn btn-primary btn-sm">Upload CSV</button>
             </form>
         </div>
     </nav>
     <div class="container mt-5">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
         <div class="row mb-4">
             <div class="col-12">
                 <!-- Stock Categories Tabs -->
@@ -128,17 +142,17 @@
         <div class="row mb-2">
             <div class="col-12 d-flex flex-wrap align-items-center justify-content-between">
                 <div class="btn-group mb-2" role="group" aria-label="Transaction Side Filter">
-                    <a href="{{ url_for('stock_detail', symbol=current_filter, side='all', range=selected_range) }}#transactions" class="btn btn-outline-primary {% if selected_side == 'all' %}active{% endif %}">All</a>
-                    <a href="{{ url_for('stock_detail', symbol=current_filter, side='buy', range=selected_range) }}#transactions" class="btn btn-outline-success {% if selected_side == 'buy' %}active{% endif %}">Buy</a>
-                    <a href="{{ url_for('stock_detail', symbol=current_filter, side='sell', range=selected_range) }}#transactions" class="btn btn-outline-danger {% if selected_side == 'sell' %}active{% endif %}">Sell</a>
+                    <a href="{{ url_for('stock_detail', symbol=current_filter, side='all', range=selected_range) }}" class="btn btn-outline-primary {% if selected_side == 'all' %}active{% endif %}">All</a>
+                    <a href="{{ url_for('stock_detail', symbol=current_filter, side='buy', range=selected_range) }}" class="btn btn-outline-success {% if selected_side == 'buy' %}active{% endif %}">Buy</a>
+                    <a href="{{ url_for('stock_detail', symbol=current_filter, side='sell', range=selected_range) }}" class="btn btn-outline-danger {% if selected_side == 'sell' %}active{% endif %}">Sell</a>
                 </div>
                 <div class="btn-group mb-2" role="group" aria-label="Time Range Filter">
-                    <a href="{{ url_for('stock_detail', symbol=current_filter, side=selected_side, range='all') }}#transactions" class="btn btn-outline-secondary {% if selected_range == 'all' %}active{% endif %}">All</a>
-                    <a href="{{ url_for('stock_detail', symbol=current_filter, side=selected_side, range='ytd') }}#transactions" class="btn btn-outline-secondary {% if selected_range == 'ytd' %}active{% endif %}">YTD</a>
-                    <a href="{{ url_for('stock_detail', symbol=current_filter, side=selected_side, range='1y') }}#transactions" class="btn btn-outline-secondary {% if selected_range == '1y' %}active{% endif %}">1Y</a>
-                    <a href="{{ url_for('stock_detail', symbol=current_filter, side=selected_side, range='2y') }}#transactions" class="btn btn-outline-secondary {% if selected_range == '2y' %}active{% endif %}">2Y</a>
-                    <a href="{{ url_for('stock_detail', symbol=current_filter, side=selected_side, range='5y') }}#transactions" class="btn btn-outline-secondary {% if selected_range == '5y' %}active{% endif %}">5Y</a>
-                    <a href="{{ url_for('stock_detail', symbol=current_filter, side=selected_side, range='max') }}#transactions" class="btn btn-outline-secondary {% if selected_range == 'max' %}active{% endif %}">MAX</a>
+                    <a href="{{ url_for('stock_detail', symbol=current_filter, side=selected_side, range='all') }}" class="btn btn-outline-secondary {% if selected_range == 'all' %}active{% endif %}">All</a>
+                    <a href="{{ url_for('stock_detail', symbol=current_filter, side=selected_side, range='ytd') }}" class="btn btn-outline-secondary {% if selected_range == 'ytd' %}active{% endif %}">YTD</a>
+                    <a href="{{ url_for('stock_detail', symbol=current_filter, side=selected_side, range='1y') }}" class="btn btn-outline-secondary {% if selected_range == '1y' %}active{% endif %}">1Y</a>
+                    <a href="{{ url_for('stock_detail', symbol=current_filter, side=selected_side, range='2y') }}" class="btn btn-outline-secondary {% if selected_range == '2y' %}active{% endif %}">2Y</a>
+                    <a href="{{ url_for('stock_detail', symbol=current_filter, side=selected_side, range='5y') }}" class="btn btn-outline-secondary {% if selected_range == '5y' %}active{% endif %}">5Y</a>
+                    <a href="{{ url_for('stock_detail', symbol=current_filter, side=selected_side, range='max') }}" class="btn btn-outline-secondary {% if selected_range == 'max' %}active{% endif %}">MAX</a>
                 </div>
             </div>
         </div>
@@ -314,35 +328,25 @@
     <script>
     // Improved scrolling function with prevention of page jumping
     document.addEventListener('DOMContentLoaded', function() {
-        // Set a flag to track if we've scrolled
-        let hasScrolled = false;
+        // Set a flag to track if we should scroll
+        let shouldScroll = false;
         
         function scrollToTransactions() {
-            if (hasScrolled) return; // Don't scroll again if we've already scrolled
-            
             const targetElement = document.getElementById('transactions');
-            if (targetElement) {
-                hasScrolled = true; // Mark that we've scrolled
-                
-                // Wait longer to ensure all content is loaded before scrolling
+            if (targetElement && shouldScroll) {
                 setTimeout(function() {
                     const offset = targetElement.getBoundingClientRect().top + window.pageYOffset - 80;
                     window.scrollTo({
                         top: offset,
                         behavior: 'smooth'
                     });
-                    
-                    // Prevent any automatic browser scroll after our custom scroll
-                    setTimeout(function() {
-                        // This will prevent any native browser scroll behavior
-                        history.scrollRestoration = 'manual';
-                    }, 100);
                 }, 500);
             }
         }
         
-        // Check if URL contains hash for scrolling
-        if (window.location.hash) {
+        // Only scroll if coming from a stock box click or if URL has #transactions
+        if (window.location.hash === '#transactions') {
+            shouldScroll = true;
             scrollToTransactions();
         }
         
@@ -350,15 +354,27 @@
         const stockBoxes = document.querySelectorAll('.stock-box');
         stockBoxes.forEach(box => {
             box.addEventListener('click', function(e) {
-                // Ensure the links include #transactions
+                shouldScroll = true;
+                // Add #transactions to URL only for stock box clicks
                 if (!box.href.includes('#transactions')) {
                     box.href = box.href + '#transactions';
                 }
             });
         });
         
-        // For stock detail pages, always scroll
-        if (document.getElementById('stockChartApex')) {
+        // Prevent scrolling for filter buttons
+        const filterButtons = document.querySelectorAll('.btn-group .btn');
+        filterButtons.forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                // Remove any existing hash from the URL without scrolling
+                if (window.location.hash) {
+                    history.pushState('', document.title, window.location.pathname + window.location.search);
+                }
+            });
+        });
+        
+        // For stock detail pages, only scroll if coming from a stock box
+        if (document.getElementById('stockChartApex') && shouldScroll) {
             scrollToTransactions();
         }
     });
@@ -536,7 +552,22 @@
                         zoomout: true,
                         pan: true,
                         reset: true
-                    }
+                    },
+                    export: {
+                        csv: {
+                            filename: '{{ current_filter }}_chart_data',
+                        },
+                        svg: {
+                            filename: '{{ current_filter }}_chart',
+                        },
+                        png: {
+                            filename: '{{ current_filter }}_chart',
+                        }
+                    },
+                    autoSelected: 'zoom',
+                    position: 'top',
+                    offsetX: 0,
+                    offsetY: 0
                 },
                 zoom: { 
                     enabled: true,
@@ -589,6 +620,18 @@
                     style: {
                         fontSize: '11px'
                     }
+                },
+                axisBorder: {
+                    show: true,
+                    color: '#e3e9f7'
+                },
+                axisTicks: {
+                    show: true,
+                    color: '#e3e9f7'
+                },
+                title: {
+                    text: 'Date',
+                    offsetY: 10
                 }
             },
             yaxis: {
@@ -602,7 +645,11 @@
                 },
                 forceNiceScale: true,
                 tickAmount: 5,
-                opposite: false  // This ensures axis appears on left side
+                opposite: false,  // This ensures axis appears on left side
+                title: {
+                    text: 'Price ($)',
+                    offsetX: -10
+                }
             },
             tooltip: {
                 shared: false,
@@ -648,8 +695,18 @@
                 padding: {
                     left: 15,
                     right: 15,
-                    top: 10,
+                    top: 50,  // Increased top padding to prevent overlap
                     bottom: 10
+                },
+                xaxis: {
+                    lines: {
+                        show: true
+                    }
+                },
+                yaxis: {
+                    lines: {
+                        show: true
+                    }
                 }
             },
             noData: { text: 'No chart data available.' },
@@ -686,7 +743,33 @@
             legend: {
                 show: true,
                 position: 'top',
-                horizontalAlign: 'right'
+                horizontalAlign: 'right',
+                floating: true,
+                offsetY: -5,
+                offsetX: -5,
+                itemMargin: {
+                    horizontal: 10,
+                    vertical: 0
+                },
+                onItemClick: {
+                    toggleDataSeries: false
+                },
+                onItemHover: {
+                    highlightDataSeries: true
+                },
+                markers: {
+                    width: 12,
+                    height: 12,
+                    strokeWidth: 0,
+                    strokeColor: '#fff',
+                    radius: 12,
+                    offsetX: 0,
+                    offsetY: 0
+                },
+                formatter: function(seriesName, opts) {
+                    // Add extra spacing between legend items
+                    return ['   ' + seriesName + '   '];
+                }
             },
             dataLabels: {
                 enabled: false

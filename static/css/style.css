@@ -186,9 +186,12 @@ h2 {
     white-space: nowrap;
 }
 
-.stock-box.active .stock-name,
+.stock-box.active .stock-name {
+    color: rgba(255, 255, 255, 0.9);
+}
+
 .stock-box:hover .stock-name {
-    color: #e9ecef;
+    color: #4f8cff;
 }
 
 /* Card and Chart Styles */
