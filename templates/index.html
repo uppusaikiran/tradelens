@@ -905,5 +905,194 @@
         }
     });
     </script>
+    
+    <!-- Chat Bot -->
+    <div class="chat-bot-container">
+        <div class="chat-bot-header">
+            <div class="chat-bot-title">
+                Stock Assistant
+                <span id="ai-badge" class="ai-badge">AI Powered</span>
+            </div>
+            <div class="chat-bot-actions">
+                <button class="chat-bot-clear" title="Clear Chat">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M2.5 1a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1H3v9a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4h.5a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H10a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1H2.5zm3 4a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 .5-.5zM8 5a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7A.5.5 0 0 1 8 5zm3 .5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 1 0z"/>
+                    </svg>
+                </button>
+                <button class="chat-bot-toggle" title="Toggle Chat">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                        <path d="M11 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm-7 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+                        <path d="M4.285 12.433a.5.5 0 0 0 .683-.183A3.498 3.498 0 0 1 8 10.5c1.295 0 2.426.703 3.032 1.75a.5.5 0 0 0 .866-.5A4.498 4.498 0 0 0 8 9.5a4.5 4.5 0 0 0-3.898 2.25.5.5 0 0 0 .183.683z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <div class="chat-bot-body">
+            <div class="chat-bot-messages">
+                <div class="chat-bot-message bot">
+                    <div class="chat-bot-message-content">
+                        Hello! How can I help you with your stock portfolio today?
+                    </div>
+                </div>
+            </div>
+            <div class="chat-bot-input-container">
+                <input type="text" class="chat-bot-input" placeholder="Ask a question...">
+                <button class="chat-bot-send">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M15.964.686a.5.5 0 0 0-.65-.65L.767 5.855H.766l-.452.18a.5.5 0 0 0-.082.887l.41.26.001.002 4.995 3.178 3.178 4.995.002.002.26.41a.5.5 0 0 0 .886-.083l6-15a.5.5 0 0 0-.084-.562z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // Chat Bot JavaScript
+    document.addEventListener('DOMContentLoaded', function() {
+        const chatBotContainer = document.querySelector('.chat-bot-container');
+        const chatBotToggle = document.querySelector('.chat-bot-toggle');
+        const chatBotClear = document.querySelector('.chat-bot-clear');
+        const chatBotMessages = document.querySelector('.chat-bot-messages');
+        const chatBotInput = document.querySelector('.chat-bot-input');
+        const chatBotSend = document.querySelector('.chat-bot-send');
+        const aiBadge = document.getElementById('ai-badge');
+        
+        // Check if AI APIs are available
+        fetch('/api/chat', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ message: 'check_api' }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.api_available === false) {
+                aiBadge.style.display = 'none';
+                addMessage("I'm operating in basic mode. For full AI capabilities, configure an OpenAI or Perplexity API key.", 'bot');
+            } else {
+                if (data.openai_available) {
+                    aiBadge.textContent = 'OpenAI Powered';
+                    aiBadge.setAttribute('data-provider', 'openai');
+                } else if (data.perplexity_available) {
+                    aiBadge.textContent = 'Perplexity Powered';
+                    aiBadge.setAttribute('data-provider', 'perplexity');
+                }
+            }
+        })
+        .catch(error => {
+            aiBadge.style.display = 'none';
+            console.error('Error checking API:', error);
+        });
+        
+        // Toggle chat bot visibility
+        chatBotToggle.addEventListener('click', () => {
+            chatBotContainer.classList.toggle('collapsed');
+        });
+        
+        // Clear chat messages
+        chatBotClear.addEventListener('click', () => {
+            // Keep only the first welcome message
+            while (chatBotMessages.children.length > 1) {
+                chatBotMessages.removeChild(chatBotMessages.lastChild);
+            }
+        });
+        
+        // Send message on button click
+        chatBotSend.addEventListener('click', sendMessage);
+        
+        // Send message on Enter key
+        chatBotInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+        
+        function sendMessage() {
+            const message = chatBotInput.value.trim();
+            if (!message) return;
+            
+            // Add user message to chat
+            addMessage(message, 'user');
+            chatBotInput.value = '';
+            
+            // Process the message and get a response
+            processMessage(message);
+        }
+        
+        function addMessage(message, sender) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('chat-bot-message', sender);
+            
+            const messageContent = document.createElement('div');
+            messageContent.classList.add('chat-bot-message-content');
+            messageContent.textContent = message;
+            
+            messageElement.appendChild(messageContent);
+            chatBotMessages.appendChild(messageElement);
+            
+            // Scroll to bottom
+            chatBotMessages.scrollTop = chatBotMessages.scrollHeight;
+        }
+        
+        function processMessage(message) {
+            // Show typing indicator
+            const typingIndicator = document.createElement('div');
+            typingIndicator.classList.add('chat-bot-message', 'bot', 'typing');
+            typingIndicator.innerHTML = '<div class="chat-bot-message-content"><div class="typing-indicator"><span></span><span></span><span></span></div></div>';
+            chatBotMessages.appendChild(typingIndicator);
+            
+            // Disable input while processing
+            chatBotInput.disabled = true;
+            chatBotSend.disabled = true;
+            
+            // Make API call to get bot response
+            fetch('/api/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ message: message }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Remove typing indicator
+                chatBotMessages.removeChild(typingIndicator);
+                
+                // Add bot response
+                addMessage(data.response, 'bot');
+                
+                // Update AI badge if provider information is available
+                if (data.provider) {
+                    if (data.provider === 'openai') {
+                        aiBadge.textContent = 'OpenAI Powered';
+                        aiBadge.setAttribute('data-provider', 'openai');
+                    } else if (data.provider === 'perplexity') {
+                        aiBadge.textContent = 'Perplexity Powered';
+                        aiBadge.setAttribute('data-provider', 'perplexity');
+                    }
+                }
+                
+                // Re-enable input
+                chatBotInput.disabled = false;
+                chatBotSend.disabled = false;
+                chatBotInput.focus();
+            })
+            .catch(error => {
+                // Remove typing indicator
+                chatBotMessages.removeChild(typingIndicator);
+                
+                // Add error message
+                addMessage('Sorry, I encountered an error while processing your request.', 'bot');
+                console.error('Error:', error);
+                
+                // Re-enable input
+                chatBotInput.disabled = false;
+                chatBotSend.disabled = false;
+            });
+        }
+    });
+    </script>
 </body>
 </html> 

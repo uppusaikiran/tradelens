@@ -22,6 +22,10 @@ A web-based tool to analyze and visualize your Robinhood stock transactions. Upl
 - 🎯 Click on chart markers to highlight corresponding transactions
 - 📂 Easy CSV file upload
 - 💼 MAG7 stocks categorization
+- 🤖 AI-powered chat assistant with:
+  - OpenAI integration
+  - Perplexity API fallback
+  - Basic fallback mode without API keys
 
 ## Getting Started
 
@@ -60,6 +64,12 @@ pip install -r requirements.txt
 ```
 http://localhost:5000
 ```
+
+3. (Optional) Setup with AI chat capabilities:
+```bash
+./setup_env.sh YOUR_OPENAI_API_KEY [YOUR_PERPLEXITY_API_KEY]
+```
+If the OpenAI API encounters rate limits or errors, the system will automatically fall back to Perplexity AI if a key is provided.
 
 ### Data Format
 

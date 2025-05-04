@@ -1,4 +1,7 @@
 flask==2.3.3
 numpy
 pandas
-yfinance==0.2.54
+yfinance==0.2.58
+openai>=1.0.0
+python-dotenv
+httpx>=0.28.1

@@ -11,6 +11,14 @@ if ! command_exists python3; then
     exit 1
 fi
 
+# Check if the OPENAI_API_KEY environment variable is set
+if [ -z "$OPENAI_API_KEY" ]; then
+    echo "Warning: OPENAI_API_KEY environment variable is not set."
+    echo "The chatbot will fall back to static responses."
+    echo "To enable ChatGPT integration, run: ./setup_env.sh YOUR_OPENAI_API_KEY"
+    echo ""
+fi
+
 # Check if virtualenv is installed
 if ! command_exists virtualenv; then
     echo "Installing virtualenv..."
@@ -45,4 +53,4 @@ echo "You can now upload your CSV file through the web interface."
 export FLASK_APP=app.py
 export FLASK_ENV=development
 export FLASK_DEBUG=1
-flask run --host=0.0.0.0 --port=3000 
+flask run --host=0.0.0.0 --port=5000

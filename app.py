@@ -7,6 +7,9 @@ import sqlite3
 import yfinance as yf
 import time
 from init_db import init_db
+from openai import OpenAI
+import openai
+from dotenv import load_dotenv
 
 # Define MAG7 stocks
 MAG7_STOCKS = {
@@ -18,6 +21,20 @@ MAG7_STOCKS = {
     'NVDA': 'NVIDIA Corporation',
     'TSLA': 'Tesla Inc.'
 }
+
+# Load environment variables
+load_dotenv()
+
+# Initialize OpenAI client
+openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+
+# Initialize Perplexity client (fallback)
+perplexity_client = None
+if os.getenv('PERPLEXITY_API_KEY'):
+    perplexity_client = OpenAI(
+        api_key=os.getenv('PERPLEXITY_API_KEY'),
+        base_url="https://api.perplexity.ai"
+    )
 
 # Cache for stock splits
 split_cache = {}
@@ -746,5 +763,148 @@ def upload_file():
     
     return redirect(url_for('index'))
 
+@app.route('/api/chat', methods=['POST'])
+def chat():
+    """API endpoint to process chat messages and return responses using ChatGPT API"""
+    data = request.get_json()
+    message = data.get('message', '')
+    
+    # Check if we're just checking API availability
+    if message == 'check_api':
+        openai_available = bool(os.getenv('OPENAI_API_KEY'))
+        perplexity_available = bool(os.getenv('PERPLEXITY_API_KEY'))
+        return jsonify({
+            "openai_available": openai_available,
+            "perplexity_available": perplexity_available,
+            "api_available": openai_available or perplexity_available
+        })
+    
+    if not message:
+        return jsonify({"response": "Please enter a message."})
+    
+    # Get application context to provide to AI models
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT COUNT(*) FROM transactions')
+    total_transactions = cursor.fetchone()[0]
+    cursor.execute('SELECT DISTINCT Symbol FROM transactions')
+    symbols = [row['Symbol'] for row in cursor.fetchall()]
+    conn.close()
+    
+    context = f"""
+    You are a helpful assistant for a stock transactions analyzer application.
+    The app allows users to analyze their stock portfolio and transactions.
+    
+    Key application features:
+    - View stock transactions with filtering options (buy/sell, date ranges)
+    - Charts showing stock price history and transaction points
+    - MAG7 stocks section (Apple, Microsoft, Google, Amazon, Meta, NVIDIA, Tesla)
+    - Other stocks section
+    - Unlisted stocks section
+    
+    The user has {total_transactions} total stock transactions in their portfolio.
+    Their portfolio includes stocks like: {', '.join(symbols[:10])}
+    
+    Keep your responses concise, focused on stocks and the application features.
+    """
+    
+    # Try OpenAI first if available
+    if os.getenv('OPENAI_API_KEY'):
+        try:
+            # Call OpenAI API
+            response = openai_client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": context},
+                    {"role": "user", "content": message}
+                ],
+                max_tokens=300,
+                temperature=0.7
+            )
+            
+            # Extract the response text
+            chat_response = response.choices[0].message.content.strip()
+            return jsonify({"response": chat_response, "provider": "openai"})
+            
+        except (openai.RateLimitError, openai.APIError) as e:
+            print(f"OpenAI API error (possibly rate limit): {str(e)}")
+            # Check if we have Perplexity as a fallback
+            if perplexity_client:
+                print("Falling back to Perplexity API...")
+                # Continue to Perplexity fallback
+            else:
+                # No Perplexity fallback, use simple chat
+                print("No Perplexity fallback available, using simple chat")
+                return handle_simple_chat(message)
+                
+        except Exception as e:
+            print(f"Error calling OpenAI API: {str(e)}")
+            if perplexity_client:
+                print("Falling back to Perplexity API due to general error...")
+                # Continue to Perplexity fallback
+            else:
+                # Fallback to simple response if API fails
+                return handle_simple_chat(message)
+    
+    # Try Perplexity if OpenAI failed or isn't available
+    if perplexity_client:
+        try:
+            # Call Perplexity API using the OpenAI client interface
+            response = perplexity_client.chat.completions.create(
+                model="llama-3.1-sonar-small-128k-online",  # Use an appropriate Perplexity model
+                messages=[
+                    {"role": "system", "content": context},
+                    {"role": "user", "content": message}
+                ],
+                max_tokens=300
+            )
+            
+            # Extract the response text
+            chat_response = response.choices[0].message.content.strip()
+            return jsonify({"response": chat_response, "provider": "perplexity"})
+            
+        except Exception as e:
+            print(f"Error calling Perplexity API: {str(e)}")
+            # Fallback to simple response if both APIs fail
+            return handle_simple_chat(message)
+    
+    # If we got here, neither API is available or both failed
+    return handle_simple_chat(message)
+
+def handle_simple_chat(message):
+    """Fallback to simple responses if API is not available"""
+    message = message.lower()
+    
+    # Simple response logic based on keywords
+    if 'hello' in message or 'hi' in message:
+        response = "Hello! How can I help you with your stock portfolio today?"
+    elif 'help' in message:
+        response = "I can help you analyze your stock transactions. Try asking about specific stocks, transaction history, or general market information."
+    elif any(word in message for word in ['stock', 'stocks', 'portfolio']):
+        response = "Your portfolio contains various stocks. You can view detailed information by clicking on specific stocks in the main view."
+    elif any(word in message for word in ['transaction', 'transactions', 'history']):
+        response = "Your transaction history is displayed in the main table. You can filter by stock, transaction type, and date range."
+    elif 'mag7' in message or 'magnificent 7' in message:
+        response = "The Magnificent Seven (MAG7) are: Apple (AAPL), Microsoft (MSFT), Alphabet/Google (GOOGL), Amazon (AMZN), Meta/Facebook (META), NVIDIA (NVDA), and Tesla (TSLA)."
+    elif 'chart' in message or 'graph' in message:
+        response = "Charts are displayed when you select a specific stock. They show price history and your buy/sell transactions."
+    elif 'filter' in message:
+        response = "You can filter transactions by stock symbol, transaction type (buy/sell), and date range using the buttons above the transaction table."
+    elif 'buy' in message or 'sell' in message:
+        response = "Your buy and sell transactions are color-coded in the transaction table. You can also filter to show only buys or sells."
+    elif 'clear' in message:
+        response = "You can clear our conversation by clicking the trash icon in the top-right corner of this chat window."
+    elif 'thanks' in message or 'thank you' in message:
+        response = "You're welcome! Let me know if you have any other questions."
+    elif 'bye' in message or 'goodbye' in message:
+        response = "Goodbye! Feel free to chat again if you have more questions."
+    else:
+        response = "I'm sorry, I don't have specific information about that. Try asking about your stock portfolio, transactions, or how to use this application."
+    
+    return jsonify({"response": response})
+
+
 if __name__ == '__main__':
+    # Make sure the database exists
+    init_db()
     app.run(debug=True) 

@@ -518,4 +518,306 @@ tr.highlighted-row td {
 
 .table-hover tbody tr.split-adjusted:hover {
     background-color: rgba(79, 140, 255, 0.15) !important;
+}
+
+/* Chat Bot Styles */
+.chat-bot-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 350px;
+    height: 500px;
+    background-color: #fff;
+    border-radius: 15px;
+    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.15);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    z-index: 1000;
+}
+
+.chat-bot-container.collapsed {
+    height: 60px;
+    width: 350px;
+}
+
+.chat-bot-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background: linear-gradient(90deg, #4f8cff 0%, #6bb7ff 100%);
+    color: white;
+    border-top-left-radius: 15px;
+    border-top-right-radius: 15px;
+}
+
+.chat-bot-title {
+    font-weight: 600;
+    font-size: 16px;
+}
+
+.chat-bot-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.chat-bot-clear, 
+.chat-bot-toggle {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+.chat-bot-clear:hover, 
+.chat-bot-toggle:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.chat-bot-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.chat-bot-container.collapsed .chat-bot-body {
+    display: none;
+}
+
+.chat-bot-messages {
+    flex: 1;
+    padding: 15px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.chat-bot-message {
+    max-width: 80%;
+    padding: 10px 15px;
+    border-radius: 18px;
+    margin-bottom: 5px;
+    position: relative;
+}
+
+.chat-bot-message.user {
+    align-self: flex-end;
+    background-color: #4f8cff;
+    color: white;
+    border-bottom-right-radius: 5px;
+}
+
+.chat-bot-message.bot {
+    align-self: flex-start;
+    background-color: #f0f2f5;
+    color: #333;
+    border-bottom-left-radius: 5px;
+}
+
+.chat-bot-message-content {
+    word-wrap: break-word;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.chat-bot-input-container {
+    display: flex;
+    padding: 10px;
+    border-top: 1px solid #eee;
+    background-color: #fff;
+}
+
+.chat-bot-input {
+    flex: 1;
+    padding: 10px 15px;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.chat-bot-input:focus {
+    border-color: #4f8cff;
+}
+
+.chat-bot-send {
+    background-color: #4f8cff;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    margin-left: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+}
+
+.chat-bot-send:hover {
+    background-color: #357ae8;
+}
+
+/* Typing indicator animation */
+.typing-indicator {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.typing-indicator span {
+    width: 8px;
+    height: 8px;
+    background-color: #999;
+    border-radius: 50%;
+    display: inline-block;
+    animation: bounce 1.5s infinite ease-in-out;
+}
+
+.typing-indicator span:nth-child(1) {
+    animation-delay: 0s;
+}
+
+.typing-indicator span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.typing-indicator span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes bounce {
+    0%, 60%, 100% {
+        transform: translateY(0);
+    }
+    30% {
+        transform: translateY(-5px);
+    }
+}
+
+/* Mobile responsiveness for chat bot */
+@media (max-width: 576px) {
+    .chat-bot-container {
+        width: 300px;
+        height: 450px;
+        bottom: 10px;
+        right: 10px;
+    }
+    
+    .chat-bot-container.collapsed {
+        width: 300px;
+    }
+}
+
+/* AI badge for chat bot */
+.ai-badge {
+    display: inline-block;
+    background: linear-gradient(90deg, #10a37f 0%, #0d8a6c 100%);
+    color: white;
+    font-size: 10px;
+    border-radius: 10px;
+    padding: 2px 8px;
+    margin-left: 10px;
+    vertical-align: middle;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    box-shadow: 0 2px 5px rgba(16, 163, 127, 0.3);
+    animation: pulse 2s infinite ease-in-out;
+}
+
+/* OpenAI specific badge */
+.ai-badge[data-provider="openai"] {
+    background: linear-gradient(90deg, #10a37f 0%, #0d8a6c 100%);
+    box-shadow: 0 2px 5px rgba(16, 163, 127, 0.3);
+}
+
+/* Perplexity specific badge */
+.ai-badge[data-provider="perplexity"] {
+    background: linear-gradient(90deg, #0055ff 0%, #0044cc 100%);
+    box-shadow: 0 2px 5px rgba(0, 85, 255, 0.3);
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(16, 163, 127, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 6px rgba(16, 163, 127, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(16, 163, 127, 0);
+    }
+}
+
+/* Enhanced typing indicator */
+.typing-indicator {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 0;
+}
+
+.typing-indicator span {
+    width: 8px;
+    height: 8px;
+    background: linear-gradient(90deg, #10a37f 0%, #0d8a6c 100%);
+    border-radius: 50%;
+    display: inline-block;
+    animation: bounce 1.5s infinite ease-in-out;
+    opacity: 0.7;
+}
+
+.typing-indicator span:nth-child(1) {
+    animation-delay: 0s;
+}
+
+.typing-indicator span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.typing-indicator span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes bounce {
+    0%, 60%, 100% {
+        transform: translateY(0);
+    }
+    30% {
+        transform: translateY(-5px);
+    }
+}
+
+/* Disabled state for chat input */
+.chat-bot-input:disabled, 
+.chat-bot-send:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+/* Animation for new messages */
+.chat-bot-message {
+    animation: messageAppear 0.3s ease-out forwards;
+    opacity: 0;
+    transform: translateY(10px);
+}
+
+@keyframes messageAppear {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 } 
