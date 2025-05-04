@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stock Transactions Analyzer</title>
+    <title>TradeLens</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -162,7 +162,7 @@
         <div class="container-fluid">
             <a class="navbar-brand d-flex align-items-center" href="/">
                 <img src="{{ url_for('static', filename='logo.png') }}" alt="App Logo" class="title-icon mr-2" style="width:1.8rem;height:1.8rem;">
-                Stock Transactions Analyzer
+                TradeLens
             </a>
             <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data" class="ml-auto">
                 <div class="file-upload-container">
@@ -294,6 +294,9 @@
         {% if current_filter %}
         <div class="row mb-2">
             <div class="col-12 d-flex flex-wrap align-items-center justify-content-between">
+                <!-- Hidden field to store current stock symbol for the chat feature -->
+                <input type="hidden" id="currentFilter" value="{{ current_filter }}">
+                
                 <div class="btn-group mb-2" role="group" aria-label="Transaction Side Filter">
                     <a href="{{ url_for('stock_detail', symbol=current_filter, side='all', range=selected_range) }}" class="btn btn-outline-primary {% if selected_side == 'all' %}active{% endif %}">All</a>
                     <a href="{{ url_for('stock_detail', symbol=current_filter, side='buy', range=selected_range) }}" class="btn btn-outline-success {% if selected_side == 'buy' %}active{% endif %}">Buy</a>
@@ -530,6 +533,7 @@
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     
     <script>
     // Improved scrolling function with prevention of page jumping
@@ -958,6 +962,10 @@
         const chatBotSend = document.querySelector('.chat-bot-send');
         const aiBadge = document.getElementById('ai-badge');
         
+        // Check if we're on a stock detail page
+        const currentFilter = document.getElementById('currentFilter');
+        const currentStock = currentFilter ? currentFilter.value : null;
+        
         // Check if AI APIs are available
         fetch('/api/chat', {
             method: 'POST',
@@ -978,6 +986,43 @@
                 } else if (data.perplexity_available) {
                     aiBadge.textContent = 'Perplexity Powered';
                     aiBadge.setAttribute('data-provider', 'perplexity');
+                }
+                
+                // Add stock-specific suggestions if on stock detail page
+                if (currentStock && data.api_available) {
+                    setTimeout(() => {
+                        const suggestionMessage = document.createElement('div');
+                        suggestionMessage.classList.add('chat-bot-message', 'bot');
+                        
+                        const suggestionContent = document.createElement('div');
+                        suggestionContent.classList.add('chat-bot-message-content');
+                        suggestionContent.innerHTML = `
+                            <p><strong>${currentStock} Analysis</strong> - Ask me about:</p>
+                            <div class="chat-suggestions">
+                                <button class="chat-suggestion" data-text="Is it a good time to buy ${currentStock} based on my transaction history?">
+                                    <span>📈 Is it a good time to buy?</span>
+                                </button>
+                                <button class="chat-suggestion" data-text="Have I made impulse buys or panic sells with ${currentStock}?">
+                                    <span>🧠 Analyze my trading pattern</span>
+                                </button>
+                            </div>
+                        `;
+                        
+                        suggestionMessage.appendChild(suggestionContent);
+                        chatBotMessages.appendChild(suggestionMessage);
+                        
+                        // Add event listeners for suggestion buttons
+                        document.querySelectorAll('.chat-suggestion').forEach(button => {
+                            button.addEventListener('click', function() {
+                                const text = this.getAttribute('data-text');
+                                chatBotInput.value = text;
+                                sendMessage();
+                            });
+                        });
+                        
+                        // Scroll to bottom
+                        chatBotMessages.scrollTop = chatBotMessages.scrollHeight;
+                    }, 1000);
                 }
             }
         })
@@ -1027,7 +1072,63 @@
             
             const messageContent = document.createElement('div');
             messageContent.classList.add('chat-bot-message-content');
-            messageContent.textContent = message;
+            
+            if (sender === 'bot') {
+                // Use marked to parse markdown
+                const parsedMessage = marked.parse(message);
+                messageContent.innerHTML = parsedMessage;
+                
+                // Add specific styling for markdown elements
+                messageContent.querySelectorAll('code').forEach(code => {
+                    code.style.backgroundColor = 'rgba(79, 140, 255, 0.1)';
+                    code.style.padding = '2px 6px';
+                    code.style.borderRadius = '4px';
+                    code.style.fontFamily = 'monospace';
+                    code.style.fontSize = '0.9em';
+                });
+                
+                messageContent.querySelectorAll('pre').forEach(pre => {
+                    pre.style.backgroundColor = '#f8f9fa';
+                    pre.style.padding = '12px';
+                    pre.style.borderRadius = '6px';
+                    pre.style.overflowX = 'auto';
+                    pre.style.margin = '8px 0';
+                });
+                
+                messageContent.querySelectorAll('a').forEach(link => {
+                    link.style.color = '#4f8cff';
+                    link.style.textDecoration = 'none';
+                    link.target = '_blank';
+                });
+                
+                messageContent.querySelectorAll('ul, ol').forEach(list => {
+                    list.style.paddingLeft = '20px';
+                    list.style.margin = '8px 0';
+                });
+                
+                messageContent.querySelectorAll('li').forEach(item => {
+                    item.style.margin = '4px 0';
+                });
+                
+                messageContent.querySelectorAll('p').forEach(p => {
+                    p.style.margin = '8px 0';
+                });
+                
+                messageContent.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach(heading => {
+                    heading.style.margin = '16px 0 8px 0';
+                    heading.style.fontWeight = 'bold';
+                });
+                
+                messageContent.querySelectorAll('blockquote').forEach(quote => {
+                    quote.style.borderLeft = '3px solid #4f8cff';
+                    quote.style.paddingLeft = '12px';
+                    quote.style.margin = '8px 0';
+                    quote.style.color = '#666';
+                    quote.style.fontStyle = 'italic';
+                });
+            } else {
+                messageContent.textContent = message;
+            }
             
             messageElement.appendChild(messageContent);
             chatBotMessages.appendChild(messageElement);
@@ -1047,31 +1148,58 @@
             chatBotInput.disabled = true;
             chatBotSend.disabled = true;
             
+            // Check if we're on a stock detail page
+            const currentFilter = document.getElementById('currentFilter');
+            const currentStock = currentFilter ? currentFilter.value : null;
+            
             // Make API call to get bot response
             fetch('/api/chat', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ message: message }),
+                body: JSON.stringify({ 
+                    message: message,
+                    stock: currentStock
+                }),
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
                 // Remove typing indicator
                 chatBotMessages.removeChild(typingIndicator);
                 
-                // Add bot response
-                addMessage(data.response, 'bot');
+                if (!data.response) {
+                    throw new Error('Empty response received');
+                }
+                
+                // Check if response seems truncated
+                const truncationIndicators = [
+                    '...', '…',
+                    data.response.endsWith('.') && !data.response.endsWith('...'),
+                    data.response.endsWith(','),
+                    data.response.endsWith(':'),
+                    data.response.endsWith('('),
+                    data.response.endsWith('{')
+                ];
+                
+                if (truncationIndicators.some(indicator => 
+                    typeof indicator === 'boolean' ? indicator : data.response.endsWith(indicator))) {
+                    // Add warning about truncated response
+                    addMessage(data.response + '\n\n_Note: This response might be truncated. Please ask for clarification if needed._', 'bot');
+                } else {
+                    // Add complete response
+                    addMessage(data.response, 'bot');
+                }
                 
                 // Update AI badge if provider information is available
                 if (data.provider) {
-                    if (data.provider === 'openai') {
-                        aiBadge.textContent = 'OpenAI Powered';
-                        aiBadge.setAttribute('data-provider', 'openai');
-                    } else if (data.provider === 'perplexity') {
-                        aiBadge.textContent = 'Perplexity Powered';
-                        aiBadge.setAttribute('data-provider', 'perplexity');
-                    }
+                    aiBadge.textContent = `${data.provider.charAt(0).toUpperCase() + data.provider.slice(1)} Powered`;
+                    aiBadge.setAttribute('data-provider', data.provider);
                 }
                 
                 // Re-enable input
@@ -1080,17 +1208,39 @@
                 chatBotInput.focus();
             })
             .catch(error => {
+                console.error('Error:', error);
                 // Remove typing indicator
                 chatBotMessages.removeChild(typingIndicator);
                 
-                // Add error message
-                addMessage('Sorry, I encountered an error while processing your request.', 'bot');
-                console.error('Error:', error);
+                // Add error message with retry button
+                const errorMessage = document.createElement('div');
+                errorMessage.classList.add('chat-bot-message', 'bot', 'error');
+                errorMessage.innerHTML = `
+                    <div class="chat-bot-message-content">
+                        <p>Sorry, I encountered an error while processing your request.</p>
+                        <button class="retry-button" onclick="retryMessage('${message.replace(/'/g, "\\'")}')">
+                            Retry
+                        </button>
+                    </div>
+                `;
+                chatBotMessages.appendChild(errorMessage);
                 
                 // Re-enable input
                 chatBotInput.disabled = false;
                 chatBotSend.disabled = false;
             });
+        }
+        
+        // Add retry functionality
+        function retryMessage(message) {
+            // Remove the error message
+            const errorMessage = document.querySelector('.chat-bot-message.error');
+            if (errorMessage) {
+                errorMessage.remove();
+            }
+            
+            // Retry the message
+            processMessage(message);
         }
     });
     </script>

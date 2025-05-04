@@ -768,6 +768,7 @@ def chat():
     """API endpoint to process chat messages and return responses using ChatGPT API"""
     data = request.get_json()
     message = data.get('message', '')
+    current_stock = data.get('stock', None)  # Get the current stock from the request
     
     # Check if we're just checking API availability
     if message == 'check_api':
@@ -789,6 +790,85 @@ def chat():
     total_transactions = cursor.fetchone()[0]
     cursor.execute('SELECT DISTINCT Symbol FROM transactions')
     symbols = [row['Symbol'] for row in cursor.fetchall()]
+    
+    # Stock-specific context if the user is viewing a stock page
+    stock_specific_context = ""
+    if current_stock:
+        # Get current stock price and recent performance
+        price_data = get_stock_price(current_stock)
+        
+        # Get transactions for this specific stock
+        cursor.execute('''
+            SELECT * FROM transactions 
+            WHERE Symbol = ? 
+            ORDER BY Date DESC, Time DESC
+        ''', (current_stock,))
+        stock_transactions = cursor.fetchall()
+        
+        # Calculate stats for this stock
+        stats = calculate_transaction_stats(stock_transactions)
+        
+        # Calculate average buy/sell prices
+        total_buy_amount = 0
+        total_buy_qty = 0
+        total_sell_amount = 0
+        total_sell_qty = 0
+        
+        for tx in stock_transactions:
+            try:
+                qty = float(tx['Qty'])
+                price = float(tx['AveragePrice'])
+                amount = price * qty
+                
+                if tx['Side'].lower() == 'buy':
+                    total_buy_amount += amount
+                    total_buy_qty += qty
+                elif tx['Side'].lower() == 'sell':
+                    total_sell_amount += amount
+                    total_sell_qty += qty
+            except (ValueError, TypeError):
+                continue
+        
+        avg_buy_price = total_buy_amount / total_buy_qty if total_buy_qty > 0 else 0
+        avg_sell_price = total_sell_amount / total_sell_qty if total_sell_qty > 0 else 0
+        
+        # Get the first and last transaction dates
+        cursor.execute('''
+            SELECT MIN(Date), MAX(Date) FROM transactions 
+            WHERE Symbol = ?
+        ''', (current_stock,))
+        first_date, last_date = cursor.fetchone()
+        
+        # Create stock-specific context
+        current_price = price_data.get('current_price', 'Unknown')
+        change_percent = price_data.get('change_percent', 'Unknown')
+        
+        # Format the change percentage correctly
+        if isinstance(change_percent, (int, float)):
+            change_percent_display = f"{change_percent:.2f}%"
+        else:
+            change_percent_display = "Unknown"
+        
+        stock_specific_context = f"""
+        The user is currently viewing the {current_stock} stock page.
+        
+        Stock details:
+        - Current price: ${current_price if current_price != 'Unknown' else 'Unknown'}
+        - Today's change: {change_percent_display}
+        - User's average buy price: ${avg_buy_price:.2f}
+        - User's average sell price: ${avg_sell_price:.2f}
+        - First transaction: {first_date}
+        - Most recent transaction: {last_date}
+        - Total shares bought: {stats['total_stocks_bought']}
+        - Total shares sold: {stats['total_stocks_sold']}
+        - Net shares: {stats['total_stocks_bought'] - stats['total_stocks_sold']}
+        
+        The user may want recommendations about:
+        1. Is it the right time to buy {current_stock} based on their transaction history and current price
+        2. Whether they have made impulse buys or panic sells with this stock
+        3. Analysis of their trading pattern with {current_stock}
+        """
+    
     conn.close()
     
     context = f"""
@@ -805,7 +885,10 @@ def chat():
     The user has {total_transactions} total stock transactions in their portfolio.
     Their portfolio includes stocks like: {', '.join(symbols[:10])}
     
+    {stock_specific_context}
+    
     Keep your responses concise, focused on stocks and the application features.
+    If the user asks about buy timing or trading patterns for the current stock, provide personalized insights based on their transaction history.
     """
     
     # Try OpenAI first if available
@@ -818,8 +901,11 @@ def chat():
                     {"role": "system", "content": context},
                     {"role": "user", "content": message}
                 ],
-                max_tokens=300,
-                temperature=0.7
+                max_tokens=1000,  # Increased from 300 to 1000
+                temperature=0.7,
+                presence_penalty=0.6,  # Add presence penalty to encourage complete responses
+                frequency_penalty=0.2,  # Add frequency penalty
+                stream=False  # Ensure we get complete responses
             )
             
             # Extract the response text
@@ -835,7 +921,7 @@ def chat():
             else:
                 # No Perplexity fallback, use simple chat
                 print("No Perplexity fallback available, using simple chat")
-                return handle_simple_chat(message)
+                return handle_simple_chat(message, current_stock)
                 
         except Exception as e:
             print(f"Error calling OpenAI API: {str(e)}")
@@ -844,7 +930,7 @@ def chat():
                 # Continue to Perplexity fallback
             else:
                 # Fallback to simple response if API fails
-                return handle_simple_chat(message)
+                return handle_simple_chat(message, current_stock)
     
     # Try Perplexity if OpenAI failed or isn't available
     if perplexity_client:
@@ -866,14 +952,25 @@ def chat():
         except Exception as e:
             print(f"Error calling Perplexity API: {str(e)}")
             # Fallback to simple response if both APIs fail
-            return handle_simple_chat(message)
+            return handle_simple_chat(message, current_stock)
     
     # If we got here, neither API is available or both failed
-    return handle_simple_chat(message)
+    return handle_simple_chat(message, current_stock)
 
-def handle_simple_chat(message):
+def handle_simple_chat(message, current_stock=None):
     """Fallback to simple responses if API is not available"""
     message = message.lower()
+    
+    # Stock-specific recommendations if user is viewing a stock page
+    if current_stock and ('time to buy' in message or 'right time' in message or 'good buy' in message):
+        return jsonify({
+            "response": f"Without access to real-time market data, I can't provide specific buy recommendations for {current_stock}. Consider checking the price chart and your transaction history to identify your own patterns. You might also want to research recent news about {current_stock} before making any decisions."
+        })
+    
+    if current_stock and ('impulse' in message or 'panic' in message or 'emotion' in message or 'pattern' in message):
+        return jsonify({
+            "response": f"To analyze your trading patterns with {current_stock}, I'd need to evaluate your transaction timing and price points. Look at your transaction history - do you see a pattern of buying at peaks or selling at lows? Consider enabling API access for more personalized insights on your trading patterns."
+        })
     
     # Simple response logic based on keywords
     if 'hello' in message or 'hi' in message:
