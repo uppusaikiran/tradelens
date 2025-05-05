@@ -15,6 +15,12 @@
             border: 1px solid #e9ecef;
         }
         
+        .chart-container {
+            height: 300px;
+            width: 100%;
+            margin-bottom: 15px;
+        }
+        
         .risk-card-header {
             background: linear-gradient(90deg, #e04d4d 0%, #e87676 100%);
             color: white;
@@ -241,6 +247,43 @@
         <h2 class="mb-3">Risk Analysis</h2>
         
         {% if portfolio %}
+            <!-- Visual Risk Overview -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card h-100 risk-card">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">Sector Allocation</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="sectorAllocationChart" class="chart-container"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card h-100 risk-card">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0">Risk Distribution</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="riskDistributionChart" class="chart-container"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="card risk-card">
+                        <div class="card-header bg-secondary text-white">
+                            <h5 class="mb-0">Tariff Impact by Holding</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="tariffImpactChart" class="chart-container"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
             <!-- Tariff Risk Card -->
             <div class="risk-card">
                 <div class="risk-card-header tariff">
@@ -299,6 +342,19 @@
                     <span class="risk-level risk-level-medium">Medium Risk</span>
                 </div>
                 <div class="risk-card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <div id="geographicExposureChart" class="chart-container"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- World Map Visual Chart -->
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <div id="geographicRadarChart" class="chart-container"></div>
+                        </div>
+                    </div>
+                    
                     <div class="risk-detail">
                         <div class="risk-detail-title">China Dependence</div>
                         <div class="risk-detail-content">
@@ -325,6 +381,12 @@
                     <span class="risk-level risk-level-medium">Medium Risk</span>
                 </div>
                 <div class="risk-card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <div id="sectorVolatilityChart" class="chart-container"></div>
+                        </div>
+                    </div>
+                    
                     <div class="risk-detail">
                         <div class="risk-detail-title">Technology Sector Exposure</div>
                         <div class="risk-detail-content">
@@ -368,6 +430,7 @@
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <script src="{{ url_for('static', filename='js/chat-integration.js') }}"></script>
     <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
     
@@ -375,6 +438,44 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             console.log('Risk review page loaded');
+            
+            // Debug check for chart containers
+            const chartContainers = {
+                sectorAllocation: document.querySelector("#sectorAllocationChart"),
+                riskDistribution: document.querySelector("#riskDistributionChart"),
+                tariffImpact: document.querySelector("#tariffImpactChart"),
+                geographicExposure: document.querySelector("#geographicExposureChart"),
+                sectorVolatility: document.querySelector("#sectorVolatilityChart")
+            };
+            
+            console.log('Chart containers found:', {
+                sectorAllocation: !!chartContainers.sectorAllocation,
+                riskDistribution: !!chartContainers.riskDistribution,
+                tariffImpact: !!chartContainers.tariffImpact,
+                geographicExposure: !!chartContainers.geographicExposure,
+                sectorVolatility: !!chartContainers.sectorVolatility
+            });
+            
+            // Initialize charts if we have portfolio data
+            {% if portfolio %}
+                // Render sector allocation pie chart
+                renderSectorAllocationChart();
+                
+                // Render risk distribution chart
+                renderRiskDistributionChart();
+                
+                // Render tariff impact chart
+                renderTariffImpactChart();
+                
+                // Render geographic exposure chart
+                renderGeographicExposureChart();
+                
+                // Render geographic radar chart
+                renderGeographicRadarChart();
+                
+                // Render sector volatility chart
+                renderSectorVolatilityChart();
+            {% endif %}
             
             const tariffBtn = document.getElementById('tariff-impact-btn');
             if (tariffBtn) {
@@ -600,6 +701,398 @@
                 }
             }, 500);
         });
+        
+        function renderSectorAllocationChart() {
+            const options = {
+                series: [25, 20, 18, 15, 12, 10],
+                chart: {
+                    type: 'donut',
+                    height: 300
+                },
+                labels: ['Technology', 'Financial Services', 'Healthcare', 'Consumer Cyclical', 'Communication Services', 'Other'],
+                colors: ['#4361ee', '#3f37c9', '#3a0ca3', '#480ca8', '#560bad', '#7209b7'],
+                legend: {
+                    position: 'bottom'
+                },
+                dataLabels: {
+                    enabled: true,
+                    formatter: function (val) {
+                        return val.toFixed(1) + "%"
+                    }
+                },
+                tooltip: {
+                    y: {
+                        formatter: function(val) {
+                            return val + '%'
+                        }
+                    }
+                },
+                plotOptions: {
+                    pie: {
+                        donut: {
+                            labels: {
+                                show: true,
+                                name: {
+                                    show: true
+                                },
+                                value: {
+                                    show: true,
+                                    formatter: function(val) {
+                                        return val + '%'
+                                    }
+                                },
+                                total: {
+                                    show: true,
+                                    label: 'Total',
+                                    formatter: function() {
+                                        return '100%'
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+
+            const chart = new ApexCharts(document.querySelector("#sectorAllocationChart"), options);
+            chart.render();
+        }
+        
+        function renderRiskDistributionChart() {
+            const options = {
+                series: [{
+                    name: 'Risk Level',
+                    data: [
+                        { x: 'High Risk', y: 15, fillColor: '#e74c3c' },
+                        { x: 'Medium Risk', y: 40, fillColor: '#f39c12' },
+                        { x: 'Low Risk', y: 45, fillColor: '#2ecc71' }
+                    ]
+                }],
+                chart: {
+                    type: 'bar',
+                    height: 300
+                },
+                plotOptions: {
+                    bar: {
+                        borderRadius: 4,
+                        horizontal: true,
+                        distributed: true,
+                        dataLabels: {
+                            position: 'top'
+                        }
+                    }
+                },
+                dataLabels: {
+                    enabled: true,
+                    formatter: function (val) {
+                        return val + "%";
+                    },
+                    offsetX: 20,
+                    style: {
+                        fontSize: '12px',
+                        colors: ['#fff']
+                    }
+                },
+                xaxis: {
+                    categories: ['High Risk', 'Medium Risk', 'Low Risk'],
+                    labels: {
+                        formatter: function(val) {
+                            return val + "%";
+                        }
+                    }
+                },
+                yaxis: {
+                    labels: {
+                        show: true
+                    }
+                },
+                title: {
+                    text: 'Portfolio Risk Distribution',
+                    align: 'center',
+                    floating: false
+                },
+                tooltip: {
+                    y: {
+                        formatter: function(val) {
+                            return val + "% of portfolio"
+                        }
+                    }
+                }
+            };
+
+            const chart = new ApexCharts(document.querySelector("#riskDistributionChart"), options);
+            chart.render();
+        }
+        
+        function renderTariffImpactChart() {
+            const options = {
+                series: [{
+                    name: 'Tariff Impact',
+                    data: [
+                        { x: 'AAPL', y: 12.5, fillColor: '#e74c3c' },
+                        { x: 'TSLA', y: 10.2, fillColor: '#e74c3c' },
+                        { x: 'NVDA', y: 8.7, fillColor: '#e74c3c' },
+                        { x: 'MSFT', y: 6.8, fillColor: '#f39c12' },
+                        { x: 'AMD', y: 5.5, fillColor: '#f39c12' },
+                        { x: 'AMZN', y: 4.2, fillColor: '#f39c12' },
+                        { x: 'GOOGL', y: 3.1, fillColor: '#2ecc71' },
+                        { x: 'META', y: 2.5, fillColor: '#2ecc71' }
+                    ]
+                }],
+                chart: {
+                    type: 'bar',
+                    height: 300
+                },
+                plotOptions: {
+                    bar: {
+                        borderRadius: 4,
+                        horizontal: true,
+                        distributed: true
+                    }
+                },
+                dataLabels: {
+                    enabled: false
+                },
+                xaxis: {
+                    categories: ['AAPL', 'TSLA', 'NVDA', 'MSFT', 'AMD', 'AMZN', 'GOOGL', 'META'],
+                    labels: {
+                        formatter: function(val) {
+                            return val + "%";
+                        }
+                    }
+                },
+                yaxis: {
+                    labels: {
+                        show: true
+                    }
+                },
+                title: {
+                    text: 'Estimated Tariff Impact (% of Position Value)',
+                    align: 'center',
+                    floating: false
+                },
+                tooltip: {
+                    y: {
+                        formatter: function(val) {
+                            return val + "% potential impact"
+                        }
+                    }
+                }
+            };
+
+            const chart = new ApexCharts(document.querySelector("#tariffImpactChart"), options);
+            chart.render();
+        }
+        
+        function renderGeographicExposureChart() {
+            const options = {
+                series: [45, 30, 15, 10],
+                chart: {
+                    type: 'pie',
+                    height: 300
+                },
+                labels: ['United States', 'China', 'Europe', 'Other'],
+                colors: ['#2ecc71', '#e74c3c', '#3498db', '#f1c40f'],
+                legend: {
+                    position: 'bottom'
+                },
+                dataLabels: {
+                    enabled: true,
+                    formatter: function (val) {
+                        return val.toFixed(1) + "%"
+                    }
+                },
+                title: {
+                    text: 'Geographic Revenue Exposure',
+                    align: 'center'
+                },
+                tooltip: {
+                    y: {
+                        formatter: function(val) {
+                            return val + '%'
+                        }
+                    }
+                },
+                responsive: [{
+                    breakpoint: 480,
+                    options: {
+                        chart: {
+                            height: 250
+                        },
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }]
+            };
+
+            const chartElement = document.querySelector("#geographicExposureChart");
+            if (!chartElement) {
+                console.error('Geographic exposure chart container not found');
+                return;
+            }
+            
+            try {
+                const chart = new ApexCharts(chartElement, options);
+                chart.render();
+                console.log('Geographic exposure chart rendered successfully');
+            } catch (error) {
+                console.error('Error rendering geographic exposure chart:', error);
+            }
+        }
+        
+        function renderGeographicRadarChart() {
+            const options = {
+                series: [{
+                    name: 'Revenue',
+                    data: [45, 30, 15, 10, 5]
+                }, {
+                    name: 'Manufacturing',
+                    data: [20, 45, 10, 15, 5]
+                }, {
+                    name: 'R&D',
+                    data: [60, 10, 20, 5, 5]
+                }],
+                chart: {
+                    height: 350,
+                    type: 'radar',
+                    dropShadow: {
+                        enabled: true,
+                        blur: 1,
+                        left: 1,
+                        top: 1
+                    }
+                },
+                title: {
+                    text: 'Global Footprint Analysis',
+                    align: 'center'
+                },
+                stroke: {
+                    width: 2
+                },
+                fill: {
+                    opacity: 0.1
+                },
+                markers: {
+                    size: 4,
+                    hover: {
+                        size: 6
+                    }
+                },
+                xaxis: {
+                    categories: ['North America', 'Asia (China)', 'Europe', 'Rest of Asia', 'Other']
+                },
+                yaxis: {
+                    labels: {
+                        formatter: function(val) {
+                            return val.toFixed(0) + '%';
+                        }
+                    }
+                },
+                colors: ['#2ecc71', '#e74c3c', '#3498db'],
+                tooltip: {
+                    y: {
+                        formatter: function(val) {
+                            return val + '%';
+                        }
+                    }
+                }
+            };
+
+            const chartElement = document.querySelector("#geographicRadarChart");
+            if (!chartElement) {
+                console.error('Geographic radar chart container not found');
+                return;
+            }
+            
+            try {
+                const chart = new ApexCharts(chartElement, options);
+                chart.render();
+                console.log('Geographic radar chart rendered successfully');
+            } catch (error) {
+                console.error('Error rendering geographic radar chart:', error);
+            }
+        }
+        
+        function renderSectorVolatilityChart() {
+            const options = {
+                series: [{
+                    name: '30-day Volatility',
+                    data: [
+                        { x: 'Technology', y: 25.8 },
+                        { x: 'Financial', y: 18.3 },
+                        { x: 'Healthcare', y: 12.6 },
+                        { x: 'Consumer', y: 19.5 },
+                        { x: 'Utilities', y: 8.2 },
+                        { x: 'Energy', y: 22.7 }
+                    ]
+                }],
+                chart: {
+                    type: 'bar',
+                    height: 300
+                },
+                colors: ['#7209b7'],
+                plotOptions: {
+                    bar: {
+                        borderRadius: 4,
+                        columnWidth: '60%',
+                        dataLabels: {
+                            position: 'top'
+                        }
+                    }
+                },
+                dataLabels: {
+                    enabled: true,
+                    formatter: function (val) {
+                        return val.toFixed(1) + "%";
+                    },
+                    offsetY: -20,
+                    style: {
+                        fontSize: '12px',
+                        colors: ["#304758"]
+                    }
+                },
+                xaxis: {
+                    categories: ['Technology', 'Financial', 'Healthcare', 'Consumer', 'Utilities', 'Energy'],
+                    position: 'bottom',
+                    axisBorder: {
+                        show: false
+                    },
+                    axisTicks: {
+                        show: false
+                    }
+                },
+                yaxis: {
+                    axisBorder: {
+                        show: false
+                    },
+                    axisTicks: {
+                        show: false
+                    },
+                    labels: {
+                        show: true,
+                        formatter: function (val) {
+                            return val.toFixed(1) + "%";
+                        }
+                    }
+                },
+                title: {
+                    text: 'Sector Volatility (30-day)',
+                    align: 'center',
+                    floating: false
+                },
+                tooltip: {
+                    y: {
+                        formatter: function(val) {
+                            return val.toFixed(2) + "% volatility"
+                        }
+                    }
+                }
+            };
+
+            const chart = new ApexCharts(document.querySelector("#sectorVolatilityChart"), options);
+            chart.render();
+        }
     </script>
 </body>
 </html> 
