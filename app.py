@@ -953,6 +953,88 @@ def risk_review():
                            risk_analysis_date=datetime.now().strftime('%Y-%m-%d'),
                            settings=get_settings())
 
+@app.route('/strategy-backtesting')
+def strategy_backtesting():
+    """Strategy backtesting page that allows users to analyze historical performance."""
+    # Prepare backtesting presets
+    backtesting_presets = [
+        {
+            "id": "macro_impact_sp500_2020",
+            "name": "Summarize macro economic events that impacted S&P500 between Jan-May 2020",
+            "prompt": "Summarize the major macroeconomic events that impacted the S&P500 between January and May 2020. Focus on key market-moving events, policy responses, and their impact on market performance."
+        },
+        {
+            "id": "covid_recovery_tech",
+            "name": "Analyze tech sector performance during COVID recovery (2020-2021)",
+            "prompt": "Analyze how the technology sector performed during the COVID recovery period from March 2020 through December 2021. Include key trends, notable outperformers, and factors that drove the sector's performance."
+        },
+        {
+            "id": "interest_rate_impact_2022",
+            "name": "Interest rate impacts on growth stocks in 2022",
+            "prompt": "Analyze how the Federal Reserve's interest rate hikes in 2022 impacted growth stocks. Compare performance before and after key rate decisions and identify which subsectors were most affected."
+        },
+        {
+            "id": "banking_crisis_2023",
+            "name": "Banking sector crisis impact on markets (March 2023)",
+            "prompt": "Analyze the banking sector crisis of March 2023 (Silicon Valley Bank, Signature Bank, etc.) and its impact on broader market indices. What were the warning signs, policy responses, and how did different sectors react?"
+        },
+        {
+            "id": "ai_stocks_performance",
+            "name": "AI stock performance since ChatGPT launch (Nov 2022)",
+            "prompt": "Analyze the performance of AI-related stocks since the public launch of ChatGPT in November 2022. Which companies saw the biggest gains, what were key catalysts, and how did this compare to broader technology indices?"
+        }
+    ]
+    
+    # Get current portfolio data to show relevant stocks
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Get current portfolio positions by aggregating buy/sell transactions
+    cursor.execute('''
+        SELECT 
+            Symbol, 
+            Name,
+            SUM(CASE WHEN Side = 'buy' THEN Qty ELSE -Qty END) as CurrentShares,
+            SUM(CASE WHEN Side = 'buy' THEN Qty * AveragePrice ELSE -Qty * AveragePrice END) as TotalInvestment
+        FROM 
+            transactions
+        GROUP BY 
+            Symbol
+        HAVING 
+            CurrentShares > 0
+        ORDER BY 
+            CurrentShares * 
+            (SELECT AveragePrice FROM transactions 
+             WHERE Symbol = transactions.Symbol 
+             ORDER BY Date DESC, Time DESC LIMIT 1) DESC
+    ''')
+    
+    portfolio = cursor.fetchall()
+    
+    # Get current prices for portfolio holdings
+    current_prices = {}
+    for stock in portfolio:
+        symbol = stock['Symbol']
+        try:
+            price_data = get_stock_price(symbol)
+            if price_data and 'current_price' in price_data and price_data['current_price'] is not None:
+                current_prices[symbol] = price_data['current_price']
+            else:
+                current_prices[symbol] = None
+        except Exception as e:
+            print(f"Error getting price for {symbol}: {e}")
+            current_prices[symbol] = None
+    
+    # Close connection
+    conn.close()
+    
+    return render_template('strategy_backtesting.html', 
+                           portfolio=portfolio,
+                           current_prices=current_prices,
+                           backtesting_presets=backtesting_presets,
+                           analysis_date=datetime.now().strftime('%Y-%m-%d'),
+                           settings=get_settings())
+
 def analyze_tariff_risk(current_stock=None):
     """Analyze tariff risks for stocks in the portfolio to support AI assistant responses."""
     conn = get_db_connection()

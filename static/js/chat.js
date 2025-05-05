@@ -201,8 +201,20 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // For bot messages with model info
         if (sender === 'bot') {
-            // Use innerHTML for bot messages to preserve formatting
-            messageContent.innerHTML = text;
+            // Check if the text is already HTML (already formatted) or needs formatting
+            if (text.startsWith('<') && text.includes('</')) {
+                // Already HTML formatted
+                messageContent.innerHTML = text;
+            } else if (typeof marked !== 'undefined') {
+                // Use marked.js to parse markdown
+                messageContent.innerHTML = marked.parse(text);
+            } else {
+                // Fallback to basic formatting if marked isn't available
+                messageContent.innerHTML = text
+                    .replace(/\n\n/g, '<br><br>')
+                    .replace(/\n/g, '<br>')
+                    .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank">$1</a>');
+            }
             
             // Add model info if provided
             if (modelInfo) {
@@ -278,12 +290,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Add response to chat
                 if (data.response) {
-                    // Format the response - convert newlines to <br> tags
-                    const formattedResponse = data.response
-                        .replace(/\n\n/g, '<br><br>')  // Double newlines as paragraph breaks
-                        .replace(/\n/g, '<br>')  // Single newlines
-                        // Make URLs clickable
-                        .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank">$1</a>');
+                    // Check if marked library is available
+                    let formattedResponse;
+                    if (typeof marked !== 'undefined') {
+                        // Parse markdown using marked library
+                        formattedResponse = marked.parse(data.response);
+                    } else {
+                        // Fallback to basic formatting if marked isn't available
+                        formattedResponse = data.response
+                            .replace(/\n\n/g, '<br><br>')
+                            .replace(/\n/g, '<br>')
+                            .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank">$1</a>');
+                    }
                     
                     // Create formatted response element
                     const messageElement = document.createElement('div');

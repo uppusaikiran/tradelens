@@ -59,4 +59,7 @@
 <!-- Optional: Pass the current stock to the chat system if viewing a stock page -->
 {% if current_stock %}
 <input type="hidden" id="current-stock" value="{{ current_stock }}">
-{% endif %} 
+{% endif %}
+
+<!-- Include marked.js for markdown parsing -->
+<script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js"></script> 
