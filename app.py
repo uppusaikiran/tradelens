@@ -242,6 +242,20 @@ def get_unique_stocks(transactions):
 def get_db_connection():
     conn = sqlite3.connect('stock_transactions.db')
     conn.row_factory = sqlite3.Row
+    
+    # Add custom converter functions to handle TEXT to numeric conversions
+    def convert_to_float(value):
+        if value is None or value == "null" or value == "":
+            return None
+        try:
+            return float(value)
+        except (ValueError, TypeError):
+            return None
+    
+    # Register adapter and converter for REAL type
+    sqlite3.register_adapter(float, lambda val: str(val))
+    sqlite3.register_converter("REAL", convert_to_float)
+    
     return conn
 
 def get_categorized_stocks(cursor):
@@ -429,8 +443,17 @@ def process_transactions(transactions):
     for t in transactions:
         try:
             date_obj = datetime.strptime(t['Date'], '%Y-%m-%d')
-            price = float(t['AveragePrice'])
-            qty = float(t['Qty'])
+            
+            # Convert text values to float, handling possible null values
+            try:
+                price = float(t['AveragePrice']) if t['AveragePrice'] and t['AveragePrice'].lower() != 'null' else None
+            except (ValueError, TypeError, AttributeError):
+                price = None
+                
+            try:
+                qty = float(t['Qty']) if t['Qty'] and t['Qty'].lower() != 'null' else None
+            except (ValueError, TypeError, AttributeError):
+                qty = None
             
             processed.append({
                 'Id': t['Id'],
@@ -450,7 +473,7 @@ def process_transactions(transactions):
             print(f"Error processing transaction: {t}, Error: {e}")
             processed.append({
                 'Id': t['Id'],
-                'Date': date_obj,
+                'Date': date_obj if 'date_obj' in locals() else None,
                 'Time': t['Time'],
                 'Symbol': t['Symbol'],
                 'Name': t['Name'],
@@ -475,9 +498,17 @@ def calculate_transaction_stats(transactions):
     
     for tx in transactions:
         try:
-            # Use adjusted quantities and prices for calculations
-            qty = float(tx['Qty'])
-            price = float(tx['AveragePrice'])
+            # Safely convert text values to float
+            try:
+                qty = float(tx['Qty']) if tx['Qty'] and str(tx['Qty']).lower() != 'null' else 0
+            except (ValueError, TypeError):
+                qty = 0
+                
+            try:
+                price = float(tx['AveragePrice']) if tx['AveragePrice'] and str(tx['AveragePrice']).lower() != 'null' else 0
+            except (ValueError, TypeError):
+                price = 0
+                
             amount = price * qty
             
             if tx['Side'].lower() == 'buy':
@@ -562,10 +593,16 @@ def api_stock_chart(symbol):
     sell_transactions = []
     
     for tx in transactions:
-        if not tx['AveragePrice']:
-            continue
         try:
-            price = float(tx['AveragePrice'])
+            # Safely convert AveragePrice to float
+            if not tx['AveragePrice'] or tx['AveragePrice'].lower() == 'null':
+                continue
+                
+            try:
+                price = float(tx['AveragePrice'])
+            except (ValueError, TypeError):
+                continue
+                
             point = {
                 'id': tx['Id'],
                 'date': tx['Date'],
@@ -693,7 +730,14 @@ def stock_detail(symbol):
         WHERE t.Symbol = ?
     ''', (symbol, symbol))
     result = cursor.fetchone()
-    stock_name = result['stock_name']
+    
+    # Handle case where no transactions are found for this symbol
+    if result is None:
+        flash(f"No transactions found for symbol {symbol}", "warning")
+        return redirect(url_for('index'))
+        
+    # Get stock name with a fallback if not found
+    stock_name = result['stock_name'] if result and result['stock_name'] else symbol
     
     # Build the base query for transactions
     base_query = 'SELECT * FROM transactions WHERE Symbol = ?'
@@ -1612,10 +1656,17 @@ def assess_tariff_risk(symbol, sector):
 
 def init_db():
     """Initialize the database with transactions table and thesis_jobs table"""
+    # First drop existing tables to ensure a clean start
     conn = sqlite3.connect('stock_transactions.db')
     c = conn.cursor()
     
-    # Create transactions table if it doesn't exist
+    # Drop tables if they exist to ensure clean schema
+    c.execute('DROP TABLE IF EXISTS transactions')
+    c.execute('DROP TABLE IF EXISTS thesis_jobs')
+    c.execute('DROP TABLE IF EXISTS earnings_jobs')
+    c.execute('DROP TABLE IF EXISTS earnings_calendar')
+    
+    # Create transactions table if it doesn't exist - using TEXT for all fields to prevent type issues
     c.execute('''
     CREATE TABLE IF NOT EXISTS transactions (
         Id TEXT,
@@ -1625,8 +1676,8 @@ def init_db():
         Name TEXT,
         Type TEXT,
         Side TEXT,
-        AveragePrice REAL,
-        Qty REAL,
+        AveragePrice TEXT,  -- Store as TEXT to avoid type conversion issues
+        Qty TEXT,           -- Store as TEXT to avoid type conversion issues
         State TEXT,
         Fees TEXT
     )
@@ -1665,7 +1716,7 @@ def init_db():
         company_name TEXT,
         earnings_date TEXT NOT NULL,
         time_of_day TEXT,
-        eps_estimate REAL,
+        eps_estimate TEXT,  -- Store as TEXT to avoid type conversion issues
         last_updated TEXT NOT NULL
     )
     ''')
@@ -1686,20 +1737,7 @@ def init_db():
                     # Generate a unique ID if not present in the CSV
                     transaction_id = row.get('Id', str(uuid.uuid4()))
                     
-                    # Safe conversion functions for numeric values
-                    def safe_convert(value, convert_func):
-                        if value is None or value == "" or value.lower() == "null":
-                            return None
-                        try:
-                            return convert_func(value)
-                        except (ValueError, TypeError):
-                            return None
-                    
-                    # Convert values safely
-                    average_price = safe_convert(row['AveragePrice'], float)
-                    qty = safe_convert(row['Qty'], float)
-                    fees = row['Fees']  # Keep fees as text
-                    
+                    # Store all values as strings in the database to avoid type issues
                     c.execute('''
                     INSERT INTO transactions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ''', (
@@ -1710,10 +1748,10 @@ def init_db():
                         row['Name'],
                         row['Type'],
                         row['Side'],
-                        average_price,
-                        qty,
+                        row['AveragePrice'],  # Store as text
+                        row['Qty'],           # Store as text
                         row['State'],
-                        fees
+                        row['Fees']
                     ))
                 except Exception as e:
                     print(f"Error processing row: {row}")
@@ -1722,6 +1760,7 @@ def init_db():
             conn.commit()
     
     conn.close()
+    print("Database initialized successfully!")
 
 def create_thesis_job(thesis):
     """Create a new thesis validation job in the database"""
