@@ -2375,8 +2375,8 @@ def process_earnings_research(job_id, symbol, earnings_date, perplexity_model):
             base_url="https://api.perplexity.ai"
         )
         
-        # Use provided model or fallback to sonar-deep-research
-        model = perplexity_model or 'sonar-deep-research'
+        # Always use sonar-deep-research for enhanced analysis
+        model = 'sonar-deep-research'
         
         # Get current date for context
         current_date = datetime.now().strftime('%Y-%m-%d')
@@ -2399,14 +2399,14 @@ def process_earnings_research(job_id, symbol, earnings_date, perplexity_model):
                 The investor would likely be particularly interested in how upcoming earnings might affect their position.
                 """
         
-        # Create a prompt for the earnings research
-        prompt = f"""Generate a detailed earnings preview research report for {symbol} ({company_name}) ahead of its earnings report on {earnings_date}.
+        # Create a prompt for the earnings research with emphasis on rich visualizations and sources
+        prompt = f"""Generate a comprehensive earnings preview research report for {symbol} ({company_name}) ahead of its earnings report on {earnings_date}.
 
 Today's date is {current_date}, so this is forward-looking research to prepare an investor for the upcoming earnings announcement.
 
 {investor_context}
 
-Please structure your analysis with the following sections:
+Please structure your analysis with the following sections and provide visualization-friendly data wherever possible:
 
 ## Company Overview
 - Brief business description
@@ -2417,48 +2417,66 @@ Please structure your analysis with the following sections:
 - Results from the last quarter
 - Year-over-year growth metrics
 - Stock price reaction to previous earnings announcements
+- PROVIDE SPECIFIC NUMERICAL DATA for EPS estimates vs. actuals for the past 4 quarters that can be visualized in charts
 
 ## Current Quarter Expectations
 - Consensus EPS and revenue estimates
 - Whisper numbers and analyst sentiment
 - Key metrics investors should focus on
+- Include specific numerical forecasts with confidence intervals where possible
 
 ## Industry & Competitive Landscape
 - Industry trends affecting the company
-- Competitive positioning
+- Competitive positioning with market share percentages if available
 - Market share changes
+- INCLUDE NUMERICAL RANKINGS or scores for the company vs. competitors that can be visualized
 
 ## Recent News & Events
 - Material news since last earnings
 - Management commentary and guidance
 - Analyst ratings changes
+- Include exact dates for significant events
 
 ## Potential Catalysts & Risk Factors
 - Specific things to watch for in this earnings report
 - Upside and downside catalysts
 - Potential areas of concern
+- Quantify potential impacts where possible
 
 ## Technical Analysis
 - Current price trends and key levels
 - Volume patterns leading into earnings
 - Historical price movements around earnings
+- INCLUDE SPECIFIC PRICE POINTS and percentage moves for support/resistance
 
 ## Investment Thesis
 - Bull case: What could drive outperformance
 - Bear case: What could cause disappointment
 - Expected impact on the stock price in various scenarios
+- Include probability estimates for different outcomes
 
 ## Sources
-- List all sources of information used in this analysis
+- List ALL sources of information used in this analysis
+- Include direct links to analyst reports, earnings call transcripts, SEC filings, and news articles
+- Cite specific pages or sections of longer documents
+- Provide publication dates for all sources
 
 Format your response using proper Markdown syntax with clear section headings, bullet points, and emphasis where appropriate. Provide specific numbers, dates, and data points whenever possible. Be objective and balanced in presenting both bullish and bearish perspectives.
+
+IMPORTANT: For visualizations, provide exact numerical data that can be rendered into interactive charts. The frontend will display your data as:
+1. Price history chart with earnings dates marked
+2. EPS estimates vs. actuals comparison chart
+3. Investment sentiment pie chart
+4. Industry comparison radar chart
+
+Make sure to include all relevant numerical data for these visualizations.
 """
         
         # Call Perplexity API using the OpenAI client interface
         response = perplexity_client.chat.completions.create(
             model=model,
             messages=[
-                {"role": "system", "content": "You are an expert financial analyst specializing in earnings previews. You provide comprehensive, well-researched analysis with specific data points, clear insights for investors, and properly sourced information. You focus on actionable information relevant to the upcoming earnings report."},
+                {"role": "system", "content": "You are an expert financial analyst specializing in earnings previews. You provide comprehensive, well-researched analysis with specific data points, clear insights for investors, and properly sourced information. Always include extensive sources that are properly formatted and provide visualization-friendly data for interactive charts."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.2,
@@ -2490,6 +2508,10 @@ def earnings_companion():
     """Earnings Season Companion page"""
     # Get current settings
     settings = get_settings()
+    
+    # Force deep research model for earnings analysis
+    settings['perplexity_model'] = 'sonar-deep-research'
+    session['settings'] = settings
     
     # Check if Perplexity API is available
     perplexity_available = bool(os.getenv('PERPLEXITY_API_KEY'))
