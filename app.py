@@ -1,6 +1,7 @@
 import os
 import csv
 import json
+import uuid
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for, jsonify, flash, session
 import pandas as pd
@@ -11,6 +12,7 @@ from init_db import init_db
 from openai import OpenAI
 import openai
 from dotenv import load_dotenv
+import threading
 
 # Define MAG7 stocks
 MAG7_STOCKS = {
@@ -33,6 +35,20 @@ PERPLEXITY_MODELS = {
     'r1-1776': 'r1-1776',
     'llama-3.1-sonar-small': 'llama-3.1-sonar-small'
 }
+
+# Investment thesis examples for dropdown
+INVESTMENT_THESES = [
+    "AI stocks will outperform in Q3 2025",
+    "Renewable energy sector will see growth due to recent policy changes",
+    "Semiconductor stocks will face headwinds from supply chain disruptions",
+    "Fintech companies will benefit from rising interest rates",
+    "Healthcare innovation stocks will outperform due to aging demographics",
+    "E-commerce stocks will decline with return to brick-and-mortar shopping",
+    "Cybersecurity stocks will surge due to increased corporate spending",
+    "Small-cap stocks will outperform large-caps in the next fiscal year",
+    "Cloud computing providers will face margin pressure from competition",
+    "Electric vehicle stocks will underperform due to raw material costs"
+]
 
 # Set default model
 DEFAULT_PERPLEXITY_MODEL = 'sonar'
@@ -1574,6 +1590,333 @@ def assess_tariff_risk(symbol, sector):
         "risk_score": risk_score,
         "assessment": assessment
     }
+
+def init_db():
+    """Initialize the database with transactions table and thesis_jobs table"""
+    conn = sqlite3.connect('stock_transactions.db')
+    c = conn.cursor()
+    
+    # Create transactions table if it doesn't exist
+    c.execute('''
+    CREATE TABLE IF NOT EXISTS transactions (
+        Id TEXT,
+        Date TEXT,
+        Time TEXT,
+        Symbol TEXT,
+        Name TEXT,
+        Type TEXT,
+        Side TEXT,
+        AveragePrice REAL,
+        Qty REAL,
+        State TEXT,
+        Fees TEXT
+    )
+    ''')
+    
+    # Create thesis_jobs table if it doesn't exist
+    c.execute('''
+    CREATE TABLE IF NOT EXISTS thesis_jobs (
+        job_id TEXT PRIMARY KEY,
+        thesis TEXT NOT NULL,
+        status TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        completed_at TEXT,
+        result TEXT
+    )
+    ''')
+    
+    conn.commit()
+    
+    # Load data from CSV if the table is empty
+    c.execute('SELECT COUNT(*) FROM transactions')
+    if c.fetchone()[0] == 0:
+        with open('stock_orders.csv', 'r') as file:
+            reader = csv.DictReader(file)
+            for row in reader:
+                # Convert date format from MM/DD/YYYY to YYYY-MM-DD
+                date_obj = datetime.strptime(row['Date'], '%m/%d/%Y')
+                date_str = date_obj.strftime('%Y-%m-%d')
+                
+                c.execute('''
+                INSERT INTO transactions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    row['Id'],
+                    date_str,
+                    row['Time'],
+                    row['Symbol'],
+                    row['Name'],
+                    row['Type'],
+                    row['Side'],
+                    float(row['AveragePrice']) if row['AveragePrice'] else None,
+                    float(row['Qty']) if row['Qty'] else None,
+                    row['State'],
+                    row['Fees']
+                ))
+            conn.commit()
+    
+    conn.close()
+
+def create_thesis_job(thesis):
+    """Create a new thesis validation job in the database"""
+    job_id = str(uuid.uuid4())
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+    INSERT INTO thesis_jobs (job_id, thesis, status, created_at)
+    VALUES (?, ?, ?, ?)
+    ''', (job_id, thesis, 'pending', datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+    
+    conn.commit()
+    conn.close()
+    return job_id
+
+def get_thesis_job(job_id):
+    """Get a specific thesis job by ID"""
+    conn = get_db_connection()
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    cursor.execute('SELECT * FROM thesis_jobs WHERE job_id = ?', (job_id,))
+    job = cursor.fetchone()
+    
+    conn.close()
+    return dict(job) if job else None
+
+def get_thesis_jobs():
+    """Get all thesis jobs from the database"""
+    conn = get_db_connection()
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    cursor.execute('SELECT * FROM thesis_jobs ORDER BY created_at DESC')
+    jobs = cursor.fetchall()
+    
+    conn.close()
+    return [dict(job) for job in jobs]
+
+def update_thesis_job(job_id, status, result=None):
+    """Update the status and result of a thesis job"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    if result:
+        cursor.execute('''
+        UPDATE thesis_jobs 
+        SET status = ?, result = ?, completed_at = ?
+        WHERE job_id = ?
+        ''', (status, result, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), job_id))
+    else:
+        cursor.execute('''
+        UPDATE thesis_jobs 
+        SET status = ?
+        WHERE job_id = ?
+        ''', (status, job_id))
+    
+    conn.commit()
+    conn.close()
+
+def process_thesis_validation(job_id, thesis):
+    """Background task to process the thesis validation"""
+    try:
+        # Update job status to processing
+        update_thesis_job(job_id, 'processing')
+        
+        # Get settings
+        settings = DEFAULT_SETTINGS
+        
+        # Get Perplexity client
+        perplexity_api_key = os.getenv('PERPLEXITY_API_KEY')
+        if not perplexity_api_key:
+            update_thesis_job(job_id, 'failed', "Perplexity API key not configured")
+            return
+        
+        perplexity_client = OpenAI(
+            api_key=perplexity_api_key,
+            base_url="https://api.perplexity.ai"
+        )
+        
+        # Use sonar-deep-research model specifically for thesis validation
+        model = 'sonar-deep-research'
+        
+        # Create a prompt for the thesis validation
+        prompt = f"""Analyze the following investment thesis: "{thesis}"
+        
+        Provide a detailed analysis with:
+        1. Expert opinions supporting the thesis
+        2. Expert opinions refuting the thesis
+        3. Recent market data and trends relevant to this thesis
+        4. Key risk factors to consider
+        5. Potential investment opportunities related to this thesis
+        
+        Include specific citations, references, and links to sources for all claims. 
+        Format your response using proper Markdown syntax:
+        - Use ## for section headings (h2)
+        - Use ### for subsection headings (h3)
+        - Use **bold** for emphasis
+        - Use *italic* for secondary emphasis
+        - Use [text](url) format for links
+        - Use > for blockquotes
+        - Use properly formatted lists with - or 1. 
+        - Include a "Sources" section at the end with numbered references
+        
+        Be balanced in your analysis, considering both supporting and contradicting evidence.
+        """
+        
+        # Call Perplexity API using the OpenAI client interface
+        response = perplexity_client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": "You are an expert financial advisor who provides comprehensive, well-researched investment thesis validations with specific citations and references. Format your response with clear Markdown syntax including proper headers, lists, links, and citations."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.2,
+            max_tokens=4000
+        )
+        
+        if response and response.choices and len(response.choices) > 0:
+            result = response.choices[0].message.content
+            
+            # Ensure the result contains proper markdown formatting
+            # Add a main heading if not present
+            if not result.startswith('# '):
+                result = f"# Analysis of Investment Thesis: {thesis}\n\n{result}"
+            
+            # Ensure sources are properly formatted
+            if "Sources:" in result and not "\n## Sources" in result:
+                result = result.replace("Sources:", "\n## Sources\n")
+            
+            update_thesis_job(job_id, 'completed', result)
+        else:
+            update_thesis_job(job_id, 'failed', "No response received from the AI model")
+    
+    except Exception as e:
+        print(f"Error processing thesis validation job {job_id}: {str(e)}")
+        update_thesis_job(job_id, 'failed', f"Error: {str(e)}")
+
+@app.route('/thesis-validation', methods=['GET', 'POST'])
+def thesis_validation():
+    # Get current settings
+    settings = get_settings()
+    
+    # Check if Perplexity API is available
+    perplexity_available = bool(os.getenv('PERPLEXITY_API_KEY'))
+    if not perplexity_available:
+        flash("Perplexity API is required for thesis validation. Please set your API key in settings.", "warning")
+        return redirect(url_for('settings'))
+    
+    # Get connection to database
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Get user's portfolio (stocks with positive current shares)
+    cursor.execute('''
+        SELECT 
+            Symbol, 
+            Name,
+            SUM(CASE WHEN Side = 'buy' THEN Qty ELSE -Qty END) as CurrentShares,
+            SUM(CASE WHEN Side = 'buy' THEN Qty * AveragePrice ELSE 0 END) / 
+            NULLIF(SUM(CASE WHEN Side = 'buy' THEN Qty ELSE 0 END), 0) as AverageCost
+        FROM 
+            transactions
+        GROUP BY 
+            Symbol
+        HAVING 
+            SUM(CASE WHEN Side = 'buy' THEN Qty ELSE -Qty END) > 0
+        ORDER BY 
+            Symbol
+    ''')
+    
+    portfolio = cursor.fetchall()
+    
+    # Get current prices
+    current_prices = {}
+    for stock in portfolio:
+        symbol = stock['Symbol']
+        if symbol not in current_prices:
+            price_data = get_stock_price(symbol)
+            if price_data and 'current_price' in price_data and price_data['current_price'] is not None:
+                current_prices[symbol] = price_data['current_price']
+            else:
+                current_prices[symbol] = 0
+    
+    # Portfolio summary
+    portfolio_summary = {
+        'total_stocks': len(portfolio),
+        'total_value': sum(stock['CurrentShares'] * current_prices.get(stock['Symbol'], 0) for stock in portfolio),
+        'total_investment': sum(stock['CurrentShares'] * stock['AverageCost'] for stock in portfolio if stock['AverageCost'] is not None),
+    }
+    
+    portfolio_summary['total_gain_loss'] = portfolio_summary['total_value'] - portfolio_summary['total_investment']
+    if portfolio_summary['total_investment'] > 0:
+        portfolio_summary['total_gain_loss_percentage'] = (portfolio_summary['total_gain_loss'] / portfolio_summary['total_investment']) * 100
+    else:
+        portfolio_summary['total_gain_loss_percentage'] = 0
+    
+    # Get all thesis jobs
+    thesis_jobs = get_thesis_jobs()
+    
+    # Handle thesis analysis request
+    selected_thesis = None
+    job_id = None
+    
+    if request.method == 'POST':
+        selected_thesis = request.form.get('thesis')
+        
+        if selected_thesis:
+            # Create a new job in the database
+            job_id = create_thesis_job(selected_thesis)
+            
+            # Start the thesis validation in a background thread
+            thread = threading.Thread(
+                target=process_thesis_validation,
+                args=(job_id, selected_thesis)
+            )
+            thread.daemon = True
+            thread.start()
+            
+            flash(f"Thesis validation job created. Check back later for results. Job ID: {job_id}", "success")
+            return redirect(url_for('thesis_validation'))
+    
+    # Close database connection
+    conn.close()
+    
+    return render_template(
+        'thesis_validation.html',
+        portfolio=portfolio,
+        current_prices=current_prices,
+        portfolio_summary=portfolio_summary,
+        investment_theses=INVESTMENT_THESES,
+        thesis_jobs=thesis_jobs,
+        selected_thesis=selected_thesis,
+        job_id=job_id,
+        settings=settings
+    )
+
+@app.route('/thesis-job/<job_id>')
+def thesis_job(job_id):
+    """Route to get a specific thesis job"""
+    job = get_thesis_job(job_id)
+    
+    if not job:
+        flash("Job not found", "error")
+        return redirect(url_for('thesis_validation'))
+    
+    return render_template(
+        'thesis_job.html',
+        job=job,
+        settings=get_settings()
+    )
+
+@app.route('/api/thesis-job/<job_id>', methods=['GET'])
+def api_thesis_job(job_id):
+    """API endpoint to get the status of a thesis job"""
+    job = get_thesis_job(job_id)
+    
+    if not job:
+        return jsonify({"error": "Job not found"}), 404
+    
+    return jsonify(job)
 
 if __name__ == '__main__':
     # Make sure the database exists

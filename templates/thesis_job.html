@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradeLens - Thesis Analysis Results</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .thesis-card {
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+            margin-bottom: 24px;
+            overflow: hidden;
+            border: 1px solid #e9ecef;
+        }
+        
+        .thesis-card-header {
+            background: linear-gradient(90deg, #6a42c1 0%, #8e6ad1 100%);
+            color: white;
+            font-weight: 600;
+            padding: 15px 20px;
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .thesis-card-body {
+            padding: 20px;
+            background-color: #fff;
+        }
+        
+        .analysis-result {
+            padding: 15px 0;
+            line-height: 1.6;
+        }
+        
+        .analysis-result p {
+            margin-bottom: 12px;
+        }
+        
+        .analysis-result ul, .analysis-result ol {
+            margin-bottom: 15px;
+            padding-left: 20px;
+        }
+        
+        .analysis-result li {
+            margin-bottom: 8px;
+        }
+        
+        .analysis-result h1, .analysis-result h2, .analysis-result h3, .analysis-result h4, .analysis-result h5 {
+            margin-top: 25px;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+        
+        .analysis-result table {
+            width: 100%;
+            margin-bottom: 20px;
+            border-collapse: collapse;
+        }
+        
+        .analysis-result table, .analysis-result th, .analysis-result td {
+            border: 1px solid #dee2e6;
+        }
+        
+        .analysis-result th, .analysis-result td {
+            padding: 8px 12px;
+            text-align: left;
+        }
+        
+        .analysis-result th {
+            background-color: #f8f9fa;
+        }
+        
+        .analysis-result a {
+            color: #6a42c1;
+            text-decoration: none;
+        }
+        
+        .analysis-result a:hover {
+            text-decoration: underline;
+        }
+        
+        .analysis-result blockquote {
+            border-left: 4px solid #6a42c1;
+            padding-left: 15px;
+            margin-left: 0;
+            color: #495057;
+            font-style: italic;
+        }
+        
+        .analysis-result code {
+            background-color: #f8f9fa;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        
+        .job-meta {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 12px 15px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #6c757d;
+        }
+        
+        .job-meta .meta-item {
+            display: inline-block;
+            margin-right: 20px;
+        }
+        
+        .job-meta .meta-label {
+            font-weight: 600;
+            margin-right: 5px;
+        }
+        
+        .analysis-nav {
+            position: sticky;
+            top: 80px;
+            max-height: calc(100vh - 100px);
+            overflow-y: auto;
+            padding-right: 15px;
+        }
+        
+        .analysis-nav .nav-link {
+            color: #495057;
+            border-left: 2px solid #e9ecef;
+            padding: 8px 15px;
+            margin: 5px 0;
+            transition: all 0.2s ease;
+        }
+        
+        .analysis-nav .nav-link:hover {
+            color: #6a42c1;
+            border-left-color: #6a42c1;
+        }
+        
+        .analysis-nav .nav-link.active {
+            color: #6a42c1;
+            font-weight: 600;
+            border-left-color: #6a42c1;
+        }
+        
+        .section-heading {
+            padding-top: 20px;
+            margin-top: 20px;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        .section-heading:first-child {
+            padding-top: 0;
+            margin-top: 0;
+            border-top: none;
+        }
+        
+        .badge-status {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .badge-completed {
+            background-color: #c3e6cb;
+            color: #155724;
+        }
+        
+        .badge-processing {
+            background-color: #b8daff;
+            color: #004085;
+        }
+        
+        .badge-pending {
+            background-color: #ffeeba;
+            color: #856404;
+        }
+        
+        .badge-failed {
+            background-color: #f5c6cb;
+            color: #721c24;
+        }
+        
+        /* Additional styles for markdown rendering */
+        .analysis-result img {
+            max-width: 100%;
+            height: auto;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+        
+        .analysis-result ul li, .analysis-result ol li {
+            margin-bottom: 0.5rem;
+        }
+        
+        .analysis-result pre {
+            background-color: #f8f9fa;
+            padding: 1rem;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+        
+        .analysis-result table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+        
+        .analysis-result blockquote {
+            border-left: 4px solid #6a42c1;
+            padding: 0.5rem 0 0.5rem 1rem;
+            margin: 1rem 0;
+            color: #495057;
+            font-style: italic;
+        }
+        
+        .source {
+            font-size: 0.9rem;
+            color: #6c757d;
+            padding: 0.5rem;
+            border-left: 3px solid #6a42c1;
+            background-color: #f8f9fa;
+            margin-top: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .source a {
+            margin-right: 0.5rem;
+        }
+        
+        /* Handle superscript citations */
+        .analysis-result sup {
+            font-size: 0.75em;
+            vertical-align: super;
+            line-height: 0;
+        }
+        
+        .analysis-result sup a {
+            color: #6a42c1;
+            text-decoration: none;
+        }
+        
+        /* Add colors to code syntax highlighting */
+        .analysis-result code {
+            color: #e83e8c;
+            background-color: #f8f9fa;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <!-- Modern Navbar with Title -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top" style="padding: 0.7rem 2vw; z-index: 100;">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center" href="/">
+                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="App Logo" class="title-icon mr-2" style="width:1.8rem;height:1.8rem;">
+                TradeLens
+            </a>
+            <div class="d-flex align-items-center ml-auto">
+                <a href="{{ url_for('index') }}" class="nav-link mr-3">Dashboard</a>
+                <a href="{{ url_for('risk_review') }}" class="nav-link mr-3">Risk Review</a>
+                <a href="{{ url_for('strategy_backtesting') }}" class="nav-link mr-3">Strategy Backtesting</a>
+                <a href="{{ url_for('thesis_validation') }}" class="nav-link mr-3">Thesis Validation</a>
+                <a href="{{ url_for('settings') }}" class="nav-settings" title="AI Settings">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-gear" viewBox="0 0 16 16">
+                        <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
+                        <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115l.094-.319z"/>
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="container mt-5 mb-5">
+        <div class="mb-4 d-flex justify-content-between align-items-center">
+            <div>
+                <a href="{{ url_for('thesis_validation') }}" class="btn btn-sm btn-outline-secondary mb-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-left" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
+                    </svg>
+                    Back to Thesis Validation
+                </a>
+                <h1>Investment Thesis Analysis</h1>
+            </div>
+            {% if job.status == 'completed' %}
+                <div>
+                    <a href="{{ url_for('thesis_validation') }}" class="btn btn-primary">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus" viewBox="0 0 16 16">
+                            <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+                        </svg>
+                        New Analysis
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="thesis-card">
+            <div class="thesis-card-header">
+                <div>
+                    <h4 class="mb-0">{{ job.thesis }}</h4>
+                </div>
+                <div>
+                    <span class="badge badge-status badge-{{ job.status }}">{{ job.status|capitalize }}</span>
+                </div>
+            </div>
+            <div class="thesis-card-body">
+                <!-- Job metadata -->
+                <div class="job-meta">
+                    <div class="meta-item">
+                        <span class="meta-label">Job ID:</span>
+                        <span>{{ job.job_id }}</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">Submitted:</span>
+                        <span>{{ job.created_at }}</span>
+                    </div>
+                    {% if job.completed_at %}
+                        <div class="meta-item">
+                            <span class="meta-label">Completed:</span>
+                            <span>{{ job.completed_at }}</span>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Show appropriate content based on job status -->
+                {% if job.status == 'pending' %}
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="sr-only">Loading...</span>
+                        </div>
+                        <h4 class="mt-3">Your thesis analysis is queued...</h4>
+                        <p class="text-muted">Analysis typically takes 2-3 minutes to complete. You can leave this page and check back later.</p>
+                        <button class="btn btn-primary mt-3" id="refreshStatus">Refresh Status</button>
+                    </div>
+                {% elif job.status == 'processing' %}
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="sr-only">Loading...</span>
+                        </div>
+                        <h4 class="mt-3">Your thesis analysis is in progress...</h4>
+                        <p class="text-muted">Deep research is being conducted using multiple sources. This may take a few minutes to complete.</p>
+                        <button class="btn btn-primary mt-3" id="refreshStatus">Refresh Status</button>
+                    </div>
+                {% elif job.status == 'failed' %}
+                    <div class="alert alert-danger">
+                        <h4 class="alert-heading">Analysis Failed</h4>
+                        <p>We encountered an error while analyzing your investment thesis.</p>
+                        <hr>
+                        <p class="mb-0">Error details: {{ job.result }}</p>
+                    </div>
+                    <div class="text-center mt-4">
+                        <a href="{{ url_for('thesis_validation') }}" class="btn btn-primary">Try Another Thesis</a>
+                    </div>
+                {% elif job.status == 'completed' %}
+                    <!-- Perplexity attribution banner - prominent location -->
+                    <div class="mb-4 p-3 text-center" style="background-color: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">
+                        <div class="d-flex justify-content-center align-items-center">
+                            <img src="{{ url_for('static', filename='img/icons/perplexity_icon.png') }}" alt="Perplexity AI" style="width: 24px; height: 24px; margin-right: 10px;">
+                            <span style="font-size: 18px; font-weight: 600; color: #6a42c1;">Powered by Perplexity — Model: sonar-deep-research</span>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <!-- Left side: Content navigation -->
+                        <div class="col-lg-3 d-none d-lg-block">
+                            <div class="analysis-nav" id="analysisNav">
+                                <h5 class="mb-3">Contents</h5>
+                                <!-- Dynamically populated by JS -->
+                            </div>
+                        </div>
+                        
+                        <!-- Right side: Analysis content -->
+                        <div class="col-lg-9">
+                            <div class="analysis-result" id="analysisResult">
+                                {{ job.result|safe }}
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Remove footer attribution for Perplexity - moved to top of content -->
+    
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <script>
+        $(document).ready(function() {
+            // Function to refresh job status
+            $('#refreshStatus').click(function() {
+                location.reload();
+            });
+            
+            // If job is completed, improve formatting and fix links
+            if ('{{ job.status }}' === 'completed') {
+                const result = $('#analysisResult');
+                const rawContent = result.html();
+                
+                // Convert markdown to HTML using marked.js
+                const htmlContent = marked.parse(rawContent);
+                result.html(htmlContent);
+                
+                // Process links after markdown conversion
+                result.find('a').each(function() {
+                    const href = $(this).attr('href');
+                    if (href && !href.startsWith('#')) {
+                        $(this).attr('target', '_blank');
+                        $(this).attr('rel', 'noopener noreferrer');
+                        
+                        // Extract domain for citation display
+                        let domain = '';
+                        try {
+                            domain = new URL(href).hostname.replace('www.', '');
+                        } catch (e) {
+                            // Not a valid URL, keep as is
+                        }
+                        
+                        if (domain) {
+                            const linkText = $(this).text();
+                            // Add source domain as a small badge if not already in the text
+                            if (!linkText.includes(domain)) {
+                                $(this).html(`${linkText} <small class="text-muted">[${domain}]</small>`);
+                            }
+                        }
+                        
+                        // Style links as buttons only for source citations
+                        if ($(this).closest('p, li').hasClass('source') || 
+                            $(this).closest('div').hasClass('sources') ||
+                            $(this).parent().is('sup') ||
+                            linkText.match(/^\[\d+\]$/)) {
+                            $(this).addClass('btn btn-sm btn-outline-primary mb-1 mr-1');
+                        } else {
+                            $(this).addClass('text-primary');
+                        }
+                    }
+                });
+                
+                // Enhance tables with Bootstrap styling
+                result.find('table').addClass('table table-bordered table-hover');
+                result.find('thead').addClass('thead-light');
+                
+                // Add proper styling to blockquotes
+                result.find('blockquote').addClass('blockquote pl-3 border-left');
+                
+                // Add better code formatting
+                result.find('pre, code').addClass('p-2 bg-light rounded');
+                
+                // Generate table of contents
+                const nav = $('#analysisNav');
+                const headings = result.find('h1, h2, h3, h4, h5');
+                
+                if (headings.length > 0) {
+                    // Add IDs to headings and build navigation
+                    headings.each(function(index) {
+                        const heading = $(this);
+                        const headingText = heading.text().trim();
+                        const id = 'section-' + index;
+                        
+                        // Add ID to the heading
+                        heading.attr('id', id);
+                        heading.addClass('section-heading');
+                        
+                        // Create navigation link with proper indentation based on heading level
+                        const indentClass = heading.prop('tagName') === 'H1' ? '' : 
+                                          heading.prop('tagName') === 'H2' ? 'pl-2' : 
+                                          heading.prop('tagName') === 'H3' ? 'pl-3' : 'pl-4';
+                        
+                        const link = $('<a>')
+                            .addClass('nav-link ' + indentClass)
+                            .attr('href', '#' + id)
+                            .text(headingText);
+                        
+                        nav.append(link);
+                    });
+                    
+                    // Handle scrollspy behavior
+                    $(window).on('scroll', function() {
+                        const scrollPos = $(window).scrollTop();
+                        
+                        // Find which section is currently in view
+                        headings.each(function() {
+                            const heading = $(this);
+                            const topOffset = heading.offset().top - 100;
+                            const id = heading.attr('id');
+                            
+                            if (scrollPos >= topOffset) {
+                                // Remove active class from all links
+                                nav.find('.nav-link').removeClass('active');
+                                
+                                // Add active class to current section link
+                                nav.find(`a[href="#${id}"]`).addClass('active');
+                            }
+                        });
+                    });
+                    
+                    // Trigger scroll event to initialize active section
+                    $(window).trigger('scroll');
+                } else {
+                    // If no headings found, add alternative content navigation
+                    nav.append('<p class="text-muted">No content sections detected</p>');
+                }
+                
+                // Improve formatting of source citations
+                result.find('p').each(function() {
+                    const text = $(this).text().trim();
+                    if (text.startsWith('Source:') || text.startsWith('Sources:') || 
+                        text.startsWith('References:') || text.startsWith('Citation:')) {
+                        $(this).addClass('source font-italic');
+                    }
+                });
+            }
+            
+            // Auto refresh for pending/processing status
+            if ('{{ job.status }}' === 'pending' || '{{ job.status }}' === 'processing') {
+                setTimeout(function() {
+                    location.reload();
+                }, 10000); // Refresh every 10 seconds
+            }
+        });
+    </script>
+</body>
+</html> 
