@@ -507,22 +507,22 @@
                             {{ transaction.Side|upper }}
                         </td>
                         <td>
-                            ${{ "%.2f"|format(transaction.AveragePrice) }}
+                            $ {{ "%.2f"|format(transaction.AveragePrice) if transaction.AveragePrice is not none else "N/A" }}
                             {% if transaction.HasSplitAdjustment %}
                             <div class="split-info">
                                 <small class="text-muted">
-                                    Original: ${{ "%.2f"|format(transaction.OriginalPrice) }}
+                                    Original: $ {{ "%.2f"|format(transaction.OriginalPrice) if transaction.OriginalPrice is not none else "N/A" }}
                                 </small>
                                 <span class="split-indicator" title="Split Adjusted">📊</span>
                             </div>
                             {% endif %}
                         </td>
                         <td>
-                            {{ "%.2f"|format(transaction.Qty) }}
+                            {{ "%.2f"|format(transaction.Qty) if transaction.Qty is not none else "N/A" }}
                             {% if transaction.HasSplitAdjustment %}
                             <div class="split-info">
                                 <small class="text-muted">
-                                    Original: {{ "%.2f"|format(transaction.OriginalQty) }}
+                                    Original: {{ "%.2f"|format(transaction.OriginalQty) if transaction.OriginalQty is not none else "N/A" }}
                                 </small>
                             </div>
                             {% endif %}

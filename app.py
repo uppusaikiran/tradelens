@@ -2412,7 +2412,7 @@ def process_earnings_research(job_id, symbol, earnings_date, perplexity_model):
         ''', (symbol,))
         
         position = cursor.fetchone()
-        has_position = position and position['CurrentShares'] > 0
+        has_position = position and position['CurrentShares'] is not None and position['CurrentShares'] > 0
         
         # Get earnings history for this stock
         cursor.execute('''
@@ -2436,7 +2436,7 @@ def process_earnings_research(job_id, symbol, earnings_date, perplexity_model):
             base_url="https://api.perplexity.ai"
         )
         
-        # Always use sonar-deep-research for enhanced analysis
+        # Always use sonar-deep-research for earnings analysis
         model = 'sonar-deep-research'
         
         # Get current date for context
@@ -2445,8 +2445,8 @@ def process_earnings_research(job_id, symbol, earnings_date, perplexity_model):
         # Build investor context based on portfolio position
         investor_context = ""
         if has_position:
-            avg_cost = position['AverageCost'] or 0
-            current_shares = position['CurrentShares'] or 0
+            avg_cost = position['AverageCost'] if position['AverageCost'] is not None else 0
+            current_shares = position['CurrentShares'] if position['CurrentShares'] is not None else 0
             
             # Get current price
             price_data = get_stock_price(symbol)
@@ -2570,6 +2570,9 @@ def earnings_companion():
     # Get current settings
     settings = get_settings()
     
+    # Store user's original model selection
+    original_model = settings.get('perplexity_model', DEFAULT_PERPLEXITY_MODEL)
+    
     # Force deep research model for earnings analysis
     settings['perplexity_model'] = 'sonar-deep-research'
     session['settings'] = settings
@@ -2577,145 +2580,136 @@ def earnings_companion():
     # Check if Perplexity API is available
     perplexity_available = bool(os.getenv('PERPLEXITY_API_KEY'))
     if not perplexity_available:
-        flash("Perplexity API is required for earnings research. Please set your API key in settings.", "warning")
+        flash("Perplexity API is required for earnings analysis. Please set your API key in settings.", "warning")
         return redirect(url_for('settings'))
     
-    # Try to update earnings calendar in the background
-    try:
-        threading.Thread(target=update_earnings_calendar, daemon=True).start()
-    except Exception as e:
-        print(f"Error starting calendar update thread: {e}")
-    
-    # Get connection to database
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    # Get user's portfolio (stocks with positive current shares)
-    cursor.execute('''
-        SELECT 
-            Symbol, 
-            Name,
-            SUM(CASE WHEN Side = 'buy' THEN Qty ELSE -Qty END) as CurrentShares,
-            SUM(CASE WHEN Side = 'buy' THEN Qty * AveragePrice ELSE 0 END) / 
-            NULLIF(SUM(CASE WHEN Side = 'buy' THEN Qty ELSE 0 END), 0) as AverageCost
-        FROM 
-            transactions
-        GROUP BY 
-            Symbol
-        HAVING 
-            SUM(CASE WHEN Side = 'buy' THEN Qty ELSE -Qty END) > 0
-        ORDER BY 
-            Symbol
-    ''')
-    
-    portfolio = cursor.fetchall()
-    
-    # Get all portfolio symbols for filtering
-    portfolio_symbols = [stock['Symbol'] for stock in portfolio]
-    
-    # Get current prices
-    current_prices = {}
-    for stock in portfolio:
-        symbol = stock['Symbol']
-        if symbol not in current_prices:
-            price_data = get_stock_price(symbol)
-            if price_data and 'current_price' in price_data and price_data['current_price'] is not None:
-                current_prices[symbol] = price_data['current_price']
-            else:
-                current_prices[symbol] = 0
-    
-    # Get earnings calendar for the next 30 days
-    today = datetime.now().date()
-    start_date = today.strftime('%Y-%m-%d')
-    end_date = (today + timedelta(days=90)).strftime('%Y-%m-%d')
-    
-    cursor.execute('''
-        SELECT * FROM earnings_calendar 
-        WHERE earnings_date BETWEEN ? AND ?
-        ORDER BY earnings_date ASC
-    ''', (start_date, end_date))
-    
-    earnings_calendar = cursor.fetchall()
-    
-    # Get all earnings research jobs
-    cursor.execute('SELECT * FROM earnings_jobs ORDER BY created_at DESC')
-    earnings_jobs = cursor.fetchall()
-    
-    # Handle new research request
+    # Process form submission for earnings research
     if request.method == 'POST':
         symbol = request.form.get('symbol')
         earnings_date = request.form.get('earnings_date')
         
         if symbol and earnings_date:
-            # Create a new job in the database
+            # Create a job for the earnings research
             job_id = create_earnings_research_job(symbol, earnings_date)
             
-            # Get current perplexity model from settings to pass to the background process
-            perplexity_model = settings.get('perplexity_model', 'sonar-deep-research')
-            
-            # Start the earnings research in a background thread
+            # Start a background thread to process the job
             thread = threading.Thread(
                 target=process_earnings_research,
-                args=(job_id, symbol, earnings_date, perplexity_model)
+                args=(job_id, symbol, earnings_date, settings['perplexity_model'])
             )
             thread.daemon = True
             thread.start()
             
-            flash(f"Earnings research job created. Check back later for results. Job ID: {job_id}", "success")
+            flash(f"Earnings research job created for {symbol}. Check back in a minute for results.", "success")
             return redirect(url_for('earnings_companion'))
     
-    # Group earnings by week for better visualization
+    # Get today's date
+    today = datetime.now().date()
+    
+    # Get the earnings calendar for the next 30 days
+    end_date = (today + timedelta(days=30)).strftime('%Y-%m-%d')
+    earnings_calendar = get_earnings_calendar(
+        start_date=today.strftime('%Y-%m-%d'),
+        end_date=end_date
+    )
+    
+    # If calendar is empty, try to update it
+    if not earnings_calendar:
+        update_earnings_calendar()
+        earnings_calendar = get_earnings_calendar(
+            start_date=today.strftime('%Y-%m-%d'),
+            end_date=end_date
+        )
+    
+    # Get user's portfolio to highlight stocks
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        SELECT 
+            Symbol,
+            SUM(CASE WHEN Side = 'buy' THEN Qty ELSE -Qty END) as CurrentShares
+        FROM 
+            transactions
+        GROUP BY 
+            Symbol
+        HAVING 
+            CurrentShares > 0
+    ''')
+    
+    portfolio_symbols = {row['Symbol']: row['CurrentShares'] for row in cursor.fetchall()}
+    conn.close()
+    
+    # Mark portfolio stocks in the earnings calendar
+    for entry in earnings_calendar:
+        entry['in_portfolio'] = entry['symbol'] in portfolio_symbols
+        if entry['in_portfolio']:
+            entry['shares'] = portfolio_symbols[entry['symbol']]
+    
+    # Organize earnings by week
     earnings_by_week = {}
     
-    for earning in earnings_calendar:
+    for entry in earnings_calendar:
         # Parse earnings date
-        date_obj = datetime.strptime(earning['earnings_date'], '%Y-%m-%d').date()
+        earnings_date = datetime.strptime(entry['earnings_date'], '%Y-%m-%d').date()
         
-        # Calculate week of the month
-        start_of_month = date_obj.replace(day=1)
-        days_since_month_start = (date_obj - start_of_month).days
-        week_of_month = days_since_month_start // 7 + 1
+        # Calculate week of year
+        week_num = earnings_date.isocalendar()[1]
+        year = earnings_date.year
         
-        # Create a week identifier (year-month-weeknum)
-        month_name = date_obj.strftime('%B')
-        week_id = f"{month_name} Week {week_of_month}"
+        # Generate week ID
+        week_id = f"Week {week_num}, {year}"
         
-        # Initialize week if not exists
+        # Add to appropriate week
         if week_id not in earnings_by_week:
             earnings_by_week[week_id] = []
         
-        # Add earnings to the week
-        earnings_by_week[week_id].append(earning)
+        earnings_by_week[week_id].append(entry)
     
-    # Close database connection
-    conn.close()
+    # Get recent earnings research jobs
+    earnings_jobs = get_earnings_jobs()
+    
+    # Restore user's original model selection before rendering
+    settings['perplexity_model'] = original_model
+    session['settings'] = settings
     
     return render_template(
         'earnings_companion.html',
-        portfolio=portfolio,
-        portfolio_symbols=portfolio_symbols,
-        current_prices=current_prices,
         earnings_calendar=earnings_calendar,
         earnings_by_week=earnings_by_week,
+        portfolio_symbols=portfolio_symbols,
         earnings_jobs=earnings_jobs,
-        today=today.strftime('%Y-%m-%d'),
-        end_date=end_date,
-        settings=settings
+        settings=settings,
+        today=today
     )
 
 @app.route('/earnings-job/<job_id>')
 def earnings_job(job_id):
-    """Route to get a specific earnings research job"""
+    """Route to get a specific earnings job"""
+    # Get current settings
+    settings = get_settings()
+    
+    # Store user's original model selection
+    original_model = settings.get('perplexity_model', DEFAULT_PERPLEXITY_MODEL)
+    
+    # Force deep research model for earnings research display
+    settings['perplexity_model'] = 'sonar-deep-research'
+    session['settings'] = settings
+    
     job = get_earnings_job(job_id)
     
     if not job:
         flash("Job not found", "error")
         return redirect(url_for('earnings_companion'))
     
+    # Restore user's original model selection before rendering
+    settings['perplexity_model'] = original_model
+    session['settings'] = settings
+    
     return render_template(
         'earnings_job.html',
         job=job,
-        settings=get_settings()
+        settings=settings
     )
 
 @app.route('/api/earnings-job/<job_id>', methods=['GET'])
