@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradeLens - Earnings Research</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown-light.min.css">
+    <style>
+        .earnings-card {
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+            margin-bottom: 24px;
+            overflow: hidden;
+            border: 1px solid #e9ecef;
+        }
+        
+        .earnings-card-header {
+            background: linear-gradient(90deg, #4a6cfd 0%, #6e87f5 100%);
+            color: white;
+            font-weight: 600;
+            padding: 15px 20px;
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .earnings-card-body {
+            padding: 20px;
+            background-color: #fff;
+        }
+        
+        .job-meta {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .job-meta-item {
+            display: flex;
+            margin-bottom: 8px;
+        }
+        
+        .job-meta-label {
+            font-weight: 600;
+            width: 120px;
+            color: #495057;
+        }
+        
+        .job-meta-value {
+            color: #212529;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        
+        .status-pending {
+            background-color: #f8f9fa;
+            color: #495057;
+        }
+        
+        .status-processing {
+            background-color: #cff4fc;
+            color: #055160;
+        }
+        
+        .status-completed {
+            background-color: #d1e7dd;
+            color: #0f5132;
+        }
+        
+        .status-failed {
+            background-color: #f8d7da;
+            color: #842029;
+        }
+        
+        .markdown-body {
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        }
+        
+        .markdown-body h1 {
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e9ecef;
+            margin-bottom: 20px;
+        }
+        
+        .markdown-body h2 {
+            margin-top: 24px;
+            margin-bottom: 16px;
+            font-weight: 600;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .markdown-body h3 {
+            margin-top: 24px;
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
+        
+        .markdown-body p {
+            margin-bottom: 16px;
+            line-height: 1.6;
+        }
+        
+        .markdown-body ul, .markdown-body ol {
+            margin-bottom: 16px;
+            padding-left: 2em;
+        }
+        
+        .markdown-body li {
+            margin-bottom: 4px;
+        }
+        
+        .markdown-body blockquote {
+            padding: 0 1em;
+            color: #6c757d;
+            border-left: 0.25em solid #e9ecef;
+        }
+        
+        .markdown-body pre {
+            padding: 16px;
+            overflow: auto;
+            background-color: #f6f8fa;
+            border-radius: 6px;
+        }
+        
+        .markdown-body code {
+            padding: 0.2em 0.4em;
+            background-color: #f6f8fa;
+            border-radius: 3px;
+            font-family: SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
+        }
+        
+        .markdown-body a {
+            color: #4a6cfd;
+            text-decoration: none;
+        }
+        
+        .markdown-body a:hover {
+            text-decoration: underline;
+        }
+        
+        .markdown-body img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 20px 0;
+        }
+        
+        @media (max-width: 768px) {
+            .job-meta-item {
+                flex-direction: column;
+            }
+            
+            .job-meta-label {
+                width: 100%;
+                margin-bottom: 4px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Modern Navbar with Title -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top" style="padding: 0.7rem 2vw; z-index: 100;">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center" href="/">
+                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="App Logo" class="title-icon mr-2" style="width:1.8rem;height:1.8rem;">
+                TradeLens
+            </a>
+            <div class="d-flex align-items-center ml-auto">
+                <a href="{{ url_for('index') }}" class="nav-link mr-3">Dashboard</a>
+                <a href="{{ url_for('risk_review') }}" class="nav-link mr-3">Risk Review</a>
+                <a href="{{ url_for('strategy_backtesting') }}" class="nav-link mr-3">Strategy Backtesting</a>
+                <a href="{{ url_for('thesis_validation') }}" class="nav-link mr-3">Thesis Validation</a>
+                <a href="{{ url_for('earnings_companion') }}" class="nav-link mr-3 active">Earnings Companion</a>
+                <a href="{{ url_for('settings') }}" class="nav-settings" title="AI Settings">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-gear" viewBox="0 0 16 16">
+                        <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
+                        <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319z"/>
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="container mt-5 mb-5">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <!-- Top Navigation -->
+        <div class="mb-4">
+            <a href="{{ url_for('earnings_companion') }}" class="text-decoration-none">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-left" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
+                </svg>
+                Back to Earnings Calendar
+            </a>
+        </div>
+        
+        <div class="earnings-card">
+            <div class="earnings-card-header">
+                <h4 class="mb-0">Earnings Research: {{ job.symbol }}</h4>
+                <span class="status-badge status-{{ job.status }}">{{ job.status|title }}</span>
+            </div>
+            <div class="earnings-card-body">
+                <div class="job-meta">
+                    <div class="job-meta-item">
+                        <div class="job-meta-label">Stock Symbol:</div>
+                        <div class="job-meta-value">{{ job.symbol }}</div>
+                    </div>
+                    <div class="job-meta-item">
+                        <div class="job-meta-label">Earnings Date:</div>
+                        <div class="job-meta-value">{{ job.earnings_date }}</div>
+                    </div>
+                    <div class="job-meta-item">
+                        <div class="job-meta-label">Request Created:</div>
+                        <div class="job-meta-value">{{ job.created_at }}</div>
+                    </div>
+                    {% if job.completed_at %}
+                    <div class="job-meta-item">
+                        <div class="job-meta-label">Completed:</div>
+                        <div class="job-meta-value">{{ job.completed_at }}</div>
+                    </div>
+                    {% endif %}
+                    <div class="job-meta-item">
+                        <div class="job-meta-label">AI Provider:</div>
+                        <div class="job-meta-value">
+                            {% if settings.ai_provider == 'perplexity' %}
+                                Perplexity AI ({{ settings.perplexity_model }})
+                            {% else %}
+                                OpenAI
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                {% if job.status == 'completed' %}
+                    <div class="job-content">
+                        <div class="markdown-body">
+                            {{ job.result|markdown }}
+                        </div>
+                    </div>
+                {% elif job.status == 'processing' %}
+                    <div class="d-flex justify-content-center align-items-center p-5">
+                        <div class="text-center">
+                            <div class="spinner-border text-primary mb-3" role="status">
+                                <span class="sr-only">Loading...</span>
+                            </div>
+                            <h5>Processing Research Request</h5>
+                            <p class="text-muted">This may take a minute or two. Please wait or check back later.</p>
+                            <button class="btn btn-outline-primary mt-2" onclick="location.reload()">Refresh Status</button>
+                        </div>
+                    </div>
+                {% elif job.status == 'pending' %}
+                    <div class="alert alert-info text-center p-4">
+                        <h5>Research Request Pending</h5>
+                        <p>Your research request is in the queue and will be processed shortly.</p>
+                        <button class="btn btn-outline-primary mt-2" onclick="location.reload()">Refresh Status</button>
+                    </div>
+                {% elif job.status == 'failed' %}
+                    <div class="alert alert-danger text-center p-4">
+                        <h5>Research Request Failed</h5>
+                        <p>There was an error processing your research request. Please try again.</p>
+                        <p class="text-muted"><small>Error: {{ job.result }}</small></p>
+                        <a href="{{ url_for('earnings_companion') }}" class="btn btn-primary mt-2">Back to Earnings Calendar</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    
+    {% if job.status == 'processing' or job.status == 'pending' %}
+    <script>
+        // Auto-refresh the page every 10 seconds if the job is still processing
+        setTimeout(function() {
+            location.reload();
+        }, 10000);
+    </script>
+    {% endif %}
+</body>
+</html> 

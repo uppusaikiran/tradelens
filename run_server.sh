@@ -43,9 +43,13 @@ pip install -r requirements.txt
 echo "Removing any existing database..."
 rm -f stock_transactions.db
 
-# Create empty database
-echo "Creating empty database..."
+# Ensure database is initialized
+echo "Initializing database structure..."
 python init_db.py
+
+# Update earnings data
+echo "Updating earnings calendar data..."
+python populate_earnings_data.py
 
 # Run Flask server
 echo "Starting Flask server..."
@@ -53,4 +57,4 @@ echo "You can now upload your CSV file through the web interface."
 export FLASK_APP=app.py
 export FLASK_ENV=development
 export FLASK_DEBUG=1
-flask run --host=0.0.0.0 --port=5000
+flask run --host=0.0.0.0 --port=5001

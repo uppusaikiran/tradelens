@@ -13,6 +13,7 @@ from openai import OpenAI
 import openai
 from dotenv import load_dotenv
 import threading
+import markdown
 
 # Define MAG7 stocks
 MAG7_STOCKS = {
@@ -183,6 +184,24 @@ def categorize_stock(symbol, name):
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'dev_secret_key_change_in_production')
+
+# Add custom Jinja2 filter for strptime
+@app.template_filter('strptime')
+def strptime_filter(date_str, format_str):
+    """Convert a date string to a datetime object using the given format"""
+    return datetime.strptime(date_str, format_str)
+
+# Add markdown filter for rendering markdown content
+@app.template_filter('markdown')
+def markdown_filter(text):
+    """Convert markdown text to HTML"""
+    try:
+        # Install markdown package if not present
+        import markdown
+        return markdown.markdown(text)
+    except ImportError:
+        # Fallback if markdown package is not installed
+        return text.replace('\n', '<br>')
 
 # Add more aggressive caching
 chart_cache = {}
@@ -1625,6 +1644,32 @@ def init_db():
     )
     ''')
     
+    # Create earnings_jobs table for storing earnings research requests
+    c.execute('''
+    CREATE TABLE IF NOT EXISTS earnings_jobs (
+        job_id TEXT PRIMARY KEY,
+        symbol TEXT NOT NULL,
+        earnings_date TEXT NOT NULL,
+        status TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        completed_at TEXT,
+        result TEXT
+    )
+    ''')
+    
+    # Create earnings_calendar table for storing upcoming earnings dates
+    c.execute('''
+    CREATE TABLE IF NOT EXISTS earnings_calendar (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        symbol TEXT NOT NULL,
+        company_name TEXT,
+        earnings_date TEXT NOT NULL,
+        time_of_day TEXT,
+        eps_estimate REAL,
+        last_updated TEXT NOT NULL
+    )
+    ''')
+    
     conn.commit()
     
     # Load data from CSV if the table is empty
@@ -1918,7 +1963,715 @@ def api_thesis_job(job_id):
     
     return jsonify(job)
 
+# Earnings Calendar Helper Functions
+def get_earnings_calendar(start_date=None, end_date=None, symbol=None):
+    """
+    Get earnings calendar from the database, with optional filtering by date range or symbol.
+    
+    Args:
+        start_date (str): Filter earnings after this date (inclusive)
+        end_date (str): Filter earnings before this date (inclusive)
+        symbol (str): Filter by specific stock symbol
+        
+    Returns:
+        list: Earnings calendar entries matching the criteria
+    """
+    conn = get_db_connection()
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    query = 'SELECT * FROM earnings_calendar'
+    params = []
+    
+    # Add filtering conditions
+    conditions = []
+    if start_date:
+        conditions.append('earnings_date >= ?')
+        params.append(start_date)
+    
+    if end_date:
+        conditions.append('earnings_date <= ?')
+        params.append(end_date)
+    
+    if symbol:
+        conditions.append('symbol = ?')
+        params.append(symbol)
+    
+    if conditions:
+        query += ' WHERE ' + ' AND '.join(conditions)
+    
+    query += ' ORDER BY earnings_date ASC'
+    
+    cursor.execute(query, params)
+    earnings = cursor.fetchall()
+    
+    conn.close()
+    return [dict(e) for e in earnings]
+
+def update_earnings_calendar():
+    """
+    Update the earnings calendar with latest data using Yahoo Finance API.
+    Focuses on the user's portfolio stocks first, then adds other major stocks.
+    
+    Returns:
+        bool: Success status
+    """
+    try:
+        # Get current date
+        today = datetime.now().date()
+        
+        # Get the next 30 days range
+        end_date = (today + timedelta(days=30)).strftime('%Y-%m-%d')
+        
+        # Get user's portfolio stocks
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT DISTINCT Symbol, Name
+            FROM transactions
+            WHERE Symbol IN (
+                SELECT Symbol
+                FROM transactions
+                GROUP BY Symbol
+                HAVING SUM(CASE WHEN Side = 'buy' THEN Qty ELSE -Qty END) > 0
+            )
+        ''')
+        
+        portfolio_stocks = cursor.fetchall()
+        
+        # Also get some major indices and popular stocks to add to the calendar
+        major_stocks = [
+            # MAG7 Stocks (if not in portfolio)
+            ('AAPL', 'Apple Inc.'),
+            ('MSFT', 'Microsoft Corporation'),
+            ('GOOGL', 'Alphabet Inc.'),
+            ('AMZN', 'Amazon.com Inc.'),
+            ('META', 'Meta Platforms Inc.'),
+            ('NVDA', 'NVIDIA Corporation'),
+            ('TSLA', 'Tesla Inc.'),
+            
+            # Other popular stocks
+            ('AMD', 'Advanced Micro Devices, Inc.'),
+            ('INTC', 'Intel Corporation'),
+            ('V', 'Visa Inc.'),
+            ('JPM', 'JPMorgan Chase & Co.'),
+            ('NFLX', 'Netflix Inc.'),
+            ('DIS', 'The Walt Disney Company'),
+            ('ADBE', 'Adobe Inc.'),
+            ('CRM', 'Salesforce, Inc.')
+        ]
+        
+        # Get today's date as string
+        today_str = today.strftime('%Y-%m-%d')
+        
+        # Open database connection for updates
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # List of common ETFs that don't report earnings
+        common_etfs = ['SPY', 'QQQ', 'VOO', 'IVV', 'VTI', 'TQQQ', 'SQQQ', 'DIA', 'IJR', 'EFA', 'XLF', 'XLE', 'XLK', 'XLV', 'ARKK']
+        
+        # Track processed symbols
+        processed_symbols = set()
+        
+        # Process each stock in the portfolio first
+        for stock in portfolio_stocks:
+            symbol = stock['Symbol']
+            name = stock['Name']
+            
+            # Skip common ETFs that don't report earnings
+            if symbol in common_etfs or is_etf(symbol, name):
+                continue
+                
+            processed_symbols.add(symbol)
+            
+            try:
+                # Check if we already have recent data for this stock
+                cursor.execute('''
+                    SELECT * FROM earnings_calendar 
+                    WHERE symbol = ? AND earnings_date >= ? AND last_updated >= date('now', '-7 days')
+                ''', (symbol, today_str))
+                
+                existing_entry = cursor.fetchone()
+                if existing_entry:
+                    # Already have fresh data, skip
+                    continue
+                
+                # Get earnings data using yfinance
+                stock_data = yf.Ticker(symbol)
+                earnings_dates = stock_data.calendar
+                
+                if earnings_dates and hasattr(earnings_dates, 'loc') and 'Earnings Date' in earnings_dates:
+                    earnings_date = earnings_dates.loc['Earnings Date']
+                    
+                    # Convert to datetime if it's a timestamp
+                    if isinstance(earnings_date, pd.Timestamp):
+                        earnings_date = earnings_date.date().strftime('%Y-%m-%d')
+                    else:
+                        earnings_date = str(earnings_date)
+                    
+                    # Get time of day (BMO = Before Market Open, AMC = After Market Close)
+                    time_of_day = 'Unknown'
+                    earnings_time = stock_data.calendar.loc['Earnings Time'] if 'Earnings Time' in stock_data.calendar else None
+                    if earnings_time:
+                        if 'bmo' in str(earnings_time).lower():
+                            time_of_day = 'BMO'
+                        elif 'amc' in str(earnings_time).lower():
+                            time_of_day = 'AMC'
+                    
+                    # Get EPS estimate
+                    eps_estimate = None
+                    if 'EPS Estimate' in stock_data.calendar:
+                        eps_estimate = stock_data.calendar.loc['EPS Estimate']
+                        if not isinstance(eps_estimate, (int, float)) or pd.isna(eps_estimate):
+                            eps_estimate = None
+                    
+                    # Upsert into database
+                    cursor.execute('''
+                        INSERT OR REPLACE INTO earnings_calendar 
+                        (symbol, company_name, earnings_date, time_of_day, eps_estimate, last_updated)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    ''', (
+                        symbol, 
+                        name, 
+                        earnings_date,
+                        time_of_day,
+                        eps_estimate,
+                        today_str
+                    ))
+                
+            except Exception as e:
+                print(f"Error fetching earnings for {symbol}: {e}")
+                continue
+        
+        # Now process major stocks that aren't in the portfolio
+        for symbol, name in major_stocks:
+            # Skip if already processed or if it's an ETF
+            if symbol in processed_symbols or symbol in common_etfs:
+                continue
+                
+            processed_symbols.add(symbol)
+            
+            try:
+                # Check if we already have recent data for this stock
+                cursor.execute('''
+                    SELECT * FROM earnings_calendar 
+                    WHERE symbol = ? AND earnings_date >= ? AND last_updated >= date('now', '-7 days')
+                ''', (symbol, today_str))
+                
+                existing_entry = cursor.fetchone()
+                if existing_entry:
+                    # Already have fresh data, skip
+                    continue
+                
+                # Get earnings data using yfinance
+                stock_data = yf.Ticker(symbol)
+                earnings_dates = stock_data.calendar
+                
+                if earnings_dates and hasattr(earnings_dates, 'loc') and 'Earnings Date' in earnings_dates:
+                    earnings_date = earnings_dates.loc['Earnings Date']
+                    
+                    # Convert to datetime if it's a timestamp
+                    if isinstance(earnings_date, pd.Timestamp):
+                        earnings_date = earnings_date.date().strftime('%Y-%m-%d')
+                    else:
+                        earnings_date = str(earnings_date)
+                    
+                    # Get time of day (BMO = Before Market Open, AMC = After Market Close)
+                    time_of_day = 'Unknown'
+                    earnings_time = stock_data.calendar.loc['Earnings Time'] if 'Earnings Time' in stock_data.calendar else None
+                    if earnings_time:
+                        if 'bmo' in str(earnings_time).lower():
+                            time_of_day = 'BMO'
+                        elif 'amc' in str(earnings_time).lower():
+                            time_of_day = 'AMC'
+                    
+                    # Get EPS estimate
+                    eps_estimate = None
+                    if 'EPS Estimate' in stock_data.calendar:
+                        eps_estimate = stock_data.calendar.loc['EPS Estimate']
+                        if not isinstance(eps_estimate, (int, float)) or pd.isna(eps_estimate):
+                            eps_estimate = None
+                    
+                    # Upsert into database
+                    cursor.execute('''
+                        INSERT OR REPLACE INTO earnings_calendar 
+                        (symbol, company_name, earnings_date, time_of_day, eps_estimate, last_updated)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    ''', (
+                        symbol, 
+                        name, 
+                        earnings_date,
+                        time_of_day,
+                        eps_estimate,
+                        today_str
+                    ))
+                
+            except Exception as e:
+                print(f"Error fetching earnings for {symbol}: {e}")
+                continue
+        
+        # Clean up old entries
+        cursor.execute('''
+            DELETE FROM earnings_calendar 
+            WHERE earnings_date < ?
+        ''', (today_str,))
+        
+        # Commit changes
+        conn.commit()
+        conn.close()
+        return True
+    
+    except Exception as e:
+        print(f"Error updating earnings calendar: {e}")
+        return False
+
+def is_etf(symbol, name=None):
+    """
+    Determine if a security is likely an ETF based on its symbol or name
+    
+    Args:
+        symbol (str): The stock symbol to check
+        name (str): The name of the security, if available
+        
+    Returns:
+        bool: True if the security is likely an ETF, False otherwise
+    """
+    # Common ETF keywords in names
+    etf_keywords = ['ETF', 'FUND', 'INDEX', 'TRUST', 'SHARES', 'ISHARES', 'VANGUARD', 'SPDR']
+    
+    # Check if name contains ETF keywords
+    if name:
+        upper_name = name.upper()
+        if any(keyword in upper_name for keyword in etf_keywords):
+            return True
+            
+    # Check if typical ETF pattern (3-4 letters, often ends with specific letters)
+    if len(symbol) <= 4 and any(symbol.endswith(suffix) for suffix in ['X', 'Q', 'S']):
+        # Additional verification with yfinance if needed
+        try:
+            stock = yf.Ticker(symbol)
+            info = stock.info
+            if 'quoteType' in info and info['quoteType'] in ['ETF', 'MUTUALFUND', 'INDEX']:
+                return True
+        except:
+            # If we can't verify, just continue with other checks
+            pass
+            
+    return False
+
+def create_earnings_research_job(symbol, earnings_date):
+    """Create a new earnings research job in the database"""
+    job_id = str(uuid.uuid4())
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+    INSERT INTO earnings_jobs (job_id, symbol, earnings_date, status, created_at)
+    VALUES (?, ?, ?, ?, ?)
+    ''', (job_id, symbol, earnings_date, 'pending', datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+    
+    conn.commit()
+    conn.close()
+    return job_id
+
+def get_earnings_job(job_id):
+    """Get a specific earnings research job by ID"""
+    conn = get_db_connection()
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    cursor.execute('SELECT * FROM earnings_jobs WHERE job_id = ?', (job_id,))
+    job = cursor.fetchone()
+    
+    conn.close()
+    return dict(job) if job else None
+
+def get_earnings_jobs(symbol=None):
+    """Get all earnings research jobs, optionally filtering by symbol"""
+    conn = get_db_connection()
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    if symbol:
+        cursor.execute('SELECT * FROM earnings_jobs WHERE symbol = ? ORDER BY created_at DESC', (symbol,))
+    else:
+        cursor.execute('SELECT * FROM earnings_jobs ORDER BY created_at DESC')
+    
+    jobs = cursor.fetchall()
+    
+    conn.close()
+    return [dict(job) for job in jobs]
+
+def update_earnings_job(job_id, status, result=None):
+    """Update the status and result of an earnings research job"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    if result:
+        cursor.execute('''
+        UPDATE earnings_jobs 
+        SET status = ?, result = ?, completed_at = ?
+        WHERE job_id = ?
+        ''', (status, result, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), job_id))
+    else:
+        cursor.execute('''
+        UPDATE earnings_jobs 
+        SET status = ?
+        WHERE job_id = ?
+        ''', (status, job_id))
+    
+    conn.commit()
+    conn.close()
+
+def process_earnings_research(job_id, symbol, earnings_date, perplexity_model):
+    """Background task to process the earnings research request"""
+    try:
+        # Update job status to processing
+        update_earnings_job(job_id, 'processing')
+        
+        # Get company name and any position info from user's portfolio
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT Name FROM transactions WHERE Symbol = ? LIMIT 1', (symbol,))
+        result = cursor.fetchone()
+        company_name = result['Name'] if result else symbol
+        
+        # Get user's position in this stock if any
+        cursor.execute('''
+            SELECT 
+                SUM(CASE WHEN Side = 'buy' THEN Qty ELSE -Qty END) as CurrentShares,
+                SUM(CASE WHEN Side = 'buy' THEN Qty * AveragePrice ELSE 0 END) / 
+                NULLIF(SUM(CASE WHEN Side = 'buy' THEN Qty ELSE 0 END), 0) as AverageCost
+            FROM 
+                transactions
+            WHERE 
+                Symbol = ?
+        ''', (symbol,))
+        
+        position = cursor.fetchone()
+        has_position = position and position['CurrentShares'] > 0
+        
+        # Get earnings history for this stock
+        cursor.execute('''
+            SELECT * FROM earnings_calendar 
+            WHERE symbol = ? AND earnings_date < ?
+            ORDER BY earnings_date DESC
+            LIMIT 4
+        ''', (symbol, earnings_date))
+        
+        past_earnings = cursor.fetchall()
+        conn.close()
+        
+        # Get Perplexity client
+        perplexity_api_key = os.getenv('PERPLEXITY_API_KEY')
+        if not perplexity_api_key:
+            update_earnings_job(job_id, 'failed', "Perplexity API key not configured")
+            return
+        
+        perplexity_client = OpenAI(
+            api_key=perplexity_api_key,
+            base_url="https://api.perplexity.ai"
+        )
+        
+        # Use provided model or fallback to sonar-deep-research
+        model = perplexity_model or 'sonar-deep-research'
+        
+        # Get current date for context
+        current_date = datetime.now().strftime('%Y-%m-%d')
+        
+        # Build investor context based on portfolio position
+        investor_context = ""
+        if has_position:
+            avg_cost = position['AverageCost'] or 0
+            current_shares = position['CurrentShares'] or 0
+            
+            # Get current price
+            price_data = get_stock_price(symbol)
+            current_price = price_data.get('current_price', 0) if price_data else 0
+            
+            if current_price and avg_cost:
+                gain_loss_pct = ((current_price - avg_cost) / avg_cost) * 100
+                investor_context = f"""
+                The investor currently owns {int(current_shares)} shares of {symbol} at an average cost basis of ${avg_cost:.2f}.
+                The current price is ${current_price:.2f}, representing a {'gain' if gain_loss_pct >= 0 else 'loss'} of {abs(gain_loss_pct):.1f}%.
+                The investor would likely be particularly interested in how upcoming earnings might affect their position.
+                """
+        
+        # Create a prompt for the earnings research
+        prompt = f"""Generate a detailed earnings preview research report for {symbol} ({company_name}) ahead of its earnings report on {earnings_date}.
+
+Today's date is {current_date}, so this is forward-looking research to prepare an investor for the upcoming earnings announcement.
+
+{investor_context}
+
+Please structure your analysis with the following sections:
+
+## Company Overview
+- Brief business description
+- Key products/services and revenue sources
+- Recent major developments (last 3-6 months)
+
+## Previous Earnings Performance
+- Results from the last quarter
+- Year-over-year growth metrics
+- Stock price reaction to previous earnings announcements
+
+## Current Quarter Expectations
+- Consensus EPS and revenue estimates
+- Whisper numbers and analyst sentiment
+- Key metrics investors should focus on
+
+## Industry & Competitive Landscape
+- Industry trends affecting the company
+- Competitive positioning
+- Market share changes
+
+## Recent News & Events
+- Material news since last earnings
+- Management commentary and guidance
+- Analyst ratings changes
+
+## Potential Catalysts & Risk Factors
+- Specific things to watch for in this earnings report
+- Upside and downside catalysts
+- Potential areas of concern
+
+## Technical Analysis
+- Current price trends and key levels
+- Volume patterns leading into earnings
+- Historical price movements around earnings
+
+## Investment Thesis
+- Bull case: What could drive outperformance
+- Bear case: What could cause disappointment
+- Expected impact on the stock price in various scenarios
+
+## Sources
+- List all sources of information used in this analysis
+
+Format your response using proper Markdown syntax with clear section headings, bullet points, and emphasis where appropriate. Provide specific numbers, dates, and data points whenever possible. Be objective and balanced in presenting both bullish and bearish perspectives.
+"""
+        
+        # Call Perplexity API using the OpenAI client interface
+        response = perplexity_client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": "You are an expert financial analyst specializing in earnings previews. You provide comprehensive, well-researched analysis with specific data points, clear insights for investors, and properly sourced information. You focus on actionable information relevant to the upcoming earnings report."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.2,
+            max_tokens=4000
+        )
+        
+        if response and response.choices and len(response.choices) > 0:
+            result = response.choices[0].message.content
+            
+            # Ensure the result contains proper markdown formatting
+            # Add a main heading if not present
+            if not result.startswith('# '):
+                result = f"# Earnings Preview: {symbol} ({company_name}) - {earnings_date}\n\n{result}"
+            
+            # Ensure sources are properly formatted
+            if "Sources:" in result and not "\n## Sources" in result:
+                result = result.replace("Sources:", "\n## Sources\n")
+            
+            update_earnings_job(job_id, 'completed', result)
+        else:
+            update_earnings_job(job_id, 'failed', "No response received from the AI model")
+    
+    except Exception as e:
+        print(f"Error processing earnings research job {job_id}: {str(e)}")
+        update_earnings_job(job_id, 'failed', f"Error: {str(e)}")
+
+@app.route('/earnings-companion', methods=['GET', 'POST'])
+def earnings_companion():
+    """Earnings Season Companion page"""
+    # Get current settings
+    settings = get_settings()
+    
+    # Check if Perplexity API is available
+    perplexity_available = bool(os.getenv('PERPLEXITY_API_KEY'))
+    if not perplexity_available:
+        flash("Perplexity API is required for earnings research. Please set your API key in settings.", "warning")
+        return redirect(url_for('settings'))
+    
+    # Try to update earnings calendar in the background
+    try:
+        threading.Thread(target=update_earnings_calendar, daemon=True).start()
+    except Exception as e:
+        print(f"Error starting calendar update thread: {e}")
+    
+    # Get connection to database
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Get user's portfolio (stocks with positive current shares)
+    cursor.execute('''
+        SELECT 
+            Symbol, 
+            Name,
+            SUM(CASE WHEN Side = 'buy' THEN Qty ELSE -Qty END) as CurrentShares,
+            SUM(CASE WHEN Side = 'buy' THEN Qty * AveragePrice ELSE 0 END) / 
+            NULLIF(SUM(CASE WHEN Side = 'buy' THEN Qty ELSE 0 END), 0) as AverageCost
+        FROM 
+            transactions
+        GROUP BY 
+            Symbol
+        HAVING 
+            SUM(CASE WHEN Side = 'buy' THEN Qty ELSE -Qty END) > 0
+        ORDER BY 
+            Symbol
+    ''')
+    
+    portfolio = cursor.fetchall()
+    
+    # Get all portfolio symbols for filtering
+    portfolio_symbols = [stock['Symbol'] for stock in portfolio]
+    
+    # Get current prices
+    current_prices = {}
+    for stock in portfolio:
+        symbol = stock['Symbol']
+        if symbol not in current_prices:
+            price_data = get_stock_price(symbol)
+            if price_data and 'current_price' in price_data and price_data['current_price'] is not None:
+                current_prices[symbol] = price_data['current_price']
+            else:
+                current_prices[symbol] = 0
+    
+    # Get earnings calendar for the next 30 days
+    today = datetime.now().date()
+    start_date = today.strftime('%Y-%m-%d')
+    end_date = (today + timedelta(days=90)).strftime('%Y-%m-%d')
+    
+    cursor.execute('''
+        SELECT * FROM earnings_calendar 
+        WHERE earnings_date BETWEEN ? AND ?
+        ORDER BY earnings_date ASC
+    ''', (start_date, end_date))
+    
+    earnings_calendar = cursor.fetchall()
+    
+    # Get all earnings research jobs
+    cursor.execute('SELECT * FROM earnings_jobs ORDER BY created_at DESC')
+    earnings_jobs = cursor.fetchall()
+    
+    # Handle new research request
+    if request.method == 'POST':
+        symbol = request.form.get('symbol')
+        earnings_date = request.form.get('earnings_date')
+        
+        if symbol and earnings_date:
+            # Create a new job in the database
+            job_id = create_earnings_research_job(symbol, earnings_date)
+            
+            # Get current perplexity model from settings to pass to the background process
+            perplexity_model = settings.get('perplexity_model', 'sonar-deep-research')
+            
+            # Start the earnings research in a background thread
+            thread = threading.Thread(
+                target=process_earnings_research,
+                args=(job_id, symbol, earnings_date, perplexity_model)
+            )
+            thread.daemon = True
+            thread.start()
+            
+            flash(f"Earnings research job created. Check back later for results. Job ID: {job_id}", "success")
+            return redirect(url_for('earnings_companion'))
+    
+    # Group earnings by week for better visualization
+    earnings_by_week = {}
+    
+    for earning in earnings_calendar:
+        # Parse earnings date
+        date_obj = datetime.strptime(earning['earnings_date'], '%Y-%m-%d').date()
+        
+        # Calculate week of the month
+        start_of_month = date_obj.replace(day=1)
+        days_since_month_start = (date_obj - start_of_month).days
+        week_of_month = days_since_month_start // 7 + 1
+        
+        # Create a week identifier (year-month-weeknum)
+        month_name = date_obj.strftime('%B')
+        week_id = f"{month_name} Week {week_of_month}"
+        
+        # Initialize week if not exists
+        if week_id not in earnings_by_week:
+            earnings_by_week[week_id] = []
+        
+        # Add earnings to the week
+        earnings_by_week[week_id].append(earning)
+    
+    # Close database connection
+    conn.close()
+    
+    return render_template(
+        'earnings_companion.html',
+        portfolio=portfolio,
+        portfolio_symbols=portfolio_symbols,
+        current_prices=current_prices,
+        earnings_calendar=earnings_calendar,
+        earnings_by_week=earnings_by_week,
+        earnings_jobs=earnings_jobs,
+        today=today.strftime('%Y-%m-%d'),
+        end_date=end_date,
+        settings=settings
+    )
+
+@app.route('/earnings-job/<job_id>')
+def earnings_job(job_id):
+    """Route to get a specific earnings research job"""
+    job = get_earnings_job(job_id)
+    
+    if not job:
+        flash("Job not found", "error")
+        return redirect(url_for('earnings_companion'))
+    
+    return render_template(
+        'earnings_job.html',
+        job=job,
+        settings=get_settings()
+    )
+
+@app.route('/api/earnings-job/<job_id>', methods=['GET'])
+def api_earnings_job(job_id):
+    """API endpoint to get the status of an earnings research job"""
+    job = get_earnings_job(job_id)
+    
+    if not job:
+        return jsonify({"error": "Job not found"}), 404
+    
+    return jsonify(job)
+
+@app.route('/api/earnings/calendar/update', methods=['POST'])
+def api_update_earnings_calendar():
+    """API endpoint to force update the earnings calendar"""
+    success = update_earnings_calendar()
+    
+    if success:
+        return jsonify({"status": "success", "message": "Earnings calendar updated successfully"})
+    else:
+        return jsonify({"status": "error", "message": "Failed to update earnings calendar"}), 500
+
 if __name__ == '__main__':
     # Make sure the database exists
     init_db()
+    
+    # Initialize earnings data if needed
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT COUNT(*) FROM earnings_calendar')
+    earnings_count = cursor.fetchone()[0]
+    conn.close()
+    
+    if earnings_count == 0:
+        try:
+            print("No earnings data found. Initializing earnings calendar with sample data...")
+            from populate_earnings_data import populate_sample_earnings_data
+            populate_sample_earnings_data()
+        except Exception as e:
+            print(f"Error initializing earnings data: {e}")
+    
     app.run(debug=True) 
