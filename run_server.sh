@@ -57,4 +57,4 @@ echo "You can now upload your CSV file through the web interface."
 export FLASK_APP=app.py
 export FLASK_ENV=development
 export FLASK_DEBUG=1
-flask run --host=0.0.0.0 --port=5001
+flask run --host=0.0.0.0 --port=10000
