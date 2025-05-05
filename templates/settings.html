@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradeLens - Settings</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .settings-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .settings-card {
+            border-radius: 12px;
+            box-shadow: 0 4px 24px rgba(79, 140, 255, 0.10);
+            margin-bottom: 24px;
+            background: linear-gradient(120deg, #f5faff 60%, #e3e9f7 100%);
+            transition: transform 0.3s ease;
+            border: 1px solid #e3e9f7;
+            overflow: hidden;
+        }
+        
+        .settings-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 28px rgba(79, 140, 255, 0.15);
+        }
+        
+        .settings-header {
+            background: linear-gradient(90deg, #4f8cff 0%, #6bb7ff 100%);
+            color: white;
+            font-weight: 600;
+            font-size: 16px;
+            padding: 15px 20px;
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+        }
+        
+        .settings-body {
+            padding: 20px;
+        }
+        
+        .settings-section {
+            margin-bottom: 24px;
+        }
+        
+        .settings-section:last-child {
+            margin-bottom: 0;
+        }
+        
+        .settings-title {
+            font-weight: 600;
+            color: #3a3f51;
+            margin-bottom: 16px;
+            border-bottom: 1px solid #e3e9f7;
+            padding-bottom: 8px;
+        }
+        
+        .model-option {
+            margin-bottom: 12px;
+            padding: 10px;
+            border-radius: 8px;
+            transition: background-color 0.2s;
+        }
+        
+        .model-option:hover {
+            background-color: #f0f2f5;
+        }
+        
+        .model-option input[type="radio"] {
+            margin-right: 10px;
+        }
+        
+        .model-option label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            width: 100%;
+        }
+        
+        .model-description {
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin-top: 4px;
+            margin-left: 24px;
+        }
+        
+        .ai-provider {
+            display: flex;
+            align-items: center;
+            margin-bottom: 16px;
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid #e3e9f7;
+            background-color: #fff;
+        }
+        
+        .ai-provider.active {
+            border-color: #4f8cff;
+            background-color: #f5faff;
+        }
+        
+        .ai-provider-logo {
+            width: 28px;
+            height: 28px;
+            margin-right: 10px;
+        }
+        
+        .ai-provider-details {
+            flex-grow: 1;
+        }
+        
+        .api-status {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        
+        .api-status.available {
+            background-color: #e6f7ed;
+            color: #2ecc71;
+        }
+        
+        .api-status.unavailable {
+            background-color: #fae9e8;
+            color: #e74c3c;
+        }
+        
+        .sub-models {
+            margin-left: 30px;
+            margin-top: 16px;
+            border-left: 2px solid #e3e9f7;
+            padding-left: 20px;
+        }
+        
+        .model-selector {
+            background: #fff;
+            border: 1px solid #ced4da;
+            border-radius: 8px;
+            padding: 8px 12px;
+            transition: all 0.2s;
+            display: inline-block;
+            margin-top: 10px;
+            color: #495057;
+        }
+        
+        .model-selector:focus {
+            border-color: #4f8cff;
+            box-shadow: 0 0 0 0.2rem rgba(79, 140, 255, 0.25);
+        }
+        
+        .submit-btn {
+            background: linear-gradient(90deg, #4f8cff 0%, #6bb7ff 100%);
+            color: white;
+            border: none;
+            font-weight: 600;
+            padding: 10px 24px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+        
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(79, 140, 255, 0.2);
+        }
+        
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+        
+        .back-link {
+            margin-top: 20px;
+            display: block;
+            color: #4f8cff;
+            text-decoration: none;
+        }
+        
+        .back-link:hover {
+            text-decoration: underline;
+            color: #357ae8;
+        }
+    </style>
+</head>
+<body>
+    <!-- Modern Navbar with Title -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top" style="padding: 0.7rem 2vw; z-index: 100;">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center" href="/">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="App Logo" class="title-icon mr-2" style="width:1.8rem;height:1.8rem;">
+                TradeLens
+            </a>
+        </div>
+    </nav>
+    
+    <div class="container mt-5 mb-5 settings-container">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <h1 class="mb-4">Application Settings</h1>
+        
+        <div class="settings-card">
+            <div class="settings-header">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-robot mr-2" viewBox="0 0 16 16">
+                    <path d="M6 12.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5ZM3 8.062C3 6.76 4.235 5.765 5.53 5.886a26.58 26.58 0 0 0 4.94 0C11.765 5.765 13 6.76 13 8.062v1.157a.933.933 0 0 1-.765.935c-.845.147-2.34.346-4.235.346-1.895 0-3.39-.2-4.235-.346A.933.933 0 0 1 3 9.219V8.062Zm4.542-.827a.25.25 0 0 0-.217.068l-.92.9a24.767 24.767 0 0 1-1.871-.183.25.25 0 0 0-.068.495c.55.076 1.232.149 2.02.193a.25.25 0 0 0 .189-.071l.754-.736.847 1.71a.25.25 0 0 0 .404.062l.932-.97a25.286 25.286 0 0 0 1.922-.188.25.25 0 0 0-.068-.495c-.538.074-1.207.145-1.98.189a.25.25 0 0 0-.166.076l-.754.785-.842-1.7a.25.25 0 0 0-.182-.135Z"/>
+                    <path d="M8.5 1.866a1 1 0 1 0-1 0V3h-2A4.5 4.5 0 0 0 1 7.5V8a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1v1a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1v-.5A4.5 4.5 0 0 0 10.5 3h-2V1.866ZM14 7.5V13a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7.5A3.5 3.5 0 0 1 5.5 4h5A3.5 3.5 0 0 1 14 7.5Z"/>
+                </svg>
+                AI Assistant Configuration
+            </div>
+            <div class="settings-body">
+                <form action="{{ url_for('settings') }}" method="post">
+                    <div class="settings-section">
+                        <h3 class="settings-title">Select AI Provider</h3>
+                        
+                        <!-- OpenAI Option -->
+                        <div class="ai-provider {% if settings.ai_provider == 'openai' %}active{% endif %}">
+                            <input type="radio" id="openai" name="ai_provider" value="openai" 
+                                  {% if settings.ai_provider == 'openai' %}checked{% endif %}
+                                  {% if not openai_available %}disabled{% endif %}>
+                            <label for="openai" class="d-flex align-items-center w-100">
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/ChatGPT_logo.svg/1024px-ChatGPT_logo.svg.png" 
+                                     alt="OpenAI Logo" 
+                                     class="ai-provider-logo">
+                                <div class="ai-provider-details">
+                                    <div class="font-weight-bold">OpenAI</div>
+                                    <div class="small text-muted">Uses GPT-3.5-Turbo model</div>
+                                </div>
+                                {% if openai_available %}
+                                    <span class="api-status available">Available</span>
+                                {% else %}
+                                    <span class="api-status unavailable">Unavailable</span>
+                                {% endif %}
+                            </label>
+                        </div>
+                        
+                        <!-- Perplexity Option -->
+                        <div class="ai-provider {% if settings.ai_provider == 'perplexity' %}active{% endif %} mt-3">
+                            <input type="radio" id="perplexity" name="ai_provider" value="perplexity"
+                                  {% if settings.ai_provider == 'perplexity' %}checked{% endif %} 
+                                  {% if not perplexity_available %}disabled{% endif %}>
+                            <label for="perplexity" class="d-flex align-items-center w-100">
+                                <img src="{{ url_for('static', filename='perplexity_icon.png') }}" 
+                                     alt="Perplexity Logo" 
+                                     class="ai-provider-logo">
+                                <div class="ai-provider-details">
+                                    <div class="font-weight-bold">Perplexity AI</div>
+                                    <div class="small text-muted">Uses various Perplexity models</div>
+                                </div>
+                                {% if perplexity_available %}
+                                    <span class="api-status available">Available</span>
+                                {% else %}
+                                    <span class="api-status unavailable">Unavailable</span>
+                                {% endif %}
+                            </label>
+                            
+                            <!-- Perplexity Model Selector (visible only when Perplexity is selected) -->
+                            <div class="sub-models" id="perplexityModels" 
+                                 {% if settings.ai_provider != 'perplexity' %}style="display: none;"{% endif %}>
+                                <div class="font-weight-bold mb-2">Select Perplexity Model:</div>
+                                <select name="perplexity_model" class="model-selector custom-select">
+                                    {% for model in perplexity_models %}
+                                    <option value="{{ model }}" {% if settings.perplexity_model == model %}selected{% endif %}>
+                                        {{ model }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="small text-muted mt-2">
+                                    This model will be used for the AI chat assistant.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-right mt-4">
+                        <button type="submit" class="submit-btn">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check2 mr-2" viewBox="0 0 16 16">
+                                <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
+                            </svg>
+                            Save Settings
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <a href="/" class="back-link">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-left mr-1" viewBox="0 0 16 16">
+                <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
+            </svg>
+            Back to Transactions
+        </a>
+    </div>
+    
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    
+    <script>
+        // Show/hide Perplexity model selector based on selected provider
+        document.querySelectorAll('input[name="ai_provider"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                const perplexityModels = document.getElementById('perplexityModels');
+                if (this.value === 'perplexity') {
+                    perplexityModels.style.display = 'block';
+                } else {
+                    perplexityModels.style.display = 'none';
+                }
+                
+                // Update active class
+                document.querySelectorAll('.ai-provider').forEach(provider => {
+                    provider.classList.remove('active');
+                });
+                
+                this.closest('.ai-provider').classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html> 

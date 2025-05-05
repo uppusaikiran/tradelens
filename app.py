@@ -1,7 +1,8 @@
 import os
 import csv
+import json
 from datetime import datetime, timedelta
-from flask import Flask, render_template, request, redirect, url_for, jsonify, flash
+from flask import Flask, render_template, request, redirect, url_for, jsonify, flash, session
 import pandas as pd
 import sqlite3
 import yfinance as yf
@@ -22,6 +23,20 @@ MAG7_STOCKS = {
     'TSLA': 'Tesla Inc.'
 }
 
+# Define Perplexity AI model options
+PERPLEXITY_MODELS = {
+    'sonar': 'sonar',
+    'sonar-pro': 'sonar-pro',
+    'sonar-reasoning': 'sonar-reasoning',
+    'sonar-reasoning-pro': 'sonar-reasoning-pro',
+    'sonar-deep-research': 'sonar-deep-research',
+    'r1-1776': 'r1-1776',
+    'llama-3.1-sonar-small': 'llama-3.1-sonar-small'
+}
+
+# Set default model
+DEFAULT_PERPLEXITY_MODEL = 'sonar'
+
 # Load environment variables
 load_dotenv()
 
@@ -39,6 +54,18 @@ if os.getenv('PERPLEXITY_API_KEY'):
 # Cache for stock splits
 split_cache = {}
 SPLIT_CACHE_TIMEOUT = 86400  # 24 hours
+
+# Set default settings
+DEFAULT_SETTINGS = {
+    'ai_provider': 'perplexity',  # 'openai' or 'perplexity'
+    'perplexity_model': 'sonar'   # Default Perplexity model
+}
+
+# Function to get current settings
+def get_settings():
+    if 'settings' not in session:
+        session['settings'] = DEFAULT_SETTINGS.copy()
+    return session['settings']
 
 def get_stock_splits(symbol, start_date=None):
     """
@@ -139,7 +166,7 @@ def categorize_stock(symbol, name):
         return 'unlisted'
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key_here'  # Needed for flash messages
+app.secret_key = os.getenv('SECRET_KEY', 'dev_secret_key_change_in_production')
 
 # Add more aggressive caching
 chart_cache = {}
@@ -763,12 +790,51 @@ def upload_file():
     
     return redirect(url_for('index'))
 
+@app.route('/settings', methods=['GET', 'POST'])
+def settings():
+    """Route to display and update application settings"""
+    if request.method == 'POST':
+        # Update settings
+        settings = get_settings()
+        
+        # Update AI provider
+        settings['ai_provider'] = request.form.get('ai_provider', 'perplexity')
+        
+        # Update Perplexity model if applicable
+        if settings['ai_provider'] == 'perplexity':
+            perplexity_model = request.form.get('perplexity_model')
+            if perplexity_model in PERPLEXITY_MODELS:
+                settings['perplexity_model'] = perplexity_model
+        
+        # Save settings to session
+        session['settings'] = settings
+        
+        # Redirect back to settings page with success message
+        flash('Settings updated successfully!', 'success')
+        return redirect(url_for('settings'))
+    
+    # GET method
+    settings = get_settings()
+    
+    # Check API availability
+    openai_available = bool(os.getenv('OPENAI_API_KEY'))
+    perplexity_available = bool(os.getenv('PERPLEXITY_API_KEY'))
+    
+    return render_template('settings.html', 
+                           settings=settings,
+                           perplexity_models=list(PERPLEXITY_MODELS.keys()),
+                           openai_available=openai_available,
+                           perplexity_available=perplexity_available)
+
 @app.route('/api/chat', methods=['POST'])
 def chat():
     """API endpoint to process chat messages and return responses using ChatGPT API"""
     data = request.get_json()
     message = data.get('message', '')
     current_stock = data.get('stock', None)  # Get the current stock from the request
+    
+    # Get current settings
+    settings = get_settings()
     
     # Check if we're just checking API availability
     if message == 'check_api':
@@ -777,7 +843,8 @@ def chat():
         return jsonify({
             "openai_available": openai_available,
             "perplexity_available": perplexity_available,
-            "api_available": openai_available or perplexity_available
+            "api_available": openai_available or perplexity_available,
+            "current_settings": settings
         })
     
     if not message:
@@ -891,8 +958,8 @@ def chat():
     If the user asks about buy timing or trading patterns for the current stock, provide personalized insights based on their transaction history.
     """
     
-    # Try OpenAI first if available
-    if os.getenv('OPENAI_API_KEY'):
+    # Try OpenAI first if available and selected in settings
+    if os.getenv('OPENAI_API_KEY') and settings['ai_provider'] == 'openai':
         try:
             # Call OpenAI API
             response = openai_client.chat.completions.create(
@@ -901,21 +968,25 @@ def chat():
                     {"role": "system", "content": context},
                     {"role": "user", "content": message}
                 ],
-                max_tokens=1000,  # Increased from 300 to 1000
+                max_tokens=1000,
                 temperature=0.7,
-                presence_penalty=0.6,  # Add presence penalty to encourage complete responses
-                frequency_penalty=0.2,  # Add frequency penalty
-                stream=False  # Ensure we get complete responses
+                presence_penalty=0.6,
+                frequency_penalty=0.2,
+                stream=False
             )
             
             # Extract the response text
             chat_response = response.choices[0].message.content.strip()
-            return jsonify({"response": chat_response, "provider": "openai"})
+            return jsonify({
+                "response": chat_response, 
+                "provider": "openai",
+                "model": "gpt-3.5-turbo"
+            })
             
         except (openai.RateLimitError, openai.APIError) as e:
             print(f"OpenAI API error (possibly rate limit): {str(e)}")
-            # Check if we have Perplexity as a fallback
-            if perplexity_client:
+            # Check if we should fall back to Perplexity
+            if perplexity_client and settings['ai_provider'] != 'openai_only':
                 print("Falling back to Perplexity API...")
                 # Continue to Perplexity fallback
             else:
@@ -925,19 +996,25 @@ def chat():
                 
         except Exception as e:
             print(f"Error calling OpenAI API: {str(e)}")
-            if perplexity_client:
+            if perplexity_client and settings['ai_provider'] != 'openai_only':
                 print("Falling back to Perplexity API due to general error...")
                 # Continue to Perplexity fallback
             else:
                 # Fallback to simple response if API fails
                 return handle_simple_chat(message, current_stock)
     
-    # Try Perplexity if OpenAI failed or isn't available
-    if perplexity_client:
+    # Try Perplexity if OpenAI failed or isn't available or Perplexity is selected
+    if perplexity_client and (settings['ai_provider'] == 'perplexity' or settings['ai_provider'] != 'openai_only'):
         try:
+            # Get the selected model from settings
+            selected_model = settings.get('perplexity_model', 'sonar')
+            
+            # Map the selected model name to the actual model ID
+            model_id = PERPLEXITY_MODELS.get(selected_model, PERPLEXITY_MODELS['sonar'])
+            
             # Call Perplexity API using the OpenAI client interface
             response = perplexity_client.chat.completions.create(
-                model="llama-3.1-sonar-small-128k-online",  # Use an appropriate Perplexity model
+                model=model_id,  # Use the model ID from the mapping
                 messages=[
                     {"role": "system", "content": context},
                     {"role": "user", "content": message}
@@ -947,7 +1024,11 @@ def chat():
             
             # Extract the response text
             chat_response = response.choices[0].message.content.strip()
-            return jsonify({"response": chat_response, "provider": "perplexity"})
+            return jsonify({
+                "response": chat_response, 
+                "provider": "perplexity",
+                "model": selected_model
+            })
             
         except Exception as e:
             print(f"Error calling Perplexity API: {str(e)}")

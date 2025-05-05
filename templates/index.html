@@ -154,6 +154,46 @@
                 max-width: 150px;
             }
         }
+        
+        /* Chat model selector styles */
+        .chat-model-selector {
+            background: #f0f0f0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 4px 6px;
+            font-size: 0.8rem;
+            margin-right: 8px;
+            cursor: pointer;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+        
+        .chat-model-selector:hover {
+            background: #e9e9e9;
+            border-color: #ccc;
+        }
+        
+        .chat-model-selector:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.1rem rgba(0, 123, 255, 0.25);
+        }
+        
+        /* Model info display in chat */
+        .model-info {
+            font-size: 0.7rem;
+            color: #888;
+            margin-top: 4px;
+            text-align: right;
+            font-style: italic;
+        }
+        
+        @media (max-width: 768px) {
+            .chat-model-selector {
+                max-width: 120px;
+                font-size: 0.75rem;
+                padding: 2px 4px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -164,15 +204,23 @@
                 <img src="{{ url_for('static', filename='logo.png') }}" alt="App Logo" class="title-icon mr-2" style="width:1.8rem;height:1.8rem;">
                 TradeLens
             </a>
-            <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data" class="ml-auto">
-                <div class="file-upload-container">
-                    <div class="file-upload-wrapper" id="fileWrapper">
-                        <input type="file" name="file" accept=".csv" class="file-upload-input" id="fileInput" required>
-                        <p class="file-upload-text">Choose CSV file</p>
+            <div class="d-flex align-items-center">
+                <a href="{{ url_for('settings') }}" class="nav-settings mr-3" title="AI Settings">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-gear" viewBox="0 0 16 16">
+                        <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
+                        <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115l.094-.319z"/>
+                    </svg>
+                </a>
+                <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data" class="ml-auto">
+                    <div class="file-upload-container">
+                        <div class="file-upload-wrapper" id="fileWrapper">
+                            <input type="file" name="file" accept=".csv" class="file-upload-input" id="fileInput" required>
+                            <p class="file-upload-text">Choose CSV file</p>
+                        </div>
+                        <button type="submit" class="upload-btn">Upload</button>
                     </div>
-                    <button type="submit" class="upload-btn">Upload</button>
-                </div>
-            </form>
+                </form>
+            </div>
         </div>
     </nav>
     <div class="container mt-5">
@@ -296,6 +344,12 @@
             <div class="col-12 d-flex flex-wrap align-items-center justify-content-between">
                 <!-- Hidden field to store current stock symbol for the chat feature -->
                 <input type="hidden" id="currentFilter" value="{{ current_filter }}">
+                <input type="hidden" id="current-stock" value="{{ current_filter }}">
+                
+                <!-- Add hidden inputs with static paths for JS to use -->
+                <input type="hidden" id="perplexity-icon-path" value="{{ url_for('static', filename='perplexity_icon.svg') }}">
+                <input type="hidden" id="chat-icon-path" value="{{ url_for('static', filename='chat-icon.svg') }}">
+                <input type="hidden" id="openai-icon-path" value="https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/ChatGPT_logo.svg/512px-ChatGPT_logo.svg.png">
                 
                 <div class="btn-group mb-2" role="group" aria-label="Transaction Side Filter">
                     <a href="{{ url_for('stock_detail', symbol=current_filter, side='all', range=selected_range) }}" class="btn btn-outline-primary {% if selected_side == 'all' %}active{% endif %}">All</a>
@@ -914,36 +968,53 @@
     <div class="chat-bot-container">
         <div class="chat-bot-header">
             <div class="chat-bot-title">
-                Stock Assistant
-                <span id="ai-badge" class="ai-badge">AI Powered</span>
+                <span>AI Assistant</span>
+                <span id="ai-badge" class="ai-badge" data-provider="openai">AI Powered</span>
+                <img src="{{ url_for('static', filename='chat-icon.svg') }}" alt="Chat Icon" class="title-icon">
             </div>
+            
             <div class="chat-bot-actions">
+                <a href="{{ url_for('settings') }}" class="settings-link" title="Configure AI Settings">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-gear" viewBox="0 0 16 16">
+                        <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
+                        <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115l.094-.319z"/>
+                    </svg>
+                </a>
+                
                 <button class="chat-bot-clear" title="Clear Chat">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M2.5 1a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1H3v9a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4h.5a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H10a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1H2.5zm3 4a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 .5-.5zM8 5a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7A.5.5 0 0 1 8 5zm3 .5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 1 0z"/>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
+                        <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                        <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
                     </svg>
                 </button>
                 <button class="chat-bot-toggle" title="Toggle Chat">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
-                        <path d="M11 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm-7 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
-                        <path d="M4.285 12.433a.5.5 0 0 0 .683-.183A3.498 3.498 0 0 1 8 10.5c1.295 0 2.426.703 3.032 1.75a.5.5 0 0 0 .866-.5A4.498 4.498 0 0 0 8 9.5a4.5 4.5 0 0 0-3.898 2.25.5.5 0 0 0 .183.683z"/>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-up" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708l6-6z"/>
                     </svg>
                 </button>
             </div>
         </div>
+        
         <div class="chat-bot-body">
             <div class="chat-bot-messages">
                 <div class="chat-bot-message bot">
                     <div class="chat-bot-message-content">
-                        Hello! How can I help you with your stock portfolio today?
+                        <p><strong>Hello!</strong> I'm your AI portfolio assistant. How can I help you analyze your stock transactions today?</p>
                     </div>
                 </div>
+                
+                <!-- Add model info banner that will be populated by JavaScript -->
+                <div class="model-info-banner" id="model-info-banner">
+                    <img id="model-provider-icon" src="{{ url_for('static', filename='perplexity_icon.png') }}" alt="AI Provider" style="width: 20px; height: 20px;">
+                    <span id="model-info-text">Powered by Perplexity — Model: sonar</span>
+                    <a href="{{ url_for('settings') }}">Change</a>
+                </div>
             </div>
+            
             <div class="chat-bot-input-container">
                 <input type="text" class="chat-bot-input" placeholder="Ask a question...">
                 <button class="chat-bot-send">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-send" viewBox="0 0 16 16">
                         <path d="M15.964.686a.5.5 0 0 0-.65-.65L.767 5.855H.766l-.452.18a.5.5 0 0 0-.082.887l.41.26.001.002 4.995 3.178 3.178 4.995.002.002.26.41a.5.5 0 0 0 .886-.083l6-15a.5.5 0 0 0-.084-.562z"/>
                     </svg>
                 </button>
@@ -960,77 +1031,91 @@
         const chatBotMessages = document.querySelector('.chat-bot-messages');
         const chatBotInput = document.querySelector('.chat-bot-input');
         const chatBotSend = document.querySelector('.chat-bot-send');
-        const aiBadge = document.getElementById('ai-badge');
+        const modelInfoBanner = document.getElementById('model-info-banner');
+        let currentStock = document.getElementById('current-stock')?.value || null;
         
-        // Check if we're on a stock detail page
-        const currentFilter = document.getElementById('currentFilter');
-        const currentStock = currentFilter ? currentFilter.value : null;
-        
-        // Check if AI APIs are available
+        // Call the API to check availability and get current settings
         fetch('/api/chat', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ message: 'check_api' }),
+            body: JSON.stringify({
+                message: 'check_api',
+                stock: currentStock
+            }),
         })
         .then(response => response.json())
         .then(data => {
-            if (data.api_available === false) {
-                aiBadge.style.display = 'none';
-                addMessage("I'm operating in basic mode. For full AI capabilities, configure an OpenAI or Perplexity API key.", 'bot');
-            } else {
-                if (data.openai_available) {
-                    aiBadge.textContent = 'OpenAI Powered';
-                    aiBadge.setAttribute('data-provider', 'openai');
-                } else if (data.perplexity_available) {
-                    aiBadge.textContent = 'Perplexity Powered';
-                    aiBadge.setAttribute('data-provider', 'perplexity');
-                }
+            if (data.api_available) {
+                // Display model info banner
+                updateModelInfoBanner(data.current_settings);
                 
-                // Add stock-specific suggestions if on stock detail page
-                if (currentStock && data.api_available) {
-                    setTimeout(() => {
-                        const suggestionMessage = document.createElement('div');
-                        suggestionMessage.classList.add('chat-bot-message', 'bot');
-                        
-                        const suggestionContent = document.createElement('div');
-                        suggestionContent.classList.add('chat-bot-message-content');
-                        suggestionContent.innerHTML = `
-                            <p><strong>${currentStock} Analysis</strong> - Ask me about:</p>
-                            <div class="chat-suggestions">
-                                <button class="chat-suggestion" data-text="Is it a good time to buy ${currentStock} based on my transaction history?">
-                                    <span>📈 Is it a good time to buy?</span>
-                                </button>
-                                <button class="chat-suggestion" data-text="Have I made impulse buys or panic sells with ${currentStock}?">
-                                    <span>🧠 Analyze my trading pattern</span>
-                                </button>
-                            </div>
-                        `;
-                        
-                        suggestionMessage.appendChild(suggestionContent);
-                        chatBotMessages.appendChild(suggestionMessage);
-                        
-                        // Add event listeners for suggestion buttons
-                        document.querySelectorAll('.chat-suggestion').forEach(button => {
-                            button.addEventListener('click', function() {
-                                const text = this.getAttribute('data-text');
-                                chatBotInput.value = text;
-                                sendMessage();
-                            });
+                // Add chat suggestions if API is available and on stock page
+                if (currentStock) {
+                    const suggestionMessage = document.createElement('div');
+                    suggestionMessage.classList.add('chat-bot-message', 'bot');
+                    
+                    const suggestionContent = document.createElement('div');
+                    suggestionContent.classList.add('chat-bot-message-content');
+                    suggestionContent.innerHTML = `
+                        <div class="chat-suggestions">
+                            <button class="chat-suggestion" data-text="Is it a good time to buy ${currentStock} based on my transaction history?">
+                                Is it a good time to buy ${currentStock}?
+                            </button>
+                            <button class="chat-suggestion" data-text="Have I made impulse buys or panic sells with ${currentStock}?">
+                                Analyze my trading patterns with ${currentStock}
+                            </button>
+                        </div>
+                    `;
+                    
+                    suggestionMessage.appendChild(suggestionContent);
+                    chatBotMessages.appendChild(suggestionMessage);
+                    
+                    // Add click event to suggestions
+                    document.querySelectorAll('.chat-suggestion').forEach(button => {
+                        button.addEventListener('click', () => {
+                            const text = button.dataset.text;
+                            chatBotInput.value = text;
+                            sendMessage();
                         });
-                        
-                        // Scroll to bottom
-                        chatBotMessages.scrollTop = chatBotMessages.scrollHeight;
-                    }, 1000);
+                    });
+                    
+                    // Scroll to bottom
+                    chatBotMessages.scrollTop = chatBotMessages.scrollHeight;
                 }
+            } else {
+                // Display message if no API is available
+                addMessage('bot', 'No AI provider is available. Please configure your API keys in the .env file.');
             }
         })
         .catch(error => {
-            aiBadge.style.display = 'none';
-            console.error('Error checking API:', error);
+            console.error('Error checking API availability:', error);
         });
         
+        // Function to update model info banner
+        function updateModelInfoBanner(settings) {
+            if (!settings) return;
+            
+            let providerName, modelName, iconPath;
+            
+            if (settings.ai_provider === 'openai') {
+                providerName = 'OpenAI';
+                modelName = 'GPT-3.5 Turbo';
+                iconPath = 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/ChatGPT_logo.svg/512px-ChatGPT_logo.svg.png';
+            } else {
+                providerName = 'Perplexity';
+                modelName = settings.perplexity_model || 'Default';
+                iconPath = '/static/perplexity_icon.png';
+            }
+            
+            modelInfoBanner.innerHTML = `
+                <img src="${iconPath}" alt="${providerName} Icon">
+                <span>Powered by <strong>${providerName}</strong> — Model: <strong>${modelName}</strong></span>
+                <a href="{{ url_for('settings') }}">Change</a>
+            `;
+        }
+
         // Toggle chat bot visibility
         chatBotToggle.addEventListener('click', () => {
             chatBotContainer.classList.toggle('collapsed');
@@ -1038,16 +1123,17 @@
         
         // Clear chat messages
         chatBotClear.addEventListener('click', () => {
-            // Keep only the first welcome message
-            while (chatBotMessages.children.length > 1) {
-                chatBotMessages.removeChild(chatBotMessages.lastChild);
-            }
+            // Keep only the first message (welcome message) and the model info banner
+            const welcomeMessage = chatBotMessages.firstElementChild;
+            chatBotMessages.innerHTML = '';
+            chatBotMessages.appendChild(welcomeMessage);
+            chatBotMessages.appendChild(modelInfoBanner);
         });
         
-        // Send message on button click
+        // Send button click event
         chatBotSend.addEventListener('click', sendMessage);
         
-        // Send message on Enter key
+        // Enter key event
         chatBotInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 sendMessage();
@@ -1059,75 +1145,35 @@
             if (!message) return;
             
             // Add user message to chat
-            addMessage(message, 'user');
+            addMessage('user', message);
             chatBotInput.value = '';
             
-            // Process the message and get a response
-            processMessage(message);
+            // Show typing indicator and send to API
+            sendToAPI(message);
         }
         
-        function addMessage(message, sender) {
+        function addMessage(sender, text, modelInfo = null) {
             const messageElement = document.createElement('div');
             messageElement.classList.add('chat-bot-message', sender);
             
             const messageContent = document.createElement('div');
             messageContent.classList.add('chat-bot-message-content');
             
+            // For bot messages with model info
             if (sender === 'bot') {
-                // Use marked to parse markdown
-                const parsedMessage = marked.parse(message);
-                messageContent.innerHTML = parsedMessage;
+                // Use innerHTML for bot messages to preserve formatting
+                messageContent.innerHTML = text;
                 
-                // Add specific styling for markdown elements
-                messageContent.querySelectorAll('code').forEach(code => {
-                    code.style.backgroundColor = 'rgba(79, 140, 255, 0.1)';
-                    code.style.padding = '2px 6px';
-                    code.style.borderRadius = '4px';
-                    code.style.fontFamily = 'monospace';
-                    code.style.fontSize = '0.9em';
-                });
-                
-                messageContent.querySelectorAll('pre').forEach(pre => {
-                    pre.style.backgroundColor = '#f8f9fa';
-                    pre.style.padding = '12px';
-                    pre.style.borderRadius = '6px';
-                    pre.style.overflowX = 'auto';
-                    pre.style.margin = '8px 0';
-                });
-                
-                messageContent.querySelectorAll('a').forEach(link => {
-                    link.style.color = '#4f8cff';
-                    link.style.textDecoration = 'none';
-                    link.target = '_blank';
-                });
-                
-                messageContent.querySelectorAll('ul, ol').forEach(list => {
-                    list.style.paddingLeft = '20px';
-                    list.style.margin = '8px 0';
-                });
-                
-                messageContent.querySelectorAll('li').forEach(item => {
-                    item.style.margin = '4px 0';
-                });
-                
-                messageContent.querySelectorAll('p').forEach(p => {
-                    p.style.margin = '8px 0';
-                });
-                
-                messageContent.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach(heading => {
-                    heading.style.margin = '16px 0 8px 0';
-                    heading.style.fontWeight = 'bold';
-                });
-                
-                messageContent.querySelectorAll('blockquote').forEach(quote => {
-                    quote.style.borderLeft = '3px solid #4f8cff';
-                    quote.style.paddingLeft = '12px';
-                    quote.style.margin = '8px 0';
-                    quote.style.color = '#666';
-                    quote.style.fontStyle = 'italic';
-                });
+                // Add model info if provided
+                if (modelInfo) {
+                    const modelInfoElement = document.createElement('div');
+                    modelInfoElement.classList.add('model-info');
+                    modelInfoElement.textContent = `Model: ${modelInfo}`;
+                    messageContent.appendChild(modelInfoElement);
+                }
             } else {
-                messageContent.textContent = message;
+                // Use textContent for user messages (for security)
+                messageContent.textContent = text;
             }
             
             messageElement.appendChild(messageContent);
@@ -1137,35 +1183,34 @@
             chatBotMessages.scrollTop = chatBotMessages.scrollHeight;
         }
         
-        function processMessage(message) {
-            // Show typing indicator
+        function sendToAPI(message) {
+            // Create typing indicator
             const typingIndicator = document.createElement('div');
             typingIndicator.classList.add('chat-bot-message', 'bot', 'typing');
             typingIndicator.innerHTML = '<div class="chat-bot-message-content"><div class="typing-indicator"><span></span><span></span><span></span></div></div>';
             chatBotMessages.appendChild(typingIndicator);
             
-            // Disable input while processing
+            // Disable input while waiting for response
             chatBotInput.disabled = true;
             chatBotSend.disabled = true;
             
-            // Check if we're on a stock detail page
-            const currentFilter = document.getElementById('currentFilter');
-            const currentStock = currentFilter ? currentFilter.value : null;
+            // Get current stock symbol if available
+            currentStock = document.getElementById('current-stock')?.value || null;
             
-            // Make API call to get bot response
+            // Send to API
             fetch('/api/chat', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     message: message,
                     stock: currentStock
                 }),
             })
             .then(response => {
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    throw new Error('Network response was not ok');
                 }
                 return response.json();
             })
@@ -1173,34 +1218,49 @@
                 // Remove typing indicator
                 chatBotMessages.removeChild(typingIndicator);
                 
-                if (!data.response) {
-                    throw new Error('Empty response received');
-                }
-                
-                // Check if response seems truncated
-                const truncationIndicators = [
-                    '...', '…',
-                    data.response.endsWith('.') && !data.response.endsWith('...'),
-                    data.response.endsWith(','),
-                    data.response.endsWith(':'),
-                    data.response.endsWith('('),
-                    data.response.endsWith('{')
-                ];
-                
-                if (truncationIndicators.some(indicator => 
-                    typeof indicator === 'boolean' ? indicator : data.response.endsWith(indicator))) {
-                    // Add warning about truncated response
-                    addMessage(data.response + '\n\n_Note: This response might be truncated. Please ask for clarification if needed._', 'bot');
+                // Add response to chat
+                if (data.response) {
+                    // Format the response - convert newlines to <br> tags
+                    const formattedResponse = data.response
+                        .replace(/\n\n/g, '<br><br>')  // Double newlines as paragraph breaks
+                        .replace(/\n/g, '<br>')  // Single newlines
+                        // Make URLs clickable
+                        .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank">$1</a>');
+                    
+                    // Create formatted response element
+                    const messageElement = document.createElement('div');
+                    messageElement.classList.add('chat-bot-message', 'bot');
+                    
+                    const messageContent = document.createElement('div');
+                    messageContent.classList.add('chat-bot-message-content');
+                    messageContent.innerHTML = formattedResponse;
+                    
+                    // Add model info if available
+                    if (data.model || data.provider) {
+                        const modelInfoElement = document.createElement('div');
+                        modelInfoElement.classList.add('model-info');
+                        
+                        let modelText = '';
+                        if (data.provider) {
+                            modelText += data.provider;
+                        }
+                        if (data.model) {
+                            if (modelText) modelText += ' - ';
+                            modelText += data.model;
+                        }
+                        
+                        modelInfoElement.textContent = modelText;
+                        messageContent.appendChild(modelInfoElement);
+                    }
+                    
+                    messageElement.appendChild(messageContent);
+                    chatBotMessages.appendChild(messageElement);
                 } else {
-                    // Add complete response
-                    addMessage(data.response, 'bot');
+                    addMessage('bot', 'Sorry, I couldn\'t process your request.');
                 }
                 
-                // Update AI badge if provider information is available
-                if (data.provider) {
-                    aiBadge.textContent = `${data.provider.charAt(0).toUpperCase() + data.provider.slice(1)} Powered`;
-                    aiBadge.setAttribute('data-provider', data.provider);
-                }
+                // Scroll to bottom
+                chatBotMessages.scrollTop = chatBotMessages.scrollHeight;
                 
                 // Re-enable input
                 chatBotInput.disabled = false;
@@ -1208,19 +1268,18 @@
                 chatBotInput.focus();
             })
             .catch(error => {
-                console.error('Error:', error);
+                console.error('Error sending message to API:', error);
+                
                 // Remove typing indicator
                 chatBotMessages.removeChild(typingIndicator);
                 
-                // Add error message with retry button
+                // Show error message
                 const errorMessage = document.createElement('div');
                 errorMessage.classList.add('chat-bot-message', 'bot', 'error');
                 errorMessage.innerHTML = `
                     <div class="chat-bot-message-content">
-                        <p>Sorry, I encountered an error while processing your request.</p>
-                        <button class="retry-button" onclick="retryMessage('${message.replace(/'/g, "\\'")}')">
-                            Retry
-                        </button>
+                        Sorry, there was an error processing your request. 
+                        Please try again later.
                     </div>
                 `;
                 chatBotMessages.appendChild(errorMessage);
@@ -1231,17 +1290,13 @@
             });
         }
         
-        // Add retry functionality
-        function retryMessage(message) {
-            // Remove the error message
+        // Remove error message when user starts typing
+        chatBotInput.addEventListener('input', () => {
             const errorMessage = document.querySelector('.chat-bot-message.error');
             if (errorMessage) {
-                errorMessage.remove();
+                chatBotMessages.removeChild(errorMessage);
             }
-            
-            // Retry the message
-            processMessage(message);
-        }
+        });
     });
     </script>
 </body>
