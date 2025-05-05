@@ -1678,25 +1678,47 @@ def init_db():
         with open('stock_orders.csv', 'r') as file:
             reader = csv.DictReader(file)
             for row in reader:
-                # Convert date format from MM/DD/YYYY to YYYY-MM-DD
-                date_obj = datetime.strptime(row['Date'], '%m/%d/%Y')
-                date_str = date_obj.strftime('%Y-%m-%d')
-                
-                c.execute('''
-                INSERT INTO transactions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ''', (
-                    row['Id'],
-                    date_str,
-                    row['Time'],
-                    row['Symbol'],
-                    row['Name'],
-                    row['Type'],
-                    row['Side'],
-                    float(row['AveragePrice']) if row['AveragePrice'] else None,
-                    float(row['Qty']) if row['Qty'] else None,
-                    row['State'],
-                    row['Fees']
-                ))
+                try:
+                    # Convert date format from MM/DD/YYYY to YYYY-MM-DD
+                    date_obj = datetime.strptime(row['Date'], '%m/%d/%Y')
+                    date_str = date_obj.strftime('%Y-%m-%d')
+                    
+                    # Generate a unique ID if not present in the CSV
+                    transaction_id = row.get('Id', str(uuid.uuid4()))
+                    
+                    # Safe conversion functions for numeric values
+                    def safe_convert(value, convert_func):
+                        if value is None or value == "" or value.lower() == "null":
+                            return None
+                        try:
+                            return convert_func(value)
+                        except (ValueError, TypeError):
+                            return None
+                    
+                    # Convert values safely
+                    average_price = safe_convert(row['AveragePrice'], float)
+                    qty = safe_convert(row['Qty'], float)
+                    fees = row['Fees']  # Keep fees as text
+                    
+                    c.execute('''
+                    INSERT INTO transactions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ''', (
+                        transaction_id,
+                        date_str,
+                        row['Time'],
+                        row['Symbol'],
+                        row['Name'],
+                        row['Type'],
+                        row['Side'],
+                        average_price,
+                        qty,
+                        row['State'],
+                        fees
+                    ))
+                except Exception as e:
+                    print(f"Error processing row: {row}")
+                    print(f"Error: {e}")
+                    continue
             conn.commit()
     
     conn.close()
