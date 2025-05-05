@@ -1,0 +1,62 @@
+<!-- Chat Bot Component -->
+<div class="chat-bot-container">
+    <div class="chat-bot-header">
+        <div class="chat-bot-title">
+            <span>AI Assistant</span>
+            <span id="ai-badge" class="ai-badge" data-provider="openai">AI Powered</span>
+            <img src="{{ url_for('static', filename='img/icons/chat-icon.svg') }}" alt="Chat Icon" class="title-icon">
+        </div>
+        
+        <div class="chat-bot-actions">
+            <a href="{{ url_for('settings') }}" class="settings-link" title="Configure AI Settings">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-gear" viewBox="0 0 16 16">
+                    <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
+                    <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115l.094-.319z"/>
+                </svg>
+            </a>
+            
+            <button class="chat-bot-clear" title="Clear Chat">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
+                    <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                    <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                </svg>
+            </button>
+            <button class="chat-bot-toggle" title="Toggle Chat">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-up" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708l6-6z"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+    
+    <div class="chat-bot-body">
+        <div class="chat-bot-messages">
+            <div class="chat-bot-message bot">
+                <div class="chat-bot-message-content">
+                    <p><strong>Hello!</strong> I'm your AI portfolio assistant. How can I help you analyze your stock transactions today?</p>
+                </div>
+            </div>
+            
+            <!-- Add model info banner that will be populated by JavaScript -->
+            <div class="model-info-banner" id="model-info-banner">
+                <img id="model-provider-icon" src="{{ url_for('static', filename='img/icons/perplexity_icon.png') }}" alt="AI Provider" style="width: 20px; height: 20px;">
+                <span id="model-info-text">Powered by Perplexity — Model: sonar</span>
+                <a href="{{ url_for('settings') }}">Change</a>
+            </div>
+        </div>
+        
+        <div class="chat-bot-input-container">
+            <input type="text" class="chat-bot-input" placeholder="Ask a question...">
+            <button class="chat-bot-send">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-send" viewBox="0 0 16 16">
+                    <path d="M15.964.686a.5.5 0 0 0-.65-.65L.767 5.855H.766l-.452.18a.5.5 0 0 0-.082.887l.41.26.001.002 4.995 3.178 3.178 4.995.002.002.26.41a.5.5 0 0 0 .886-.083l6-15a.5.5 0 0 0-.084-.562z"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Optional: Pass the current stock to the chat system if viewing a stock page -->
+{% if current_stock %}
+<input type="hidden" id="current-stock" value="{{ current_stock }}">
+{% endif %} 

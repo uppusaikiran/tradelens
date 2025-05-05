@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradeLens - Portfolio Risk Review</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .risk-card {
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+            margin-bottom: 24px;
+            overflow: hidden;
+            border: 1px solid #e9ecef;
+        }
+        
+        .risk-card-header {
+            background: linear-gradient(90deg, #e04d4d 0%, #e87676 100%);
+            color: white;
+            font-weight: 600;
+            padding: 15px 20px;
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .risk-card-header.tariff {
+            background: linear-gradient(90deg, #ff8c42 0%, #ffb38a 100%);
+        }
+        
+        .risk-card-header.sector {
+            background: linear-gradient(90deg, #6a75ca 0%, #8d96da 100%);
+        }
+        
+        .risk-card-header.geo {
+            background: linear-gradient(90deg, #3fad9b 0%, #64c7b6 100%);
+        }
+        
+        .risk-card-body {
+            padding: 20px;
+            background-color: #fff;
+        }
+        
+        .risk-level {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-left: auto;
+        }
+        
+        .risk-level-high {
+            background-color: #ffeded;
+            color: #e04d4d;
+        }
+        
+        .risk-level-medium {
+            background-color: #fff2e6;
+            color: #ff8c42;
+        }
+        
+        .risk-level-low {
+            background-color: #e6fff0;
+            color: #2ecc71;
+        }
+        
+        .portfolio-summary {
+            background-color: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .portfolio-data {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+        
+        .portfolio-item {
+            flex: 0 0 48%;
+            margin-bottom: 10px;
+        }
+        
+        .stock-exposure {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .stock-exposure:last-child {
+            border-bottom: none;
+        }
+        
+        .stock-symbol {
+            font-weight: 600;
+        }
+        
+        .exposure-value {
+            font-weight: 500;
+        }
+        
+        .risk-detail {
+            margin-bottom: 16px;
+        }
+        
+        .risk-detail-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #343a40;
+        }
+        
+        .risk-detail-content {
+            color: #495057;
+            line-height: 1.5;
+        }
+        
+        .affected-stocks {
+            margin-top: 16px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 12px 16px;
+        }
+        
+        .affected-stock-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        
+        .affected-stock-name {
+            color: #495057;
+        }
+        
+        .affected-stock-impact {
+            font-weight: 500;
+        }
+        
+        .affected-stock-impact.high {
+            color: #e04d4d;
+        }
+        
+        .affected-stock-impact.medium {
+            color: #ff8c42;
+        }
+        
+        .affected-stock-impact.low {
+            color: #2ecc71;
+        }
+    </style>
+</head>
+<body>
+    <!-- Modern Navbar with Title -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top" style="padding: 0.7rem 2vw; z-index: 100;">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center" href="/">
+                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="App Logo" class="title-icon mr-2" style="width:1.8rem;height:1.8rem;">
+                TradeLens
+            </a>
+            <div class="d-flex align-items-center ml-auto">
+                <a href="{{ url_for('index') }}" class="nav-link mr-3">Dashboard</a>
+                <a href="{{ url_for('risk_review') }}" class="nav-link mr-3 active">Risk Review</a>
+                <a href="{{ url_for('settings') }}" class="nav-settings" title="AI Settings">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-gear" viewBox="0 0 16 16">
+                        <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
+                        <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115l.094-.319z"/>
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="container mt-5 mb-5">
+        <h1 class="mb-4">Portfolio Risk Review</h1>
+        
+        <!-- Portfolio Summary Section -->
+        <div class="portfolio-summary">
+            <h4>Current Portfolio Composition</h4>
+            <div class="portfolio-data">
+                {% if portfolio %}
+                    <!-- Top Holdings Display -->
+                    <div class="portfolio-item">
+                        <h5>Top Holdings</h5>
+                        {% for stock in portfolio[:5] %}
+                            <div class="stock-exposure">
+                                <div>
+                                    <span class="stock-symbol">{{ stock.Symbol }}</span>
+                                    <span class="text-muted ml-2">{{ stock.Name }}</span>
+                                </div>
+                                <div class="exposure-value">
+                                    {% if stock.Symbol in current_prices and current_prices[stock.Symbol] and portfolio_summary.total_value > 0 %}
+                                        {% set position_value = stock.CurrentShares * current_prices[stock.Symbol] %}
+                                        {% set percentage = (position_value / portfolio_summary.total_value * 100) %}
+                                        {{ "%.1f"|format(percentage) }}%
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <!-- Portfolio Stats -->
+                    <div class="portfolio-item">
+                        <h5>Portfolio Stats</h5>
+                        <div class="stock-exposure">
+                            <div>Total Holdings</div>
+                            <div class="exposure-value">{{ portfolio_summary.total_stocks }} stocks</div>
+                        </div>
+                        <div class="stock-exposure">
+                            <div>Estimated Value</div>
+                            <div class="exposure-value">${{ "{:,.2f}".format(portfolio_summary.total_value) }}</div>
+                        </div>
+                        <div class="stock-exposure">
+                            <div>Total Investment</div>
+                            <div class="exposure-value">${{ "{:,.2f}".format(portfolio_summary.total_investment) }}</div>
+                        </div>
+                        <div class="stock-exposure">
+                            <div>Total Gain/Loss</div>
+                            <div class="exposure-value" style="color: {% if portfolio_summary.total_gain_loss >= 0 %}#2ecc71{% else %}#e04d4d{% endif %}">
+                                ${{ "{:,.2f}".format(portfolio_summary.total_gain_loss) }} 
+                                ({{ "%.1f"|format(portfolio_summary.total_gain_loss_percentage) }}%)
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info w-100">
+                        No current holdings found in your portfolio.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Risk Analysis Section -->
+        <h2 class="mb-3">Risk Analysis</h2>
+        
+        {% if portfolio %}
+            <!-- Tariff Risk Card -->
+            <div class="risk-card">
+                <div class="risk-card-header tariff">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-exclamation-triangle mr-2" viewBox="0 0 16 16">
+                        <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
+                    </svg>
+                    Tariff & Trade Policy Risk
+                    <span class="risk-level risk-level-high">High Risk</span>
+                </div>
+                <div class="risk-card-body">
+                    <div class="risk-detail">
+                        <div class="risk-detail-title">Recent Tariff Developments</div>
+                        <div class="risk-detail-content">
+                            Recent tariff increases on Chinese imports (up to 100% on EVs, 25% on semiconductors, batteries, and critical minerals) could significantly impact your portfolio. Tech companies with exposure to China in their supply chain face increased costs and potential disruption.
+                        </div>
+                    </div>
+                    
+                    <div class="risk-detail">
+                        <div class="risk-detail-title">Supply Chain Exposure</div>
+                        <div class="risk-detail-content">
+                            Several of your holdings have significant supply chain exposure to regions affected by current and proposed tariffs. Companies that rely on Chinese manufacturing or components may face margin pressure or need to restructure their supply chains at significant cost.
+                        </div>
+                    </div>
+                    
+                    <div class="affected-stocks">
+                        <div class="risk-detail-title">Most Affected Holdings</div>
+                        
+                        {% for stock in portfolio %}
+                            {% if stock.Symbol in ['AAPL', 'NVDA', 'TSLA'] and stock.Symbol in current_prices and current_prices[stock.Symbol] %}
+                                <div class="affected-stock-item">
+                                    <div class="affected-stock-name">
+                                        <strong>{{ stock.Symbol }}</strong> - {{ stock.Name }}
+                                    </div>
+                                    <div class="affected-stock-impact high">High Impact</div>
+                                </div>
+                            {% elif stock.Symbol in ['MSFT', 'AMD', 'AMZN'] and stock.Symbol in current_prices and current_prices[stock.Symbol] %}
+                                <div class="affected-stock-item">
+                                    <div class="affected-stock-name">
+                                        <strong>{{ stock.Symbol }}</strong> - {{ stock.Name }}
+                                    </div>
+                                    <div class="affected-stock-impact medium">Medium Impact</div>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Geographical Risk Card -->
+            <div class="risk-card">
+                <div class="risk-card-header geo">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-globe-americas mr-2" viewBox="0 0 16 16">
+                        <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0ZM2.04 4.326c.325 1.329 2.532 2.54 3.717 3.19.48.263.793.434.743.484-.08.08-.162.158-.242.234-.416.396-.787.749-.758 1.266.035.634.618.824 1.214 1.017.577.188 1.168.38 1.286.983.082.417-.075.988-.22 1.52-.215.782-.406 1.48.22 1.48 1.5-.5 3.798-3.186 4-5 .138-1.243-2-2-3.5-2.5-.478-.16-.755.081-.99.284-.172.15-.322.279-.51.216-.445-.148-2.5-2-1.5-2.5.78-.39.952-.171 1.227.182.078.099.163.208.273.318.609.304.662-.132.723-.633.039-.322.081-.671.277-.867.434-.434 1.265-.791 2.028-1.12.712-.306 1.365-.587 1.579-.88A7 7 0 1 1 2.04 4.327Z"/>
+                    </svg>
+                    Geographic Concentration Risk
+                    <span class="risk-level risk-level-medium">Medium Risk</span>
+                </div>
+                <div class="risk-card-body">
+                    <div class="risk-detail">
+                        <div class="risk-detail-title">China Dependence</div>
+                        <div class="risk-detail-content">
+                            Your portfolio shows moderate exposure to companies with significant China revenue or manufacturing dependencies. Escalating tensions between the US and China could lead to further trade restrictions and market access limitations.
+                        </div>
+                    </div>
+                    
+                    <div class="risk-detail">
+                        <div class="risk-detail-title">Diversification Opportunity</div>
+                        <div class="risk-detail-content">
+                            Consider adding exposure to companies with more diversified geographic footprints or those benefiting from "friend-shoring" trends as supply chains shift away from high-tariff regions.
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Sector Concentration Risk -->
+            <div class="risk-card">
+                <div class="risk-card-header sector">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-pie-chart mr-2" viewBox="0 0 16 16">
+                        <path d="M7.5 1.018a7 7 0 0 0-4.79 11.566L7.5 7.793V1.018zm1 0V7.5h6.482A7.001 7.001 0 0 0 8.5 1.018zM14.982 8.5H8.207l-4.79 4.79A7 7 0 0 0 14.982 8.5zM0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8z"/>
+                    </svg>
+                    Sector Concentration Risk
+                    <span class="risk-level risk-level-medium">Medium Risk</span>
+                </div>
+                <div class="risk-card-body">
+                    <div class="risk-detail">
+                        <div class="risk-detail-title">Technology Sector Exposure</div>
+                        <div class="risk-detail-content">
+                            Your portfolio has significant exposure to the technology sector, which is particularly vulnerable to tariff increases on semiconductors and electronic components. This concentration amplifies the impact of trade policy changes on your overall portfolio.
+                        </div>
+                    </div>
+                    
+                    <div class="risk-detail">
+                        <div class="risk-detail-title">Recommendation</div>
+                        <div class="risk-detail-content">
+                            Consider diversifying into sectors with less exposure to international trade tensions, such as domestic-focused utilities, healthcare, or consumer staples. Companies with primarily US-based operations and supply chains may provide better insulation from tariff risks.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="alert alert-info">
+                No current holdings found. Please upload your transaction data to see risk analysis.
+            </div>
+        {% endif %}
+        
+        <!-- Chat Integration Section -->
+        <div class="mt-5">
+            <h4>Have questions about your portfolio risks?</h4>
+            <p>Use our AI assistant to ask specific questions about tariff impacts on your investments.</p>
+            <div class="chat-prompt-link">
+                <a href="#" class="btn btn-outline-primary" id="tariff-impact-btn" data-chat-prompt="How will the new tariffs affect my portfolio?">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chat-dots mr-2" viewBox="0 0 16 16">
+                        <path d="M5 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm4 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 1a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/>
+                        <path d="m2.165 15.803.02-.004c1.83-.363 2.948-.842 3.468-1.105A9.06 9.06 0 0 0 8 15c4.418 0 8-3.134 8-7s-3.582-7-8-7-8 3.134-8 7c0 1.76.743 3.37 1.97 4.6a10.437 10.437 0 0 1-.524 2.318l-.003.011a10.722 10.722 0 0 1-.244.637c-.079.186.074.394.273.362a21.673 21.673 0 0 0 .693-.125zm.8-3.108a1 1 0 0 0-.287-.801C1.618 10.83 1 9.468 1 8c0-3.192 3.004-6 7-6s7 2.808 7 6c0 3.193-3.004 6-7 6a8.06 8.06 0 0 1-2.088-.272 1 1 0 0 0-.711.074c-.387.196-1.24.57-2.634.893a10.97 10.97 0 0 0 .398-2"/>
+                    </svg>
+                    Ask about tariff impacts
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Include the chat component -->
+    {% include 'chat_component.html' %}
+    
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="{{ url_for('static', filename='js/chat-integration.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+    
+    <!-- Add this script to ensure chat functionality works on the risk review page -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Risk review page loaded');
+            
+            const tariffBtn = document.getElementById('tariff-impact-btn');
+            if (tariffBtn) {
+                tariffBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Remove any data-chat-prompt attribute to prevent the global handler from also firing
+                    const prompt = tariffBtn.getAttribute('data-chat-prompt');
+                    tariffBtn.removeAttribute('data-chat-prompt');
+                    
+                    console.log('Tariff impact button clicked, handling locally');
+                    
+                    // Ensure chat is visible
+                    const chatContainer = document.querySelector('.chat-bot-container');
+                    if (chatContainer && chatContainer.classList.contains('collapsed')) {
+                        chatContainer.classList.remove('collapsed');
+                    }
+                    
+                    // Try multiple methods to ensure the chat prompt is sent
+                    // Method 1: Use the global chat integration API
+                    if (window.TradeLensChat && typeof window.TradeLensChat.sendPrompt === 'function') {
+                        console.log('Using TradeLensChat.sendPrompt');
+                        window.TradeLensChat.sendPrompt(prompt);
+                        return;
+                    }
+                    
+                    // Method 2: Use the chat functions directly if exposed
+                    if (window.TradeLensChat && typeof window.TradeLensChat.addMessage === 'function') {
+                        console.log('Using TradeLensChat.addMessage');
+                        window.TradeLensChat.addMessage('user', prompt);
+                        
+                        if (typeof window.TradeLensChat.sendMessage === 'function') {
+                            window.TradeLensChat.sendMessage(prompt);
+                            return;
+                        }
+                    }
+                    
+                    // Method 3: Direct DOM manipulation as last resort
+                    console.log('Using direct DOM manipulation');
+                    const chatInput = document.querySelector('.chat-bot-input');
+                    const sendButton = document.querySelector('.chat-bot-send');
+                    
+                    if (chatInput && sendButton) {
+                        // Set input value
+                        chatInput.value = prompt;
+                        chatInput.focus();
+                        
+                        // Trigger click event on send button
+                        sendButton.click();
+                    } else {
+                        console.error('Chat input or send button not found');
+                        alert("Couldn't find the chat interface. Please try refreshing the page.");
+                    }
+                });
+            }
+            
+            // Replace the buttons with ones that don't use data-chat-prompt
+            // This prevents the duplicate handler issue completely
+            setTimeout(() => {
+                // Create new button without the data attribute
+                const oldTariffBtn = document.getElementById('tariff-impact-btn');
+                if (oldTariffBtn) {
+                    const newTariffBtn = oldTariffBtn.cloneNode(true);
+                    newTariffBtn.removeAttribute('data-chat-prompt');
+                    oldTariffBtn.parentNode.replaceChild(newTariffBtn, oldTariffBtn);
+                    
+                    // Add event listener to the new button
+                    newTariffBtn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        const prompt = "How will the new tariffs affect my portfolio?";
+                        
+                        // Show the chat if it's collapsed
+                        const chatContainer = document.querySelector('.chat-bot-container');
+                        if (chatContainer && chatContainer.classList.contains('collapsed')) {
+                            chatContainer.classList.remove('collapsed');
+                        }
+                        
+                        // First, immediately add the user message to the chat
+                        if (window.TradeLensChat && typeof window.TradeLensChat.addMessage === 'function') {
+                            // Add user message right away
+                            window.TradeLensChat.addMessage('user', prompt);
+                            
+                            // Add typing indicator
+                            const chatMessages = document.querySelector('.chat-bot-messages');
+                            const typingIndicator = document.createElement('div');
+                            typingIndicator.classList.add('chat-bot-message', 'bot', 'typing');
+                            typingIndicator.innerHTML = '<div class="chat-bot-message-content"><div class="typing-indicator"><span></span><span></span><span></span></div></div>';
+                            
+                            if (chatMessages) {
+                                chatMessages.appendChild(typingIndicator);
+                                chatMessages.scrollTop = chatMessages.scrollHeight;
+                            }
+                            
+                            // Disable the input field while waiting for the response
+                            const chatInput = document.querySelector('.chat-bot-input');
+                            const sendButton = document.querySelector('.chat-bot-send');
+                            if (chatInput) chatInput.disabled = true;
+                            if (sendButton) sendButton.disabled = true;
+                            
+                            // Then make the API call after showing the user's message
+                            fetch('/api/chat', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    message: prompt,
+                                    stock: null
+                                }),
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                // Remove typing indicator
+                                if (chatMessages && typingIndicator && typingIndicator.parentNode) {
+                                    chatMessages.removeChild(typingIndicator);
+                                }
+                                
+                                // Add response if available
+                                if (data.response) {
+                                    // Format the response
+                                    const formattedResponse = data.response
+                                        .replace(/\n\n/g, '<br><br>')
+                                        .replace(/\n/g, '<br>')
+                                        .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank">$1</a>');
+                                    
+                                    // Add the bot message
+                                    window.TradeLensChat.addMessage('bot', formattedResponse, 
+                                        data.provider ? (data.provider + (data.model ? ` - ${data.model}` : '')) : null);
+                                } else {
+                                    window.TradeLensChat.addMessage('bot', 'Sorry, I couldn\'t process your request.');
+                                }
+                                
+                                // Re-enable the input field
+                                if (chatInput) chatInput.disabled = false;
+                                if (sendButton) sendButton.disabled = false;
+                                if (chatInput) chatInput.focus();
+                            })
+                            .catch(error => {
+                                console.error('Error fetching chat response:', error);
+                                
+                                // Remove typing indicator
+                                if (chatMessages && typingIndicator && typingIndicator.parentNode) {
+                                    chatMessages.removeChild(typingIndicator);
+                                }
+                                
+                                // Add error message
+                                window.TradeLensChat.addMessage('bot', 'Sorry, there was an error processing your request. Please try again.');
+                                
+                                // Re-enable the input field
+                                if (chatInput) chatInput.disabled = false;
+                                if (sendButton) sendButton.disabled = false;
+                            });
+                        } else {
+                            // Fallback if window.TradeLensChat is not available - use direct DOM manipulation
+                            console.error('TradeLensChat functions not available, trying DOM manipulation');
+                            
+                            // Get chat messages container
+                            const chatMessages = document.querySelector('.chat-bot-messages');
+                            if (!chatMessages) {
+                                alert('Chat interface not found. Please refresh the page.');
+                                return;
+                            }
+                            
+                            // Add user message manually
+                            const userMessage = document.createElement('div');
+                            userMessage.classList.add('chat-bot-message', 'user');
+                            userMessage.innerHTML = `<div class="chat-bot-message-content">${prompt}</div>`;
+                            chatMessages.appendChild(userMessage);
+                            
+                            // Add typing indicator
+                            const typingIndicator = document.createElement('div');
+                            typingIndicator.classList.add('chat-bot-message', 'bot', 'typing');
+                            typingIndicator.innerHTML = '<div class="chat-bot-message-content"><div class="typing-indicator"><span></span><span></span><span></span></div></div>';
+                            chatMessages.appendChild(typingIndicator);
+                            chatMessages.scrollTop = chatMessages.scrollHeight;
+                            
+                            // Make the API call
+                            fetch('/api/chat', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    message: prompt,
+                                    stock: null
+                                }),
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                // Remove typing indicator
+                                if (typingIndicator.parentNode) {
+                                    chatMessages.removeChild(typingIndicator);
+                                }
+                                
+                                // Add response manually
+                                const botMessage = document.createElement('div');
+                                botMessage.classList.add('chat-bot-message', 'bot');
+                                
+                                const formattedResponse = data.response
+                                    ? data.response.replace(/\n\n/g, '<br><br>').replace(/\n/g, '<br>')
+                                    : 'Sorry, I couldn\'t process your request.';
+                                
+                                botMessage.innerHTML = `<div class="chat-bot-message-content">${formattedResponse}</div>`;
+                                chatMessages.appendChild(botMessage);
+                                chatMessages.scrollTop = chatMessages.scrollHeight;
+                            })
+                            .catch(error => {
+                                console.error('Error fetching chat response:', error);
+                                // Remove typing indicator
+                                if (typingIndicator.parentNode) {
+                                    chatMessages.removeChild(typingIndicator);
+                                }
+                                
+                                // Add error message manually
+                                const errorMessage = document.createElement('div');
+                                errorMessage.classList.add('chat-bot-message', 'bot', 'error');
+                                errorMessage.innerHTML = `<div class="chat-bot-message-content">Sorry, there was an error processing your request. Please try again.</div>`;
+                                chatMessages.appendChild(errorMessage);
+                                chatMessages.scrollTop = chatMessages.scrollHeight;
+                            });
+                        }
+                    });
+                }
+            }, 500);
+        });
+    </script>
+</body>
+</html> 

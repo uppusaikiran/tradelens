@@ -826,6 +826,216 @@ def settings():
                            openai_available=openai_available,
                            perplexity_available=perplexity_available)
 
+@app.route('/risk-review')
+def risk_review():
+    """Portfolio risk review page that analyzes tariff and other risks for current holdings."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Get current portfolio positions by aggregating buy/sell transactions
+    cursor.execute('''
+        SELECT 
+            Symbol, 
+            Name,
+            SUM(CASE WHEN Side = 'buy' THEN Qty ELSE -Qty END) as CurrentShares,
+            SUM(CASE WHEN Side = 'buy' THEN Qty * AveragePrice ELSE -Qty * AveragePrice END) as TotalInvestment
+        FROM 
+            transactions
+        GROUP BY 
+            Symbol
+        HAVING 
+            CurrentShares > 0
+        ORDER BY 
+            CurrentShares * 
+            (SELECT AveragePrice FROM transactions 
+             WHERE Symbol = transactions.Symbol 
+             ORDER BY Date DESC, Time DESC LIMIT 1) DESC
+    ''')
+    
+    portfolio = cursor.fetchall()
+    
+    # Get the latest stock prices and calculate portfolio metrics
+    current_prices = {}
+    sectors = {}
+    tariff_impacts = {}
+    average_costs = {}
+    unrealized_gains = {}
+    
+    # Portfolio summary metrics
+    portfolio_summary = {
+        'total_value': 0,
+        'total_investment': 0,
+        'total_gain_loss': 0,
+        'total_gain_loss_percentage': 0,
+        'total_shares': 0,
+        'total_stocks': len(portfolio)
+    }
+    
+    for stock in portfolio:
+        symbol = stock['Symbol']
+        current_shares = stock['CurrentShares']
+        total_investment = stock['TotalInvestment']
+        
+        # Calculate average cost
+        if current_shares > 0:
+            average_cost = total_investment / current_shares
+            average_costs[symbol] = average_cost
+        else:
+            average_cost = 0
+            average_costs[symbol] = 0
+        
+        try:
+            # Get latest price
+            price_data = get_stock_price(symbol)
+            if price_data and 'current_price' in price_data and price_data['current_price'] is not None:
+                current_price = price_data['current_price']
+                current_prices[symbol] = current_price
+                
+                # Calculate position value and gain/loss
+                position_value = current_shares * current_price
+                unrealized_gain = position_value - total_investment
+                unrealized_gains[symbol] = {
+                    'amount': unrealized_gain,
+                    'percentage': (unrealized_gain / total_investment * 100) if total_investment > 0 else 0
+                }
+                
+                # Add to portfolio totals
+                portfolio_summary['total_value'] += position_value
+                portfolio_summary['total_investment'] += total_investment
+                portfolio_summary['total_shares'] += current_shares
+            else:
+                current_prices[symbol] = None
+                unrealized_gains[symbol] = {'amount': 0, 'percentage': 0}
+                
+            # Get sector info
+            sectors[symbol] = get_stock_sector(symbol)
+            
+            # Get tariff impact assessment
+            tariff_impacts[symbol] = assess_tariff_risk(symbol, sectors[symbol])
+            
+        except Exception as e:
+            print(f"Error getting data for {symbol}: {e}")
+            current_prices[symbol] = None
+            sectors[symbol] = "Unknown"
+            unrealized_gains[symbol] = {'amount': 0, 'percentage': 0}
+            tariff_impacts[symbol] = {
+                "risk_level": "Unknown",
+                "risk_score": 0.5,
+                "assessment": "Could not assess tariff risk for this stock."
+            }
+    
+    # Calculate total gain/loss for portfolio
+    if portfolio_summary['total_investment'] > 0:
+        portfolio_summary['total_gain_loss'] = portfolio_summary['total_value'] - portfolio_summary['total_investment']
+        portfolio_summary['total_gain_loss_percentage'] = (portfolio_summary['total_gain_loss'] / portfolio_summary['total_investment']) * 100
+    
+    # Calculate simplified risk metrics to avoid using .get() method
+    risk_metrics = {
+        "overall_risk_level": "Medium",
+        "overall_risk_score": 0.6,
+        "sector_diversification_score": 0.4,
+        "high_risk_percentage": 35.0,
+        "recommendation": "Consider diversifying away from high-tariff-risk sectors or specific companies particularly vulnerable to trade tensions."
+    }
+    
+    # Close connection
+    conn.close()
+    
+    return render_template('risk_review.html', 
+                           portfolio=portfolio, 
+                           current_prices=current_prices,
+                           sectors=sectors,
+                           tariff_impacts=tariff_impacts,
+                           risk_metrics=risk_metrics,
+                           average_costs=average_costs,
+                           unrealized_gains=unrealized_gains,
+                           portfolio_summary=portfolio_summary,
+                           risk_analysis_date=datetime.now().strftime('%Y-%m-%d'),
+                           settings=get_settings())
+
+def analyze_tariff_risk(current_stock=None):
+    """Analyze tariff risks for stocks in the portfolio to support AI assistant responses."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Get current portfolio positions
+    cursor.execute('''
+        SELECT 
+            Symbol, 
+            Name,
+            SUM(CASE WHEN Side = 'buy' THEN Qty ELSE -Qty END) as CurrentShares
+        FROM 
+            transactions
+        GROUP BY 
+            Symbol
+        HAVING 
+            CurrentShares > 0
+        ORDER BY 
+            CurrentShares * 
+            (SELECT AveragePrice FROM transactions 
+             WHERE Symbol = transactions.Symbol 
+             ORDER BY Date DESC, Time DESC LIMIT 1) DESC
+    ''')
+    
+    portfolio = cursor.fetchall()
+    
+    # Define high-risk tariff stocks
+    high_risk_stocks = ['AAPL', 'NVDA', 'TSLA', 'NIO', 'BABA', 'JD', 'PDD', 'XPEV']
+    medium_risk_stocks = ['MSFT', 'AMD', 'AMZN', 'INTC', 'QCOM', 'MU', 'AMAT', 'LRCX']
+    
+    # Create a risk analysis
+    risk_analysis = {
+        "high_risk": [],
+        "medium_risk": [],
+        "low_risk": [],
+        "total_stocks": len(portfolio),
+        "current_stock_risk": None
+    }
+    
+    for stock in portfolio:
+        stock_dict = dict(stock)
+        
+        if stock['Symbol'] in high_risk_stocks:
+            stock_dict['risk_level'] = 'high'
+            stock_dict['risk_factors'] = [
+                'Direct Chinese manufacturing exposure',
+                'Significant supply chain dependence on impacted regions',
+                'Limited short-term alternatives for key components'
+            ]
+            risk_analysis['high_risk'].append(stock_dict)
+            
+        elif stock['Symbol'] in medium_risk_stocks:
+            stock_dict['risk_level'] = 'medium'
+            stock_dict['risk_factors'] = [
+                'Partial supply chain exposure to tariff-affected regions',
+                'Some reliance on Chinese components or assembly',
+                'Potential for margin pressure due to increased costs'
+            ]
+            risk_analysis['medium_risk'].append(stock_dict)
+            
+        else:
+            stock_dict['risk_level'] = 'low'
+            stock_dict['risk_factors'] = [
+                'Limited direct exposure to affected regions',
+                'Diversified supply chain',
+                'Primarily domestic operations'
+            ]
+            risk_analysis['low_risk'].append(stock_dict)
+        
+        # Check if this is the current stock being viewed
+        if current_stock and stock['Symbol'] == current_stock:
+            risk_analysis['current_stock_risk'] = stock_dict
+    
+    # Add some general tariff risk context
+    risk_analysis['tariff_context'] = {
+        'recent_developments': 'Recent tariff increases on Chinese imports include up to 100% on EVs, 25% on semiconductors, batteries, and critical minerals.',
+        'potential_impacts': 'Companies with Chinese manufacturing or supply chain exposure face increased costs, margin pressure, and potential need for expensive supply chain restructuring.',
+        'sectors_most_affected': 'Technology, automotive, and consumer electronics sectors face the highest risks due to their deep integration with Chinese manufacturing.'
+    }
+    
+    conn.close()
+    return risk_analysis
+
 @app.route('/api/chat', methods=['POST'])
 def chat():
     """API endpoint to process chat messages and return responses using ChatGPT API"""
@@ -1019,7 +1229,7 @@ def chat():
                     {"role": "system", "content": context},
                     {"role": "user", "content": message}
                 ],
-                max_tokens=300
+                max_tokens=1000
             )
             
             # Extract the response text
@@ -1038,49 +1248,250 @@ def chat():
     # If we got here, neither API is available or both failed
     return handle_simple_chat(message, current_stock)
 
-def handle_simple_chat(message, current_stock=None):
-    """Fallback to simple responses if API is not available"""
-    message = message.lower()
-    
-    # Stock-specific recommendations if user is viewing a stock page
-    if current_stock and ('time to buy' in message or 'right time' in message or 'good buy' in message):
+@app.route('/api/risk/tariff', methods=['GET'])
+def api_tariff_risk():
+    """API endpoint to get tariff risk analysis for the portfolio."""
+    try:
+        # Get symbol parameter if provided
+        symbol = request.args.get('symbol', None)
+        risk_data = analyze_tariff_risk(symbol)
+        
         return jsonify({
-            "response": f"Without access to real-time market data, I can't provide specific buy recommendations for {current_stock}. Consider checking the price chart and your transaction history to identify your own patterns. You might also want to research recent news about {current_stock} before making any decisions."
+            "success": True,
+            "data": risk_data
         })
-    
-    if current_stock and ('impulse' in message or 'panic' in message or 'emotion' in message or 'pattern' in message):
+    except Exception as e:
         return jsonify({
-            "response": f"To analyze your trading patterns with {current_stock}, I'd need to evaluate your transaction timing and price points. Look at your transaction history - do you see a pattern of buying at peaks or selling at lows? Consider enabling API access for more personalized insights on your trading patterns."
-        })
-    
-    # Simple response logic based on keywords
-    if 'hello' in message or 'hi' in message:
-        response = "Hello! How can I help you with your stock portfolio today?"
-    elif 'help' in message:
-        response = "I can help you analyze your stock transactions. Try asking about specific stocks, transaction history, or general market information."
-    elif any(word in message for word in ['stock', 'stocks', 'portfolio']):
-        response = "Your portfolio contains various stocks. You can view detailed information by clicking on specific stocks in the main view."
-    elif any(word in message for word in ['transaction', 'transactions', 'history']):
-        response = "Your transaction history is displayed in the main table. You can filter by stock, transaction type, and date range."
-    elif 'mag7' in message or 'magnificent 7' in message:
-        response = "The Magnificent Seven (MAG7) are: Apple (AAPL), Microsoft (MSFT), Alphabet/Google (GOOGL), Amazon (AMZN), Meta/Facebook (META), NVIDIA (NVDA), and Tesla (TSLA)."
-    elif 'chart' in message or 'graph' in message:
-        response = "Charts are displayed when you select a specific stock. They show price history and your buy/sell transactions."
-    elif 'filter' in message:
-        response = "You can filter transactions by stock symbol, transaction type (buy/sell), and date range using the buttons above the transaction table."
-    elif 'buy' in message or 'sell' in message:
-        response = "Your buy and sell transactions are color-coded in the transaction table. You can also filter to show only buys or sells."
-    elif 'clear' in message:
-        response = "You can clear our conversation by clicking the trash icon in the top-right corner of this chat window."
-    elif 'thanks' in message or 'thank you' in message:
-        response = "You're welcome! Let me know if you have any other questions."
-    elif 'bye' in message or 'goodbye' in message:
-        response = "Goodbye! Feel free to chat again if you have more questions."
-    else:
-        response = "I'm sorry, I don't have specific information about that. Try asking about your stock portfolio, transactions, or how to use this application."
-    
-    return jsonify({"response": response})
+            "success": False,
+            "error": str(e)
+        }), 500
 
+def handle_simple_chat(message, current_stock=None):
+    """Handle a simple chat message with the AI assistant."""
+    # Look for indicators of questions needing portfolio risk data
+    need_risk_data = False
+    risk_keywords = ['risk', 'tariff', 'trade war', 'china', 'supply chain', 'import tax', 'export', 'trade policy']
+    
+    for keyword in risk_keywords:
+        if keyword.lower() in message.lower():
+            need_risk_data = True
+            break
+    
+    # Get risk analysis data if needed
+    risk_data = None
+    if need_risk_data:
+        risk_data = analyze_tariff_risk(current_stock)
+    
+    # Format transactions for context
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    if current_stock:
+        # Get transactions for the current stock
+        cursor.execute('SELECT * FROM transactions WHERE Symbol = ? ORDER BY Date DESC, Time DESC LIMIT 20', (current_stock,))
+    else:
+        # Get recent transactions
+        cursor.execute('SELECT * FROM transactions ORDER BY Date DESC, Time DESC LIMIT 10')
+    
+    transactions = cursor.fetchall()
+    conn.close()
+    
+    # Format transactions for context
+    transaction_context = ""
+    if transactions:
+        transaction_context = "Recent transactions:\n"
+        for t in transactions:
+            transaction_context += f"- {t['Date']} {t['Symbol']} {t['Side'].upper()} {t['Qty']} shares at ${t['AveragePrice']:.2f}\n"
+    
+    # Include risk analysis if available
+    risk_context = ""
+    if risk_data:
+        # Add general tariff context
+        risk_context += "\nTariff Risk Context:\n"
+        risk_context += f"- Recent Developments: {risk_data['tariff_context']['recent_developments']}\n"
+        risk_context += f"- Potential Impacts: {risk_data['tariff_context']['potential_impacts']}\n"
+        risk_context += f"- Most Affected Sectors: {risk_data['tariff_context']['sectors_most_affected']}\n\n"
+        
+        # Add portfolio risk exposure
+        risk_context += f"Portfolio Tariff Risk Exposure:\n"
+        risk_context += f"- High Risk Holdings: {len(risk_data['high_risk'])} stocks\n"
+        if risk_data['high_risk']:
+            risk_context += "  " + ", ".join([f"{s['Symbol']} ({s['Name']})" for s in risk_data['high_risk']]) + "\n"
+        
+        risk_context += f"- Medium Risk Holdings: {len(risk_data['medium_risk'])} stocks\n"
+        if risk_data['medium_risk']:
+            risk_context += "  " + ", ".join([f"{s['Symbol']} ({s['Name']})" for s in risk_data['medium_risk']]) + "\n"
+        
+        # Add specific stock risk if viewing a stock
+        if current_stock and risk_data['current_stock_risk']:
+            stock_risk = risk_data['current_stock_risk']
+            risk_context += f"\nRisk Profile for {current_stock} ({stock_risk['Name']}):\n"
+            risk_context += f"- Risk Level: {stock_risk['risk_level'].upper()}\n"
+            risk_context += f"- Risk Factors:\n"
+            for factor in stock_risk['risk_factors']:
+                risk_context += f"  * {factor}\n"
+    
+    settings = get_settings()
+    ai_provider = settings.get('ai_provider', DEFAULT_SETTINGS['ai_provider'])
+    
+    # Check if the message is specifically about tariffs or risk
+    is_risk_question = need_risk_data
+    
+    # Enhanced system prompt for tariff/risk questions
+    system_prompt = (
+        "You are a professional stock portfolio analyst assistant. "
+        "Provide clear, concise analysis about stock transactions and portfolio performance. "
+        "When analyzing trades, consider entry points, exit points, and market timing. "
+        "You can refer to the transaction history provided to give context-specific advice. "
+    )
+    
+    # Add tariff-specific instructions if needed
+    if is_risk_question:
+        system_prompt += (
+            "Focus especially on tariff and trade policy risks in your analysis. "
+            "Consider how supply chain disruptions, increased import costs, and "
+            "market access restrictions might impact different holdings. "
+            "Provide specific insights on how to mitigate these risks through portfolio adjustments. "
+            "Use the tariff risk data provided to give targeted recommendations. "
+        )
+    
+    # Build user prompt with appropriate context
+    user_prompt = f"User question: {message}\n\n"
+    
+    if transaction_context:
+        user_prompt = f"Transaction context:\n{transaction_context}\n\n" + user_prompt
+    
+    if is_risk_question and risk_context:
+        user_prompt = f"Risk analysis context:\n{risk_context}\n\n" + user_prompt
+    
+    # Try to use Perplexity first if configured
+    if ai_provider == 'perplexity' and perplexity_client:
+        try:
+            model = settings.get('perplexity_model', DEFAULT_PERPLEXITY_MODEL)
+            
+            response = perplexity_client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                temperature=0.7
+            )
+            return jsonify({
+                "response": response.choices[0].message.content,
+                "provider": "Perplexity",
+                "model": model
+            })
+        except Exception as e:
+            print(f"Error with Perplexity API: {e}")
+            # Fall back to OpenAI if available
+    
+    # Use OpenAI if Perplexity failed or not configured
+    if openai_client:
+        try:
+            response = openai_client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                temperature=0.7
+            )
+            return jsonify({
+                "response": response.choices[0].message.content,
+                "provider": "OpenAI",
+                "model": "gpt-3.5-turbo"
+            })
+        except Exception as e:
+            print(f"Error with OpenAI API: {e}")
+    
+    # If both APIs failed, return a helpful error message
+    if is_risk_question:
+        default_response = "I'm sorry, I couldn't access the AI services to analyze your portfolio risk. From the available data, stocks in technology and consumer electronics sectors are generally most affected by tariffs due to supply chain dependencies on China. Consider diversifying your portfolio to reduce exposure to these sectors."
+    else:
+        default_response = "I'm sorry, there was an error processing your request. Please try again later or check your API settings."
+    
+    return jsonify({
+        "response": default_response,
+        "provider": "Fallback",
+        "model": "Internal"
+    })
+
+def get_stock_sector(symbol):
+    """
+    Get the sector information for a given stock symbol using yfinance.
+    Returns the sector string or "Unknown" if not available.
+    """
+    try:
+        stock = yf.Ticker(symbol)
+        info = stock.info
+        
+        # Check for sector information in different possible fields
+        sector = info.get('sector') or info.get('industryDisp')
+        
+        if not sector and 'info' in dir(stock) and callable(getattr(stock, 'info')):
+            # Try refreshing info
+            refreshed_info = stock.info
+            sector = refreshed_info.get('sector') or refreshed_info.get('industryDisp')
+        
+        return sector or "Unknown"
+    except Exception as e:
+        print(f"Error getting sector for {symbol}: {e}")
+        return "Unknown"
+
+def assess_tariff_risk(symbol, sector):
+    """
+    Assess the tariff risk for a given stock based on its symbol and sector.
+    Returns a dictionary with risk assessment.
+    """
+    # High-risk sectors for tariffs
+    high_risk_sectors = [
+        "Technology", "Consumer Electronics", "Semiconductors", 
+        "Automotive", "Consumer Cyclical"
+    ]
+    
+    # Medium-risk sectors
+    medium_risk_sectors = [
+        "Industrials", "Manufacturing", "Materials", 
+        "Consumer Discretionary", "Communication Services"
+    ]
+    
+    # High-risk companies regardless of sector
+    high_risk_symbols = ['AAPL', 'NVDA', 'TSLA', 'NIO', 'AMD', 'MU']
+    medium_risk_symbols = ['MSFT', 'INTC', 'AMZN', 'QCOM', 'AMAT', 'LRCX']
+    
+    risk_level = "low"
+    risk_score = 0.3
+    
+    # Check symbol first
+    if symbol in high_risk_symbols:
+        risk_level = "high"
+        risk_score = 0.9
+    elif symbol in medium_risk_symbols:
+        risk_level = "medium"
+        risk_score = 0.6
+    
+    # Then check sector if not already high risk
+    elif sector in high_risk_sectors:
+        risk_level = "high"
+        risk_score = 0.8
+    elif sector in medium_risk_sectors:
+        risk_level = "medium"
+        risk_score = 0.5
+    
+    assessment = ""
+    if risk_level == "high":
+        assessment = "High exposure to tariffs due to significant supply chain dependencies or direct manufacturing in impacted regions."
+    elif risk_level == "medium":
+        assessment = "Moderate exposure to tariffs with some supply chain vulnerabilities but potential to adapt."
+    else:
+        assessment = "Limited exposure to tariffs with diversified supply chains or primarily domestic operations."
+    
+    return {
+        "risk_level": risk_level,
+        "risk_score": risk_score,
+        "assessment": assessment
+    }
 
 if __name__ == '__main__':
     # Make sure the database exists

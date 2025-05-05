@@ -190,9 +190,13 @@
     <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top" style="padding: 0.7rem 2vw; z-index: 100;">
         <div class="container-fluid">
             <a class="navbar-brand d-flex align-items-center" href="/">
-                <img src="{{ url_for('static', filename='logo.png') }}" alt="App Logo" class="title-icon mr-2" style="width:1.8rem;height:1.8rem;">
+                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="App Logo" class="title-icon mr-2" style="width:1.8rem;height:1.8rem;">
                 TradeLens
             </a>
+            <div class="d-flex align-items-center ml-auto">
+                <a href="{{ url_for('index') }}" class="nav-link mr-3">Dashboard</a>
+                <a href="{{ url_for('risk_review') }}" class="nav-link mr-3">Risk Review</a>
+            </div>
         </div>
     </nav>
     
@@ -253,7 +257,7 @@
                                   {% if settings.ai_provider == 'perplexity' %}checked{% endif %} 
                                   {% if not perplexity_available %}disabled{% endif %}>
                             <label for="perplexity" class="d-flex align-items-center w-100">
-                                <img src="{{ url_for('static', filename='perplexity_icon.png') }}" 
+                                <img src="{{ url_for('static', filename='img/icons/perplexity_icon.png') }}" 
                                      alt="Perplexity Logo" 
                                      class="ai-provider-logo">
                                 <div class="ai-provider-details">
