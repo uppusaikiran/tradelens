@@ -127,7 +127,7 @@ h2 {
     cursor: pointer;
     transition: all 0.22s ease-out;
     font-weight: 600;
-    color: #4f8cff;
+    color: #333333;
     box-shadow: 0 2px 8px rgba(79, 140, 255, 0.07);
     width: 120px;
     text-decoration: none;
@@ -138,17 +138,30 @@ h2 {
 
 .stock-box:hover {
     background: linear-gradient(120deg, #e3e9f7 60%, #f5faff 100%);
-    color: #4f8cff;
+    color: #222222;
     border-color: #4f8cff;
     transform: translateY(-3px);
     box-shadow: 0 6px 18px rgba(79, 140, 255, 0.13);
 }
 
 .stock-box.active {
-    background: linear-gradient(120deg, #4f8cff 60%, #6bb7ff 100%);
-    color: #fff;
+    background: linear-gradient(120deg, #2c59af 60%, #3b6dc9 100%);
+    color: #ffffff;
     border-color: #4f8cff;
     box-shadow: 0 8px 24px rgba(79, 140, 255, 0.18);
+}
+
+.stock-box.active .stock-symbol {
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    font-weight: 700;
+    letter-spacing: 0.3px;
+}
+
+.stock-box.active .stock-name {
+    color: #ffffff;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
 .stock-logo {
@@ -174,24 +187,30 @@ h2 {
     font-weight: bold;
     margin-bottom: 6px;
     color: inherit;
+    text-shadow: none;
 }
 
 .stock-box .stock-name {
     font-size: 0.78em;
-    color: #6c757d;
+    color: #222222;
     text-align: center;
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-}
-
-.stock-box.active .stock-name {
-    color: rgba(255, 255, 255, 0.9);
+    font-weight: 600;
 }
 
 .stock-box:hover .stock-name {
-    color: #4f8cff;
+    color: #222222;
+}
+
+/* Add a text shadow to text on active (blue background) cards for better contrast */
+.stock-box.active .stock-symbol,
+.stock-box.active .stock-name {
+    color: #ffffff;
+    font-weight: 700;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 /* Card and Chart Styles */
@@ -438,12 +457,26 @@ tr.highlighted-row td {
     }
     
     .stock-box .stock-symbol {
-        font-size: 0.9em;
+        font-size: 0.95em;
         margin-bottom: 4px;
+        font-weight: 700;
+        letter-spacing: 0.2px;
     }
     
     .stock-box .stock-name {
-        font-size: 0.7em;
+        font-size: 0.78em;
+        font-weight: 600;
+        line-height: 1.3;
+        color: #222222;
+    }
+    
+    .stock-box.active .stock-symbol {
+        font-size: 0.95em;
+        letter-spacing: 0.3px;
+    }
+    
+    .stock-box.active .stock-name {
+        font-size: 0.78em;
     }
     
     .container {
@@ -1281,4 +1314,65 @@ tr.highlighted-row td {
     margin-right: 10px;
     object-fit: contain;
     background-color: transparent;
+}
+
+/* Tab Navigation Styles */
+.nav-tabs {
+    border-bottom: 1px solid #dee2e6;
+}
+
+.nav-tabs .nav-item {
+    margin-bottom: -1px;
+}
+
+/* Stock category tabs specific styling for better visibility */
+#stockTabs .nav-link,
+.nav-tabs .nav-link {
+    border: 1px solid transparent;
+    border-top-left-radius: 0.25rem;
+    border-top-right-radius: 0.25rem;
+    color: #222222 !important;  /* Darker gray text with !important to ensure visibility */
+    font-weight: 500;
+    background-color: #f8f9fa;  /* Light background */
+    padding: 10px 16px;
+    transition: all 0.2s;
+}
+
+#stockTabs .nav-link:hover,
+.nav-tabs .nav-link:hover {
+    border-color: #e9ecef #e9ecef #dee2e6;
+    color: #4f8cff !important;  /* Blue text on hover with !important */
+    background-color: #ffffff;
+    text-decoration: none;  /* Prevent underline */
+}
+
+#stockTabs .nav-link.active,
+.nav-tabs .nav-link.active {
+    color: #333333 !important;  /* Darker text for active tab with !important */
+    background-color: #ffffff;
+    border-color: #dee2e6 #dee2e6 #fff;
+    font-weight: 600;
+    box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.05);  /* Subtle shadow for active tab */
+}
+
+/* Additional style for the tab content area */
+.tab-content {
+    background-color: #ffffff;
+    border-radius: 0 0 0.25rem 0.25rem;
+    padding-top: 0.5rem;
+}
+
+/* Ensure tab titles are visible in all viewport sizes */
+@media (max-width: 767px) {
+    .nav-tabs .nav-link {
+        padding: 8px 12px;
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .nav-tabs .nav-link {
+        padding: 6px 10px;
+        font-size: 0.85rem;
+    }
 } 

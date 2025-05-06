@@ -40,6 +40,9 @@ stock_orders.csv
 *.log
 .env
 instance/
+temp.html
+tmp/
+node_modules/
 
 # Flask
 flask_session/

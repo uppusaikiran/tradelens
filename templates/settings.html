@@ -184,6 +184,99 @@
             text-decoration: underline;
             color: #357ae8;
         }
+        
+        /* File Upload Styles */
+        .file-upload-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .file-upload-wrapper {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            padding: 8px 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .file-upload-wrapper:hover {
+            border-color: #4f8cff;
+            background: #f1f3f5;
+        }
+
+        .file-upload-wrapper.has-file {
+            border-style: solid;
+            border-color: #28a745;
+            background: #f8fff9;
+        }
+
+        .file-upload-input {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .file-upload-text {
+            display: flex;
+            align-items: center;
+            color: #6c757d;
+            font-size: 0.95rem;
+            margin: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 200px;
+        }
+
+        .file-upload-text::before {
+            content: '📄';
+            margin-right: 8px;
+            font-size: 1.2rem;
+        }
+
+        .upload-btn {
+            background: linear-gradient(90deg, #4f8cff 0%, #6bb7ff 100%);
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .upload-btn:hover {
+            background: linear-gradient(90deg, #3a7bef 0%, #5aa7f0 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(79, 140, 255, 0.25);
+        }
+
+        .upload-btn:active {
+            transform: translateY(0);
+        }
+
+        .upload-btn::before {
+            content: '⬆️';
+            font-size: 1.1rem;
+        }
+
+        @media (max-width: 768px) {
+            .file-upload-text {
+                max-width: 150px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -222,6 +315,34 @@
         {% endwith %}
         
         <h1 class="mb-4">Application Settings</h1>
+        
+        <!-- New Data Upload Card -->
+        <div class="settings-card mb-4">
+            <div class="settings-header">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-upload mr-2" viewBox="0 0 16 16">
+                    <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                    <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
+                </svg>
+                Data Upload
+            </div>
+            <div class="settings-body">
+                <h3 class="settings-title">Upload Transaction Data</h3>
+                <p class="mb-3">Upload your stock transaction data in CSV format. The system will process and analyze your trading history.</p>
+                
+                <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data">
+                    <div class="file-upload-container">
+                        <div class="file-upload-wrapper" id="fileWrapper">
+                            <input type="file" name="file" accept=".csv" class="file-upload-input" id="fileInput" required>
+                            <p class="file-upload-text">Choose CSV file</p>
+                        </div>
+                        <button type="submit" class="upload-btn">Upload</button>
+                    </div>
+                    <div class="small text-muted mt-2">
+                        <strong>Note:</strong> Supported format is CSV. The system will replace existing data with the new upload.
+                    </div>
+                </form>
+            </div>
+        </div>
         
         <div class="settings-card">
             <div class="settings-header">
@@ -337,6 +458,22 @@
                 
                 this.closest('.ai-provider').classList.add('active');
             });
+        });
+        
+        // File upload display handling
+        const fileInput = document.getElementById('fileInput');
+        const fileWrapper = document.getElementById('fileWrapper');
+        const fileText = fileWrapper.querySelector('.file-upload-text');
+        
+        fileInput.addEventListener('change', function() {
+            if (this.files.length > 0) {
+                const fileName = this.files[0].name;
+                fileText.textContent = fileName;
+                fileWrapper.classList.add('has-file');
+            } else {
+                fileText.textContent = 'Choose CSV file';
+                fileWrapper.classList.remove('has-file');
+            }
         });
     </script>
 </body>
