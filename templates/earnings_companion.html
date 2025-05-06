@@ -598,7 +598,8 @@
                                                         {% set year = date_parts[0]|int %}
                                                         {% set month = date_parts[1]|int %}
                                                         {% set day = date_parts[2]|int %}
-                                                        {% set weekday_idx = (day % 7 + 3) % 7 %}
+                                                        {% set date_obj = date|strptime('%Y-%m-%d') %}
+                                                        {% set weekday_idx = date_obj.weekday() %}
                                                         {% set weekday_name = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][weekday_idx] %}
                                                         
                                                         {% if weekday_name == weekday and weekday_idx < 5 %}
@@ -691,7 +692,8 @@
                                                         {% set year = date_parts[0]|int %}
                                                         {% set month = date_parts[1]|int %}
                                                         {% set day = date_parts[2]|int %}
-                                                        {% set weekday_idx = (day % 7 + 3) % 7 %}
+                                                        {% set date_obj = date|strptime('%Y-%m-%d') %}
+                                                        {% set weekday_idx = date_obj.weekday() %}
                                                         {% set weekday_name = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][weekday_idx] %}
                                                         
                                                         {% if weekday_name == weekday and weekday_idx >= 5 %}

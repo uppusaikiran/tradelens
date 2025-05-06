@@ -2081,8 +2081,8 @@ def update_earnings_calendar():
         # Get current date
         today = datetime.now().date()
         
-        # Get the next 30 days range
-        end_date = (today + timedelta(days=30)).strftime('%Y-%m-%d')
+        # Get the next 90 days range (increased from 30 days)
+        end_date = (today + timedelta(days=90)).strftime('%Y-%m-%d')
         
         # Get user's portfolio stocks
         conn = get_db_connection()
@@ -2606,8 +2606,8 @@ def earnings_companion():
     # Get today's date
     today = datetime.now().date()
     
-    # Get the earnings calendar for the next 30 days
-    end_date = (today + timedelta(days=30)).strftime('%Y-%m-%d')
+    # Get the earnings calendar for the next 90 days (increased from 30 days)
+    end_date = (today + timedelta(days=90)).strftime('%Y-%m-%d')
     earnings_calendar = get_earnings_calendar(
         start_date=today.strftime('%Y-%m-%d'),
         end_date=end_date
