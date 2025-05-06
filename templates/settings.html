@@ -239,29 +239,8 @@
                     <div class="settings-section">
                         <h3 class="settings-title">Select AI Provider</h3>
                         
-                        <!-- OpenAI Option -->
-                        <div class="ai-provider {% if settings.ai_provider == 'openai' %}active{% endif %}">
-                            <input type="radio" id="openai" name="ai_provider" value="openai" 
-                                  {% if settings.ai_provider == 'openai' %}checked{% endif %}
-                                  {% if not openai_available %}disabled{% endif %}>
-                            <label for="openai" class="d-flex align-items-center w-100">
-                                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/ChatGPT_logo.svg/1024px-ChatGPT_logo.svg.png" 
-                                     alt="OpenAI Logo" 
-                                     class="ai-provider-logo">
-                                <div class="ai-provider-details">
-                                    <div class="font-weight-bold">OpenAI</div>
-                                    <div class="small text-muted">Uses GPT-3.5-Turbo model</div>
-                                </div>
-                                {% if openai_available %}
-                                    <span class="api-status available">Available</span>
-                                {% else %}
-                                    <span class="api-status unavailable">Unavailable</span>
-                                {% endif %}
-                            </label>
-                        </div>
-                        
-                        <!-- Perplexity Option -->
-                        <div class="ai-provider {% if settings.ai_provider == 'perplexity' %}active{% endif %} mt-3">
+                        <!-- Perplexity Option (now first) -->
+                        <div class="ai-provider {% if settings.ai_provider == 'perplexity' %}active{% endif %}">
                             <input type="radio" id="perplexity" name="ai_provider" value="perplexity"
                                   {% if settings.ai_provider == 'perplexity' %}checked{% endif %} 
                                   {% if not perplexity_available %}disabled{% endif %}>
@@ -270,7 +249,7 @@
                                      alt="Perplexity Logo" 
                                      class="ai-provider-logo">
                                 <div class="ai-provider-details">
-                                    <div class="font-weight-bold">Perplexity AI</div>
+                                    <div class="font-weight-bold">Perplexity AI <span class="badge badge-success">Preferred</span></div>
                                     <div class="small text-muted">Uses various Perplexity models</div>
                                 </div>
                                 {% if perplexity_available %}
@@ -295,6 +274,27 @@
                                     This model will be used for the AI chat assistant.
                                 </div>
                             </div>
+                        </div>
+                        
+                        <!-- OpenAI Option (now second) -->
+                        <div class="ai-provider {% if settings.ai_provider == 'openai' %}active{% endif %} mt-3">
+                            <input type="radio" id="openai" name="ai_provider" value="openai" 
+                                  {% if settings.ai_provider == 'openai' %}checked{% endif %}
+                                  {% if not openai_available %}disabled{% endif %}>
+                            <label for="openai" class="d-flex align-items-center w-100">
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/ChatGPT_logo.svg/1024px-ChatGPT_logo.svg.png" 
+                                     alt="OpenAI Logo" 
+                                     class="ai-provider-logo">
+                                <div class="ai-provider-details">
+                                    <div class="font-weight-bold">OpenAI <span class="badge badge-secondary">Fallback</span></div>
+                                    <div class="small text-muted">Uses GPT-3.5-Turbo model</div>
+                                </div>
+                                {% if openai_available %}
+                                    <span class="api-status available">Available</span>
+                                {% else %}
+                                    <span class="api-status unavailable">Unavailable</span>
+                                {% endif %}
+                            </label>
                         </div>
                     </div>
                     

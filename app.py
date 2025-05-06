@@ -1337,53 +1337,8 @@ def chat():
     If the user asks about buy timing or trading patterns for the current stock, provide personalized insights based on their transaction history.
     """
     
-    # Try OpenAI first if available and selected in settings
-    if os.getenv('OPENAI_API_KEY') and settings['ai_provider'] == 'openai':
-        try:
-            # Call OpenAI API
-            response = openai_client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": context},
-                    {"role": "user", "content": message}
-                ],
-                max_tokens=1000,
-                temperature=0.7,
-                presence_penalty=0.6,
-                frequency_penalty=0.2,
-                stream=False
-            )
-            
-            # Extract the response text
-            chat_response = response.choices[0].message.content.strip()
-            return jsonify({
-                "response": chat_response, 
-                "provider": "openai",
-                "model": "gpt-3.5-turbo"
-            })
-            
-        except (openai.RateLimitError, openai.APIError) as e:
-            print(f"OpenAI API error (possibly rate limit): {str(e)}")
-            # Check if we should fall back to Perplexity
-            if perplexity_client and settings['ai_provider'] != 'openai_only':
-                print("Falling back to Perplexity API...")
-                # Continue to Perplexity fallback
-            else:
-                # No Perplexity fallback, use simple chat
-                print("No Perplexity fallback available, using simple chat")
-                return handle_simple_chat(message, current_stock)
-                
-        except Exception as e:
-            print(f"Error calling OpenAI API: {str(e)}")
-            if perplexity_client and settings['ai_provider'] != 'openai_only':
-                print("Falling back to Perplexity API due to general error...")
-                # Continue to Perplexity fallback
-            else:
-                # Fallback to simple response if API fails
-                return handle_simple_chat(message, current_stock)
-    
-    # Try Perplexity if OpenAI failed or isn't available or Perplexity is selected
-    if perplexity_client and (settings['ai_provider'] == 'perplexity' or settings['ai_provider'] != 'openai_only'):
+    # Try Perplexity first if available
+    if perplexity_client:
         try:
             # Get the selected model from settings
             selected_model = settings.get('perplexity_model', 'sonar')
@@ -1411,7 +1366,43 @@ def chat():
             
         except Exception as e:
             print(f"Error calling Perplexity API: {str(e)}")
-            # Fallback to simple response if both APIs fail
+            print("Falling back to OpenAI API...")
+            # Continue to OpenAI fallback
+    
+    # Try OpenAI if Perplexity failed or isn't available
+    if os.getenv('OPENAI_API_KEY'):
+        try:
+            # Call OpenAI API
+            response = openai_client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": context},
+                    {"role": "user", "content": message}
+                ],
+                max_tokens=1000,
+                temperature=0.7,
+                presence_penalty=0.6,
+                frequency_penalty=0.2,
+                stream=False
+            )
+            
+            # Extract the response text
+            chat_response = response.choices[0].message.content.strip()
+            return jsonify({
+                "response": chat_response, 
+                "provider": "openai",
+                "model": "gpt-3.5-turbo"
+            })
+            
+        except (openai.RateLimitError, openai.APIError) as e:
+            print(f"OpenAI API error (possibly rate limit): {str(e)}")
+            # Fallback to simple chat
+            print("No API available, using simple chat")
+            return handle_simple_chat(message, current_stock)
+                
+        except Exception as e:
+            print(f"Error calling OpenAI API: {str(e)}")
+            # Fallback to simple response if API fails
             return handle_simple_chat(message, current_stock)
     
     # If we got here, neither API is available or both failed
