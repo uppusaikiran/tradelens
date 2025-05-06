@@ -1470,7 +1470,13 @@ def handle_simple_chat(message, current_stock=None):
     if transactions:
         transaction_context = "Recent transactions:\n"
         for t in transactions:
-            transaction_context += f"- {t['Date']} {t['Symbol']} {t['Side'].upper()} {t['Qty']} shares at ${t['AveragePrice']:.2f}\n"
+            try:
+                # Convert AveragePrice to float if it's a string
+                avg_price = float(t['AveragePrice']) if isinstance(t['AveragePrice'], str) else t['AveragePrice']
+                transaction_context += f"- {t['Date']} {t['Symbol']} {t['Side'].upper()} {t['Qty']} shares at ${avg_price:.2f}\n"
+            except (ValueError, TypeError):
+                # Fallback to string format if conversion fails
+                transaction_context += f"- {t['Date']} {t['Symbol']} {t['Side'].upper()} {t['Qty']} shares at ${t['AveragePrice']}\n"
     
     # Include risk analysis if available
     risk_context = ""
