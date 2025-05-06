@@ -604,7 +604,7 @@ def api_stock_chart(symbol):
     for tx in transactions:
         try:
             # Safely convert AveragePrice to float
-            if not tx['AveragePrice'] or tx['AveragePrice'].lower() == 'null':
+            if tx['AveragePrice'] is None or (isinstance(tx['AveragePrice'], str) and (not tx['AveragePrice'] or tx['AveragePrice'].lower() == 'null')):
                 continue
                 
             try:
