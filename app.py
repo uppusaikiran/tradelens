@@ -860,7 +860,15 @@ def upload_file():
     try:
         # Reinitialize the database with the new file
         init_db()
-        flash('File uploaded and processed successfully!', 'success')
+        
+        # Populate earnings calendar data to ensure it's not empty
+        try:
+            from populate_earnings_data import populate_sample_earnings_data
+            populate_sample_earnings_data()
+            flash('File uploaded and database processed successfully! Earnings calendar has been refreshed.', 'success')
+        except Exception as e:
+            flash(f'File uploaded, but error refreshing earnings data: {str(e)}', 'warning')
+            
     except Exception as e:
         flash(f'Error processing file: {str(e)}', 'error')
         # Clean up the uploaded file
@@ -2066,8 +2074,24 @@ def get_earnings_calendar(start_date=None, end_date=None, symbol=None):
     cursor.execute(query, params)
     earnings = cursor.fetchall()
     
+    # Process earnings data to ensure eps_estimate is properly handled
+    processed_earnings = []
+    for entry in earnings:
+        entry_dict = dict(entry)
+        
+        # Handle eps_estimate
+        if entry_dict.get('eps_estimate') is not None:
+            # Try to convert to float if possible
+            try:
+                entry_dict['eps_estimate'] = float(entry_dict['eps_estimate'])
+            except (ValueError, TypeError):
+                # Keep as string if conversion fails
+                pass
+        
+        processed_earnings.append(entry_dict)
+    
     conn.close()
-    return [dict(e) for e in earnings]
+    return processed_earnings
 
 def update_earnings_calendar():
     """
@@ -2185,8 +2209,14 @@ def update_earnings_calendar():
                     eps_estimate = None
                     if 'EPS Estimate' in stock_data.calendar:
                         eps_estimate = stock_data.calendar.loc['EPS Estimate']
-                        if not isinstance(eps_estimate, (int, float)) or pd.isna(eps_estimate):
+                        # Safely handle various types of EPS estimate values
+                        if pd.isna(eps_estimate):
                             eps_estimate = None
+                        elif isinstance(eps_estimate, (int, float)):
+                            eps_estimate = str(round(eps_estimate, 2))
+                        else:
+                            # Convert any other type to string
+                            eps_estimate = str(eps_estimate)
                     
                     # Upsert into database
                     cursor.execute('''
@@ -2252,8 +2282,14 @@ def update_earnings_calendar():
                     eps_estimate = None
                     if 'EPS Estimate' in stock_data.calendar:
                         eps_estimate = stock_data.calendar.loc['EPS Estimate']
-                        if not isinstance(eps_estimate, (int, float)) or pd.isna(eps_estimate):
+                        # Safely handle various types of EPS estimate values
+                        if pd.isna(eps_estimate):
                             eps_estimate = None
+                        elif isinstance(eps_estimate, (int, float)):
+                            eps_estimate = str(round(eps_estimate, 2))
+                        else:
+                            # Convert any other type to string
+                            eps_estimate = str(eps_estimate)
                     
                     # Upsert into database
                     cursor.execute('''
@@ -2613,13 +2649,28 @@ def earnings_companion():
         end_date=end_date
     )
     
-    # If calendar is empty, try to update it
+    # If calendar is empty, try to update it with API data first
     if not earnings_calendar:
         update_earnings_calendar()
         earnings_calendar = get_earnings_calendar(
             start_date=today.strftime('%Y-%m-%d'),
             end_date=end_date
         )
+        
+        # If still empty after update, try to populate with sample data
+        if not earnings_calendar:
+            try:
+                from populate_earnings_data import populate_sample_earnings_data
+                populate_sample_earnings_data()
+                # Get the calendar data again after populating
+                earnings_calendar = get_earnings_calendar(
+                    start_date=today.strftime('%Y-%m-%d'),
+                    end_date=end_date
+                )
+                if earnings_calendar:
+                    flash("Earnings calendar has been populated with sample data.", "info")
+            except Exception as e:
+                flash(f"Could not populate earnings calendar: {str(e)}", "warning")
     
     # Get user's portfolio to highlight stocks
     conn = get_db_connection()
@@ -2736,16 +2787,24 @@ if __name__ == '__main__':
     # Make sure the database exists
     init_db()
     
-    # Initialize earnings data if needed
+    # Initialize or refresh earnings data
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute('SELECT COUNT(*) FROM earnings_calendar')
     earnings_count = cursor.fetchone()[0]
+    
+    # Get today's date to check if we have current earnings data
+    today = datetime.now().date()
+    end_date = (today + timedelta(days=90)).strftime('%Y-%m-%d')
+    cursor.execute('SELECT COUNT(*) FROM earnings_calendar WHERE earnings_date BETWEEN ? AND ?', 
+                   (today.strftime('%Y-%m-%d'), end_date))
+    current_earnings_count = cursor.fetchone()[0]
     conn.close()
     
-    if earnings_count == 0:
+    # Either no earnings data or no current data in our date range
+    if earnings_count == 0 or current_earnings_count == 0:
         try:
-            print("No earnings data found. Initializing earnings calendar with sample data...")
+            print("Refreshing earnings calendar with sample data...")
             from populate_earnings_data import populate_sample_earnings_data
             populate_sample_earnings_data()
         except Exception as e:

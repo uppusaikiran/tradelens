@@ -534,7 +534,7 @@
                 <div class="earnings-card">
                     <div class="earnings-card-header">
                         <h5 class="mb-0">Upcoming Earnings Calendar</h5>
-                        <span class="badge badge-light">Next 30 Days</span>
+                        <span class="badge badge-light">Next 90 Days</span>
                     </div>
                     <div class="earnings-card-body">
                         <div class="calendar-header">
@@ -636,7 +636,7 @@
                                                                             </div>
                                                                             {% if earning.eps_estimate %}
                                                                                 <div class="earnings-metrics">
-                                                                                    EPS Est: ${{ "%.2f"|format(earning.eps_estimate) }}
+                                                                                    EPS Est: ${% if earning.eps_estimate is string %}{{ earning.eps_estimate }}{% else %}{{ "%.2f"|format(earning.eps_estimate) }}{% endif %}
                                                                                     {% if in_portfolio %}
                                                                                         {% for stock in portfolio %}
                                                                                             {% if stock.Symbol == earning.symbol %}
@@ -730,7 +730,7 @@
                                                                             </div>
                                                                             {% if earning.eps_estimate %}
                                                                                 <div class="earnings-metrics">
-                                                                                    EPS Est: ${{ "%.2f"|format(earning.eps_estimate) }}
+                                                                                    EPS Est: ${% if earning.eps_estimate is string %}{{ earning.eps_estimate }}{% else %}{{ "%.2f"|format(earning.eps_estimate) }}{% endif %}
                                                                                     {% if in_portfolio %}
                                                                                         {% for stock in portfolio %}
                                                                                             {% if stock.Symbol == earning.symbol %}
