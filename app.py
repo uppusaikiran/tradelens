@@ -14,6 +14,9 @@ import openai
 from dotenv import load_dotenv
 import threading
 import markdown
+import requests
+from itertools import groupby
+from dateutil.relativedelta import relativedelta
 
 # Define MAG7 stocks
 MAG7_STOCKS = {
@@ -190,6 +193,12 @@ app.secret_key = os.getenv('SECRET_KEY', 'dev_secret_key_change_in_production')
 def strptime_filter(date_str, format_str):
     """Convert a date string to a datetime object using the given format"""
     return datetime.strptime(date_str, format_str)
+
+# Add custom Jinja2 filter for strftime
+@app.template_filter('strftime')
+def strftime_filter(date_obj, format_str):
+    """Format a datetime object as a string using the given format"""
+    return date_obj.strftime(format_str)
 
 # Add markdown filter for rendering markdown content
 @app.template_filter('markdown')
@@ -2773,6 +2782,439 @@ def api_update_earnings_calendar():
         return jsonify({"status": "success", "message": "Earnings calendar updated successfully"})
     else:
         return jsonify({"status": "error", "message": "Failed to update earnings calendar"}), 500
+
+def get_market_events(start_date=None, end_date=None, event_types=None, symbol=None):
+    """
+    Get market events like earnings releases, FOMC meetings, CPI releases, and stock splits
+    filtered by date range, event types, and/or symbol.
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Build the query with parameters
+    query = "SELECT * FROM market_events WHERE 1=1"
+    params = []
+    
+    if start_date:
+        query += " AND event_date >= ?"
+        params.append(start_date)
+    
+    if end_date:
+        query += " AND event_date <= ?"
+        params.append(end_date)
+    
+    if event_types:
+        # Convert single string to list if needed
+        if isinstance(event_types, str):
+            event_types = [event_types]
+        
+        placeholders = ', '.join(['?' for _ in event_types])
+        query += f" AND event_type IN ({placeholders})"
+        params.extend(event_types)
+    
+    if symbol:
+        query += " AND (symbol = ? OR symbol IS NULL)"
+        params.append(symbol.upper())
+    
+    query += " ORDER BY event_date, event_time"
+    
+    cursor.execute(query, params)
+    events = cursor.fetchall()
+    
+    # Convert to list of dictionaries for easier use in template
+    event_list = []
+    for event in events:
+        event_dict = {
+            'id': event['id'],
+            'date': event['event_date'],
+            'time': event['event_time'],
+            'type': event['event_type'],
+            'symbol': event['symbol'],
+            'title': event['title'],
+            'subtitle': event['subtitle'],
+            'description': event['description'],
+            'impact': event['impact_level']
+        }
+        event_list.append(event_dict)
+    
+    conn.close()
+    return event_list
+
+def get_fomc_meetings(start_date, end_date):
+    """
+    Fetch FOMC meeting dates from database or external API
+    This is a placeholder function that would be replaced with actual
+    implementation to fetch FOMC meeting dates from a reliable source
+    """
+    # For now, we'll hard-code some sample FOMC meetings
+    # In a real implementation, you would fetch this from an API
+    fomc_meetings = [
+        {
+            'date': '2025-01-29',
+            'time': '14:00',
+            'title': 'FOMC Interest Rate Decision',
+            'subtitle': 'January 2025 Meeting',
+            'description': 'The Federal Reserve announces its decision on interest rates after its two-day meeting.',
+            'impact': 'high'
+        },
+        {
+            'date': '2025-03-19',
+            'time': '14:00',
+            'title': 'FOMC Interest Rate Decision',
+            'subtitle': 'March 2025 Meeting',
+            'description': 'The Federal Reserve announces its decision on interest rates after its two-day meeting.',
+            'impact': 'high'
+        },
+        {
+            'date': '2025-05-07',
+            'time': '14:00',
+            'title': 'FOMC Interest Rate Decision',
+            'subtitle': 'May 2025 Meeting',
+            'description': 'The Federal Reserve announces its decision on interest rates after its two-day meeting.',
+            'impact': 'high'
+        }
+    ]
+    
+    # Filter by date range
+    start = datetime.strptime(start_date, '%Y-%m-%d').date()
+    end = datetime.strptime(end_date, '%Y-%m-%d').date()
+    
+    filtered_meetings = [
+        meeting for meeting in fomc_meetings 
+        if start <= datetime.strptime(meeting['date'], '%Y-%m-%d').date() <= end
+    ]
+    
+    return filtered_meetings
+
+def get_cpi_releases(start_date, end_date):
+    """
+    Fetch CPI release dates from database or external API
+    This is a placeholder function that would be replaced with actual
+    implementation to fetch CPI release dates from a reliable source
+    """
+    # For now, we'll hard-code some sample CPI releases
+    # In a real implementation, you would fetch this from an API
+    cpi_releases = [
+        {
+            'date': '2025-01-14',
+            'time': '08:30',
+            'title': 'CPI Data Release',
+            'subtitle': 'December 2024 Inflation Data',
+            'description': 'The Bureau of Labor Statistics releases the Consumer Price Index data for December 2024.',
+            'impact': 'high'
+        },
+        {
+            'date': '2025-02-13',
+            'time': '08:30',
+            'title': 'CPI Data Release',
+            'subtitle': 'January 2025 Inflation Data',
+            'description': 'The Bureau of Labor Statistics releases the Consumer Price Index data for January 2025.',
+            'impact': 'high'
+        },
+        {
+            'date': '2025-03-12',
+            'time': '08:30',
+            'title': 'CPI Data Release',
+            'subtitle': 'February 2025 Inflation Data',
+            'description': 'The Bureau of Labor Statistics releases the Consumer Price Index data for February 2025.',
+            'impact': 'high'
+        }
+    ]
+    
+    # Filter by date range
+    start = datetime.strptime(start_date, '%Y-%m-%d').date()
+    end = datetime.strptime(end_date, '%Y-%m-%d').date()
+    
+    filtered_releases = [
+        release for release in cpi_releases 
+        if start <= datetime.strptime(release['date'], '%Y-%m-%d').date() <= end
+    ]
+    
+    return filtered_releases
+
+def assess_impact_level(symbol, event_type):
+    """
+    Determines the impact level of an event on a particular stock
+    This would use historical data and analytics in a real implementation
+    """
+    # Placeholder logic - in a real system this would be more sophisticated
+    
+    # For earnings announcements, use a simple baseline plus adjustments
+    if event_type == 'earnings':
+        # Baseline: All earnings have medium impact
+        impact = 'medium'
+        
+        # Special cases for major companies
+        if symbol in MAG7_STOCKS:
+            impact = 'high'  # MAG7 earnings have high impact
+            
+        return impact
+    
+    # For stock splits, impact depends on the split ratio (not implemented here)
+    elif event_type == 'split':
+        return 'medium'
+    
+    # FOMC and CPI are typically high impact for the broader market
+    elif event_type in ['fomc', 'cpi']:
+        return 'high'
+    
+    # Default to medium impact if we can't determine
+    return 'medium'
+
+def update_market_events():
+    """
+    Updates the market_events table with the latest events
+    This would run on a scheduled basis in a production environment
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    
+    # Get earnings data from earnings_calendar table
+    # This assumes the earnings_calendar is kept up to date
+    cursor.execute('''
+    SELECT symbol, company_name, earnings_date, time_of_day 
+    FROM earnings_calendar 
+    WHERE earnings_date >= date('now')
+    ORDER BY earnings_date
+    ''')
+    earnings_events = cursor.fetchall()
+    
+    # Process earnings events
+    for event in earnings_events:
+        symbol = event['symbol']
+        event_date = event['earnings_date']
+        event_time = '16:00' if event['time_of_day'] == 'amc' else '09:30' if event['time_of_day'] == 'bmo' else '12:00'
+        
+        # Check if this event already exists
+        cursor.execute('''
+        SELECT id FROM market_events 
+        WHERE event_date = ? AND event_type = 'earnings' AND symbol = ?
+        ''', (event_date, symbol))
+        existing = cursor.fetchone()
+        
+        if existing:
+            # Update existing event
+            cursor.execute('''
+            UPDATE market_events 
+            SET event_time = ?, 
+                title = ?, 
+                subtitle = ?, 
+                description = ?, 
+                impact_level = ?, 
+                updated_at = ?
+            WHERE id = ?
+            ''', (
+                event_time,
+                f"{symbol} Earnings Release",
+                f"{event['company_name']} Q4 2024 Earnings",
+                f"{event['company_name']} ({symbol}) reports quarterly financial results.",
+                assess_impact_level(symbol, 'earnings'),
+                now,
+                existing['id']
+            ))
+        else:
+            # Insert new event
+            cursor.execute('''
+            INSERT INTO market_events 
+            (event_date, event_time, event_type, symbol, title, subtitle, description, impact_level, source, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                event_date,
+                event_time,
+                'earnings',
+                symbol,
+                f"{symbol} Earnings Release",
+                f"{event['company_name']} Q4 2024 Earnings",
+                f"{event['company_name']} ({symbol}) reports quarterly financial results.",
+                assess_impact_level(symbol, 'earnings'),
+                'internal_earnings_calendar',
+                now,
+                now
+            ))
+    
+    # Get stock splits
+    # In a real implementation, you would query this from a reliable source or API
+    # For now we'll use some placeholder data
+    
+    # Get FOMC meetings and add them to the database
+    start_date = datetime.now().strftime('%Y-%m-%d')
+    end_date = (datetime.now() + timedelta(days=180)).strftime('%Y-%m-%d')
+    
+    fomc_meetings = get_fomc_meetings(start_date, end_date)
+    for meeting in fomc_meetings:
+        # Check if this event already exists
+        cursor.execute('''
+        SELECT id FROM market_events 
+        WHERE event_date = ? AND event_type = 'fomc'
+        ''', (meeting['date'],))
+        existing = cursor.fetchone()
+        
+        if existing:
+            # Update existing event
+            cursor.execute('''
+            UPDATE market_events 
+            SET event_time = ?, 
+                title = ?, 
+                subtitle = ?, 
+                description = ?, 
+                impact_level = ?, 
+                updated_at = ?
+            WHERE id = ?
+            ''', (
+                meeting['time'],
+                meeting['title'],
+                meeting['subtitle'],
+                meeting['description'],
+                meeting['impact'],
+                now,
+                existing['id']
+            ))
+        else:
+            # Insert new event
+            cursor.execute('''
+            INSERT INTO market_events 
+            (event_date, event_time, event_type, symbol, title, subtitle, description, impact_level, source, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                meeting['date'],
+                meeting['time'],
+                'fomc',
+                None,  # FOMC events affect all stocks
+                meeting['title'],
+                meeting['subtitle'],
+                meeting['description'],
+                meeting['impact'],
+                'fomc_calendar',
+                now,
+                now
+            ))
+    
+    # Get CPI releases and add them to the database
+    cpi_releases = get_cpi_releases(start_date, end_date)
+    for release in cpi_releases:
+        # Check if this event already exists
+        cursor.execute('''
+        SELECT id FROM market_events 
+        WHERE event_date = ? AND event_type = 'cpi'
+        ''', (release['date'],))
+        existing = cursor.fetchone()
+        
+        if existing:
+            # Update existing event
+            cursor.execute('''
+            UPDATE market_events 
+            SET event_time = ?, 
+                title = ?, 
+                subtitle = ?, 
+                description = ?, 
+                impact_level = ?, 
+                updated_at = ?
+            WHERE id = ?
+            ''', (
+                release['time'],
+                release['title'],
+                release['subtitle'],
+                release['description'],
+                release['impact'],
+                now,
+                existing['id']
+            ))
+        else:
+            # Insert new event
+            cursor.execute('''
+            INSERT INTO market_events 
+            (event_date, event_time, event_type, symbol, title, subtitle, description, impact_level, source, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                release['date'],
+                release['time'],
+                'cpi',
+                None,  # CPI events affect all stocks
+                release['title'],
+                release['subtitle'],
+                release['description'],
+                release['impact'],
+                'economic_calendar',
+                now,
+                now
+            ))
+    
+    conn.commit()
+    conn.close()
+    return True
+
+# Add the new route for the Event Risk Calendar
+@app.route('/event-risk-calendar')
+def event_risk_calendar():
+    # Get filter parameters from query string
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    event_types = request.args.getlist('event_types')
+    symbol = request.args.get('symbol')
+    
+    # Set default values if not provided
+    today = datetime.now().date()
+    
+    if not start_date:
+        start_date = today.strftime('%Y-%m-%d')
+    
+    if not end_date:
+        # Default to 30 days ahead
+        end_date = (today + timedelta(days=30)).strftime('%Y-%m-%d')
+    
+    if not event_types:
+        # Default to all event types
+        event_types = ['earnings', 'fomc', 'cpi', 'split']
+    
+    # Parse dates for formatting in template
+    start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
+    end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
+    
+    # Calculate previous and next periods
+    period_length = (end_date_obj - start_date_obj).days
+    prev_period_start = (start_date_obj - timedelta(days=period_length)).strftime('%Y-%m-%d')
+    prev_period_end = (start_date_obj - timedelta(days=1)).strftime('%Y-%m-%d')
+    next_period_start = (end_date_obj + timedelta(days=1)).strftime('%Y-%m-%d')
+    next_period_end = (end_date_obj + timedelta(days=period_length)).strftime('%Y-%m-%d')
+    
+    # Format dates for display
+    start_date_formatted = start_date_obj.strftime('%b %d, %Y')
+    end_date_formatted = end_date_obj.strftime('%b %d, %Y')
+    
+    # Ensure database is updated with recent events
+    update_market_events()
+    
+    # Get events that match the filters
+    events = get_market_events(start_date, end_date, event_types, symbol)
+    
+    # Render the template with the events and filter parameters
+    return render_template(
+        'event_risk_calendar.html',
+        events=events,
+        start_date=start_date,
+        end_date=end_date,
+        start_date_formatted=start_date_formatted,
+        end_date_formatted=end_date_formatted,
+        selected_event_types=event_types,
+        symbol=symbol,
+        prev_period_start=prev_period_start,
+        prev_period_end=prev_period_end,
+        next_period_start=next_period_start,
+        next_period_end=next_period_end
+    )
+
+# Add API endpoint to manually trigger event updates
+@app.route('/api/events/update', methods=['POST'])
+def api_update_events():
+    try:
+        success = update_market_events()
+        if success:
+            return jsonify({'status': 'success', 'message': 'Market events updated successfully'})
+        else:
+            return jsonify({'status': 'error', 'message': 'Failed to update market events'}), 500
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 if __name__ == '__main__':
     # Make sure the database exists

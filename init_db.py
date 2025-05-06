@@ -69,6 +69,24 @@ def init_db():
     )
     ''')
     
+    # Create market_events table for storing important financial events
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS market_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        event_date DATE NOT NULL,
+        event_time TEXT,
+        event_type TEXT NOT NULL, 
+        symbol TEXT,
+        title TEXT NOT NULL,
+        subtitle TEXT,
+        description TEXT,
+        impact_level TEXT NOT NULL,
+        source TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+    )
+    ''')
+    
     # Clear existing transaction data if specified
     # cursor.execute('DELETE FROM transactions')
     

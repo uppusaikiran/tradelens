@@ -1,31 +1,36 @@
-# Robinhood Transaction Analyzer
+# TradeLens - AI-Powered Stock Portfolio Analysis
 
 <div align="left">
-  <img src="static/img/logo.png" alt="Robinhood Transaction Analyzer Logo" width="150" height="150">
+  <img src="static/img/logo.png" alt="TradeLens Logo" width="150" height="150">
 </div>
 
-A web-based tool to analyze and visualize your Robinhood stock transactions. Upload your stock orders CSV file and get detailed insights with interactive charts and transaction history.
+TradeLens emerged as a solution to the challenges faced by investors in navigating the complexities of tariffs, market volatility, and the constant need to sift through news for portfolio-related information. This sophisticated web-based tool leverages advanced AI capabilities from Perplexity to provide a comprehensive platform for analyzing and visualizing stock portfolios. By uploading your stock transactions, you can gain valuable insights through interactive visualizations, risk assessments, and AI-driven analysis, making it easier to manage and optimize your investments amidst ever-changing market conditions.
 
 ## 📸 Screenshot
 
 ![Application Screenshot](Screenshot.png)
 
-## Features
+## Key Features
 
+### Core Functionality
 - 📊 Interactive stock price charts with buy/sell indicators
-- 📈 Transaction history visualization
-- 🔍 Filter transactions by:
-  - Stock symbol (MAG7 stocks, Other stocks, Unlisted)
-  - Transaction type (Buy/Sell)
-  - Time range (YTD, 1Y, 2Y, 5Y, MAX)
-- 📱 Responsive design for desktop and mobile
-- 🎯 Click on chart markers to highlight corresponding transactions
-- 📂 Easy CSV file upload
-- 💼 MAG7 stocks categorization
-- 🤖 AI-powered chat assistant with:
-  - OpenAI integration
-  - Perplexity API fallback
-  - Basic fallback mode without API keys
+- 📈 Transaction history visualization with detailed metrics
+- 🔍 Smart filtering by stock categories (MAG7, Other, Unlisted)
+- 💼 Portfolio composition analysis
+
+### AI-Powered Analysis
+- 🤖 **Perplexity API Integration**: Leveraging advanced financial analysis capabilities
+  - Deep market research for investment decisions
+  - Real-time financial data analysis
+  - Multiple model options (sonar, sonar-pro, sonar-reasoning, etc.)
+- 💡 **Investment Thesis Validation**: Test your investment hypotheses with AI analysis
+- 📊 **Earnings Season Companion**: AI-driven earnings preparation and analysis
+- ⚠️ **Portfolio Risk Assessment**: Identify and analyze risk factors
+
+### Advanced Features
+- 📅 **Event Risk Calendar**: Track market-moving events that could impact your portfolio  
+- 📈 **Strategy Backtesting**: Test investment strategies against historical data
+- 🌐 **Tariff & Geopolitical Risk Analysis**: Assess external factors affecting your holdings
 
 ## Getting Started
 
@@ -38,8 +43,8 @@ A web-based tool to analyze and visualize your Robinhood stock transactions. Upl
 
 1. Clone the repository
 ```bash
-git clone https://github.com/yourusername/robinhood-transaction-analyzer.git
-cd robinhood-transaction-analyzer
+git clone https://github.com/yourusername/tradelens.git
+cd tradelens
 ```
 
 2. Create and activate a virtual environment
@@ -65,15 +70,14 @@ pip install -r requirements.txt
 http://localhost:5000
 ```
 
-3. (Optional) Setup with AI chat capabilities:
+3. Configure your Perplexity API key for enhanced AI features:
 ```bash
-./setup_env.sh YOUR_OPENAI_API_KEY [YOUR_PERPLEXITY_API_KEY]
+./setup_env.sh [YOUR_PERPLEXITY_API_KEY]
 ```
-If the OpenAI API encounters rate limits or errors, the system will automatically fall back to Perplexity AI if a key is provided.
 
 ### Data Format
 
-Upload your Robinhood stock orders CSV file with the following columns:
+Upload your stock orders CSV file with the following columns:
 - Symbol
 - Name
 - AveragePrice
@@ -91,32 +95,49 @@ To clean the environment and start fresh:
 ```bash
 ./clean.sh
 ```
-This will remove:
-- Database file
-- Uploaded CSV file
-- Python cache files
-- Log files
 
-## Features in Detail
+## Problem & Inspiration
 
-### Stock Categories
-- **MAG7 Stocks**: Meta, Apple, Amazon, Alphabet, Microsoft, NVIDIA, Tesla
-- **Other Stocks**: All other listed stocks
-- **Unlisted**: Stocks no longer trading or delisted
+### The Challenge
 
-### Chart Features
-- Interactive price history
-- Buy/Sell markers
-- Zoom and pan controls
-- Custom tooltips with transaction details
-- Responsive design
-- Time range selection
+Individual investors face several critical challenges:
+- Information overload from various financial sources
+- Difficulty in validating investment theses with reliable data
+- Limited tools to assess portfolio risks from various angles
+- Lack of preparation for company earnings and market events
 
-### Transaction Table
-- Sortable columns
-- Transaction highlighting
-- Pagination
-- Responsive layout
+### Our Solution
+
+TradeLens was created to democratize advanced portfolio analysis for individual investors. By combining financial data visualization with Perplexity's AI capabilities, we've built a platform that provides:
+
+1. Data-driven insights previously available only to institutional investors
+2. Easy-to-understand visualizations of complex financial information
+3. AI-powered analysis that goes beyond standard metrics
+4. Proactive tools for earnings seasons and market events
+
+## Perplexity AI Integration
+
+TradeLens extensively uses Perplexity AI for several advanced financial analysis features:
+
+### 1. Investment Thesis Validation
+- Evaluates custom investment theses against current market data
+- Uses Perplexity's reasoning capabilities to identify supporting and contradicting evidence
+- Provides actionable insights on thesis viability
+
+### 2. Earnings Season Companion
+- Prepares deep-dive research on upcoming earnings announcements
+- Analyzes historical earnings patterns and market expectations
+- Provides comprehensive risk assessments specific to earnings events
+
+### 3. Event Risk Calendar
+- Utilizes Perplexity to assess the potential impact of upcoming market events
+- Analyzes how FOMC meetings, CPI releases, and other events might affect specific holdings
+- Provides personalized risk ratings based on portfolio composition
+
+### 4. Portfolio Chat Assistant
+- Allows natural language queries about portfolio performance
+- Answers complex questions about stock fundamentals, market trends, and investment strategies
+- Provides contextual financial analysis specific to user holdings
 
 ## Contributing
 
@@ -132,6 +153,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Acknowledgments
 
+- [Perplexity AI](https://www.perplexity.ai/) for the powerful AI capabilities
 - [ApexCharts.js](https://apexcharts.com/) for the interactive charts
 - [Bootstrap](https://getbootstrap.com/) for the responsive design
 - [Flask](https://flask.palletsprojects.com/) for the web framework

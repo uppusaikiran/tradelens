@@ -1,0 +1,148 @@
+/* Modern Navbar Styling */
+
+/* Main Navbar Container */
+.navbar {
+  background: linear-gradient(90deg, #1a237e 0%, #283593 50%, #303f9f 100%) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-bottom: none;
+  padding: 0.7rem 2vw;
+  transition: all 0.3s ease;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+/* Navbar Brand/Logo */
+.navbar-brand {
+  display: flex;
+  align-items: center;
+  font-size: 1.6rem !important;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: white !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s ease;
+}
+
+.navbar-brand:hover {
+  transform: translateY(-1px);
+}
+
+.title-icon {
+  filter: drop-shadow(0 2px 4px rgba(255, 255, 255, 0.3));
+  margin-right: 10px;
+}
+
+/* Navigation Links */
+.nav-link {
+  color: rgba(255, 255, 255, 0.85) !important;
+  font-weight: 500;
+  position: relative;
+  padding: 0.7rem 0.8rem;
+  margin-right: 0 !important;
+  margin-left: 5px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.nav-link:hover {
+  color: white !important;
+  background-color: rgba(255, 255, 255, 0.1);
+  transform: translateY(-1px);
+}
+
+.nav-link.active {
+  color: white !important;
+  background-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.nav-link.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 20%;
+  width: 60%;
+  height: 3px;
+  background-color: #fff;
+  border-radius: 3px;
+}
+
+/* Settings Icon */
+.nav-settings {
+  color: rgba(255, 255, 255, 0.85);
+  margin-left: 5px;
+  padding: 8px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.nav-settings:hover {
+  color: white;
+  background-color: rgba(255, 255, 255, 0.2);
+  transform: rotate(30deg);
+}
+
+/* File Upload Container */
+.file-upload-container {
+  margin-left: 15px;
+}
+
+.file-upload-wrapper {
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px dashed rgba(255, 255, 255, 0.3);
+}
+
+.file-upload-wrapper:hover {
+  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.file-upload-text {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.upload-btn {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.upload-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Responsive Styles */
+@media (max-width: 992px) {
+  .navbar {
+    padding: 0.6rem 1vw;
+  }
+  
+  .nav-link {
+    padding: 0.5rem 0.6rem;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .navbar-brand {
+    font-size: 1.4rem !important;
+  }
+  
+  .nav-link {
+    padding: 0.4rem 0.5rem;
+    font-size: 0.85rem;
+  }
+  
+  .file-upload-text {
+    max-width: 120px;
+  }
+} 
