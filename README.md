@@ -6,17 +6,41 @@
 
 TradeLens emerged as a solution to the challenges faced by investors in navigating the complexities of tariffs, market volatility, and the constant need to sift through news for portfolio-related information. This sophisticated web-based tool leverages advanced AI capabilities from Perplexity to provide a comprehensive platform for analyzing and visualizing stock portfolios. By uploading your stock transactions, you can gain valuable insights through interactive visualizations, risk assessments, and AI-driven analysis, making it easier to manage and optimize your investments amidst ever-changing market conditions.
 
-## 📸 Screenshot
+## 📸 Screenshots & Features
 
-![Application Screenshot](Screenshot.png)
+### Main Dashboard
+![TradeLens Dashboard](static/img/Tradelens_Dashboard_with_chat_powered_by_Perplexity.png)
+The comprehensive dashboard provides an at-a-glance view of your entire portfolio. The interface includes interactive charts for visualizing stock performance, transaction history, and portfolio composition. The right panel features the Perplexity-powered chat assistant that allows natural language queries about your investments.
+
+### Perplexity AI Integration
+
+#### Model Selection
+![Perplexity Model Selection](static/img/Models_selection.png)
+Choose from various Perplexity AI models to power your analysis. Each model offers different capabilities, from quick answers to deep financial reasoning.
+
+#### Model Dropdown Interface
+![Perplexity Model Dropdown](static/img/Perplexity_model_dropdown.png)
+The dropdown interface allows you to select the appropriate Perplexity model based on your analysis needs - whether you need quick market updates or in-depth investment research.
+
+### Earnings Analysis
+![Earnings Analysis with Sonar Deep Research](static/img/Earnings_with_sonar_deep_research.png)
+TradeLens provides comprehensive earnings analysis powered by Perplexity's Sonar model. Get detailed research on upcoming earnings announcements, historical patterns, and projected performance to make informed decisions before earnings releases.
+
+### Risk Assessment
+![Risk Analysis using Sonar Pro](static/img/Risk_Analysis_using_sonar_pro.png)
+The Sonar Pro model delivers sophisticated risk analysis for your portfolio. Identify potential vulnerabilities, assess exposure to various market factors, and receive AI-powered recommendations to optimize your risk-return profile.
+
+### Event Risk Calendar
+![Event Risk Calendar](static/img/Event_risk_calandar.png)
+Stay ahead of market-moving events with the Event Risk Calendar. TradeLens uses Perplexity AI to analyze how upcoming earnings reports, economic data releases, and geopolitical developments might impact your specific holdings. The calendar highlights critical dates and provides AI-generated insights about potential market impacts.
 
 ## Key Features
 
 ### Core Functionality
-- 📊 Interactive stock price charts with buy/sell indicators
-- 📈 Transaction history visualization with detailed metrics
-- 🔍 Smart filtering by stock categories (MAG7, Other, Unlisted)
-- 💼 Portfolio composition analysis
+- 📊 **Interactive Visualizations**: Dynamic stock price charts with buy/sell indicators
+- 📈 **Transaction History**: Comprehensive view of all your trades with performance metrics
+- 🔍 **Smart Filtering**: Categorize and analyze stocks by groups (MAG7, Other, Unlisted)
+- 💼 **Portfolio Composition**: Visual breakdown of asset allocation and sector exposure
 
 ### AI-Powered Analysis
 - 🤖 **Perplexity API Integration**: Leveraging advanced financial analysis capabilities
@@ -31,6 +55,7 @@ TradeLens emerged as a solution to the challenges faced by investors in navigati
 - 📅 **Event Risk Calendar**: Track market-moving events that could impact your portfolio  
 - 📈 **Strategy Backtesting**: Test investment strategies against historical data
 - 🌐 **Tariff & Geopolitical Risk Analysis**: Assess external factors affecting your holdings
+- 🤔 **Natural Language Queries**: Ask questions about your portfolio in plain English
 
 ## Getting Started
 
@@ -38,6 +63,7 @@ TradeLens emerged as a solution to the challenges faced by investors in navigati
 
 - Python 3.8 or higher
 - pip (Python package installer)
+- Perplexity API key (set in .env file)
 
 ### Installation
 
@@ -58,6 +84,12 @@ source venv/bin/activate  # On Windows, use: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
+4. Set up your environment variables
+```bash
+cp .env.example .env
+# Edit .env to add your Perplexity API key
+```
+
 ### Running the Application
 
 1. Start the server
@@ -70,90 +102,16 @@ pip install -r requirements.txt
 http://localhost:5000
 ```
 
-3. Configure your Perplexity API key for enhanced AI features:
-```bash
-./setup_env.sh [YOUR_PERPLEXITY_API_KEY]
-```
+3. Upload your transaction data and start exploring your portfolio with AI-powered insights
 
-### Data Format
+## Technology Stack
 
-Upload your stock orders CSV file with the following columns:
-- Symbol
-- Name
-- AveragePrice
-- Qty
-- Type
-- Side
-- Fees
-- State
-- Date (MM/DD/YYYY)
-- Time
-
-### Clean Up
-
-To clean the environment and start fresh:
-```bash
-./clean.sh
-```
-
-## Problem & Inspiration
-
-### The Challenge
-
-Individual investors face several critical challenges:
-- Information overload from various financial sources
-- Difficulty in validating investment theses with reliable data
-- Limited tools to assess portfolio risks from various angles
-- Lack of preparation for company earnings and market events
-
-### Our Solution
-
-TradeLens was created to democratize advanced portfolio analysis for individual investors. By combining financial data visualization with Perplexity's AI capabilities, we've built a platform that provides:
-
-1. Data-driven insights previously available only to institutional investors
-2. Easy-to-understand visualizations of complex financial information
-3. AI-powered analysis that goes beyond standard metrics
-4. Proactive tools for earnings seasons and market events
-
-## Perplexity AI Integration
-
-TradeLens extensively uses Perplexity AI for several advanced financial analysis features:
-
-### 1. Investment Thesis Validation
-- Evaluates custom investment theses against current market data
-- Uses Perplexity's reasoning capabilities to identify supporting and contradicting evidence
-- Provides actionable insights on thesis viability
-
-### 2. Earnings Season Companion
-- Prepares deep-dive research on upcoming earnings announcements
-- Analyzes historical earnings patterns and market expectations
-- Provides comprehensive risk assessments specific to earnings events
-
-### 3. Event Risk Calendar
-- Utilizes Perplexity to assess the potential impact of upcoming market events
-- Analyzes how FOMC meetings, CPI releases, and other events might affect specific holdings
-- Provides personalized risk ratings based on portfolio composition
-
-### 4. Portfolio Chat Assistant
-- Allows natural language queries about portfolio performance
-- Answers complex questions about stock fundamentals, market trends, and investment strategies
-- Provides contextual financial analysis specific to user holdings
+- **Backend**: Python, Flask
+- **Frontend**: HTML, CSS, JavaScript, Chart.js
+- **AI Integration**: Perplexity API
+- **Data Storage**: SQLite
+- **Data Processing**: Pandas, NumPy
 
 ## Contributing
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- [Perplexity AI](https://www.perplexity.ai/) for the powerful AI capabilities
-- [ApexCharts.js](https://apexcharts.com/) for the interactive charts
-- [Bootstrap](https://getbootstrap.com/) for the responsive design
-- [Flask](https://flask.palletsprojects.com/) for the web framework
+Contributions are welcome! Please feel free to submit a Pull Request.
