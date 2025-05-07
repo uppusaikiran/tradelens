@@ -1,42 +1,55 @@
 # TradeLens - AI-Powered Stock Portfolio Analysis
 
 <div align="left">
-  <img src="static/img/logo.png" alt="TradeLens Logo" width="150" height="150">
+  <img src="static/img/logos/tradelens_logo.png" alt="TradeLens Logo" width="150" height="150">
 </div>
 
 TradeLens emerged as a solution to the challenges faced by investors in navigating the complexities of tariffs, market volatility, and the constant need to sift through news for portfolio-related information. This sophisticated web-based tool leverages advanced AI capabilities from Perplexity to provide a comprehensive platform for analyzing and visualizing stock portfolios. By uploading your stock transactions, you can gain valuable insights through interactive visualizations, risk assessments, and AI-driven analysis, making it easier to manage and optimize your investments amidst ever-changing market conditions.
 
 ## 📸 Screenshots & Features
 
-### Platform Overview
-![TradeLens Platform Overview](static/img/tradelens.png)
-A comprehensive view of the TradeLens platform, showing the portfolio management interface with interactive charts, transaction data, and AI-powered analytics in a unified dashboard experience.
+### Dashboard Overview
+![TradeLens Dashboard](static/img/dashboard_images/Dashboard Page.png)
+The main dashboard provides a comprehensive view of your portfolio performance, with interactive charts, transaction summaries, and key metrics to help you monitor your investments at a glance.
 
-### Main Dashboard
-![TradeLens Dashboard](static/img/Tradelens_Dashboard_with_chat_powered_by_Perplexity.png)
-The comprehensive dashboard provides an at-a-glance view of your entire portfolio. The interface includes interactive charts for visualizing stock performance, transaction history, and portfolio composition. The right panel features the Perplexity-powered chat assistant that allows natural language queries about your investments.
+### Stock Performance Visualization
+![Stock Buy and Sell Plot](static/img/dashboard_images/Stock Buy and Sell Plot.png)
+Visualize your stock transactions with an interactive chart showing buy and sell points plotted against historical price data, making it easy to evaluate your trading decisions.
+
+### Transaction History
+![Transactions](static/img/dashboard_images/Transactions.png)
+A detailed view of all your transactions with sortable columns, allowing you to track your investment history and analyze your trading patterns over time.
 
 ### Perplexity AI Integration
-
-#### Model Selection
-![Perplexity Model Selection](static/img/Models_selection.png)
+![Perplexity Model Selector](static/img/dashboard_images/Perplexity Model selector.png)
 Choose from various Perplexity AI models to power your analysis. Each model offers different capabilities, from quick answers to deep financial reasoning.
 
-#### Model Dropdown Interface
-![Perplexity Model Dropdown](static/img/Perplexity_model_dropdown.png)
-The dropdown interface allows you to select the appropriate Perplexity model based on your analysis needs - whether you need quick market updates or in-depth investment research.
-
 ### Earnings Analysis
-![Earnings Analysis with Sonar Deep Research](static/img/Earnings_with_sonar_deep_research.png)
-TradeLens provides comprehensive earnings analysis powered by Perplexity's Sonar model. Get detailed research on upcoming earnings announcements, historical patterns, and projected performance to make informed decisions before earnings releases.
+![Earnings Calendar](static/img/dashboard_images/Earnings calandar using deep research.png)
+Track upcoming earnings announcements relevant to your portfolio with AI-enhanced insights on expected performance and potential impacts.
+
+![Earnings Research](static/img/dashboard_images/Earnings research using sonar deepresearch.png)
+Get detailed AI-powered research on company earnings, helping you make informed decisions before and after earnings releases.
 
 ### Risk Assessment
-![Risk Analysis using Sonar Pro](static/img/Risk_Analysis_using_sonar_pro.png)
-The Sonar Pro model delivers sophisticated risk analysis for your portfolio. Identify potential vulnerabilities, assess exposure to various market factors, and receive AI-powered recommendations to optimize your risk-return profile.
+![Risk Analysis](static/img/dashboard_images/Risk Analysis.png)
+Comprehensive risk analysis for your portfolio, identifying potential vulnerabilities and providing AI-powered recommendations to optimize your risk-return profile.
 
 ### Event Risk Calendar
-![Event Risk Calendar](static/img/Event_risk_calandar.png)
-Stay ahead of market-moving events with the Event Risk Calendar. TradeLens uses Perplexity AI to analyze how upcoming earnings reports, economic data releases, and geopolitical developments might impact your specific holdings. The calendar highlights critical dates and provides AI-generated insights about potential market impacts.
+![Event Risk Calendar](static/img/dashboard_images/Event risk calandar.png)
+Stay ahead of market-moving events that might impact your portfolio. The calendar highlights critical dates and provides AI-generated insights about potential market impacts.
+
+### Investment Thesis Validation
+![Investment Thesis](static/img/dashboard_images/Investment Thesis.png)
+Test and validate your investment hypotheses with AI analysis, providing deeper insights into your investment rationale.
+
+### Strategy Backtesting
+![Strategy Backtesting](static/img/dashboard_images/Strategy Backtracking.png)
+Test investment strategies against historical data to evaluate performance and refine your approach before committing capital.
+
+### Provider Settings
+![Settings Page](static/img/dashboard_images/Settings page for Provider .png)
+Configure your API providers and settings to customize the platform according to your needs and preferences.
 
 ## Key Features
 
