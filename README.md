@@ -4,6 +4,10 @@
   <img src="static/img/logos/tradelens-logo.svg" alt="TradeLens Logo" width="150" height="150">
 </div>
 
+<div align="center">
+  <img src="static/img/tradelens.png" alt="TradeLens Dashboard" width="800">
+</div>
+
 TradeLens emerged as a solution to the challenges faced by investors in navigating the complexities of tariffs, market volatility, and the constant need to sift through news for portfolio-related information. This sophisticated web-based tool leverages advanced AI capabilities from Perplexity to provide a comprehensive platform for analyzing and visualizing stock portfolios. By uploading your stock transactions, you can gain valuable insights through interactive visualizations, risk assessments, and AI-driven analysis, making it easier to manage and optimize your investments amidst ever-changing market conditions.
 
 ## 📸 Screenshots & Features
@@ -73,6 +77,54 @@ Configure your API providers and settings to customize the platform according to
 - 📈 **Strategy Backtesting**: Test investment strategies against historical data
 - 🌐 **Tariff & Geopolitical Risk Analysis**: Assess external factors affecting your holdings
 - 🤔 **Natural Language Queries**: Ask questions about your portfolio in plain English
+
+## Perplexity Integration
+
+🔹 Perplexity Integration Points
+
+🔸 Sonar API
+
+Used for real-time data enrichment:
+	•	Inputs: Transaction history and current portfolio.
+	•	Outputs: Context-aware investment signals, AI summaries, and forecasts.
+	•	Chatbot uses it to respond with intelligent, context-specific financial insights.
+
+🔸 Sonar Pro
+
+Used for strategy reasoning:
+	•	Maps historical macroeconomic events (Covid, Banking Crisis 2023, AI boom, SP500 2020) to backtrack investment outcomes.
+	•	Injects context such as tariffs, supply chain risks, or market cycles into the reasoning loop.
+
+⸻
+
+🔹 Thesis Validation Module (Left Block)
+	•	Accepts hypotheses like "Tech stocks are undervalued post-Q2 earnings" and uses Perplexity's Deep Research to:
+	•	Pull analyst commentary.
+	•	Evaluate recent company performance.
+	•	Scan sentiment data from media and financial forums.
+	•	It synthesizes:
+	•	Stock name
+	•	Key metrics (revenue, EPS, margin trends)
+	•	Sentiment and analyst expectations
+
+Result: Validated or refuted thesis suggestions in natural language.
+
+⸻
+
+🔹 Strategy Backtracking (Top Center)
+	•	Uses Sonar's Reasoning Model to simulate how portfolios would have performed under past macro conditions:
+	•	Covid Recovery
+	•	2020 market crash and recovery
+	•	AI/Tech boom
+	•	2023 Banking Crisis
+	•	Enables reverse testing of a current strategy against historic events.
+
+⸻
+
+🔹 Earnings Calendar (Bottom Left)
+	•	Earnings Research module, powered by Perplexity:
+	•	Adds real-time annotations and research briefs for each upcoming earnings release.
+	•	Enables quick drill-down into high-impact events within your portfolio's universe.
 
 ## Getting Started
 
