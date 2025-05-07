@@ -1,0 +1,1525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradeLens - Earnings Companion</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/sidebar.css') }}">
+    <!-- Showdown.js for Markdown conversion -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/1.9.1/showdown.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .earnings-card {
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+            margin-bottom: 24px;
+            overflow: hidden;
+            border: 1px solid #e9ecef;
+        }
+        
+        .earnings-card-header {
+            background: linear-gradient(90deg, #4a6cfd 0%, #6e87f5 100%);
+            color: white;
+            font-weight: 600;
+            padding: 15px 20px;
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .earnings-card-body {
+            padding: 20px;
+            background-color: #fff;
+        }
+        
+        .portfolio-indicator {
+            background-color: #28a745;
+            color: white;
+            font-size: 0.8rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            margin-left: 8px;
+            display: inline-block;
+        }
+        
+        .earnings-time {
+            background-color: #17a2b8;
+            color: white;
+            font-size: 0.8rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            margin-left: 8px;
+            display: inline-block;
+        }
+        
+        .earnings-time.bmo {
+            background-color: #fd7e14;
+        }
+        
+        .earnings-time.amc {
+            background-color: #6f42c1;
+        }
+        
+        /* Calendar improvements */
+        .calendar-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .calendar-week {
+            margin-bottom: 2rem;
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .calendar-week-header {
+            background: linear-gradient(90deg, #4683ea 0%, #65a2ff 100%);
+            color: white;
+            padding: 12px 20px;
+            font-weight: 600;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .calendar-week-body {
+            padding: 0;
+        }
+        
+        .calendar-days {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            background-color: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .calendar-weekend {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            background-color: #f0f0f0;
+            border-top: 1px solid #dee2e6;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .calendar-day {
+            border-right: 1px solid #dee2e6;
+            min-height: 100px;
+            padding: 0;
+            background-color: white;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .calendar-day:last-child {
+            border-right: none;
+        }
+        
+        .day-header {
+            background-color: #e9ecef;
+            padding: 10px;
+            font-weight: 600;
+            text-align: center;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .day-header.today {
+            background-color: #d1e7dd;
+            color: #0f5132;
+        }
+        
+        .day-header.weekend {
+            background-color: #f0f0f0;
+            color: #6c757d;
+        }
+        
+        .day-content {
+            flex: 1;
+            overflow-y: auto;
+            max-height: 300px;
+            padding: 5px;
+        }
+        
+        .no-earnings {
+            padding: 20px;
+            text-align: center;
+            color: #6c757d;
+            font-style: italic;
+        }
+        
+        .earnings-item {
+            margin-bottom: 8px;
+            padding: 10px;
+            border-radius: 6px;
+            background-color: #f8f9fa;
+            border-left: 3px solid #6c757d;
+            transition: all 0.2s ease;
+        }
+        
+        .earnings-item:hover {
+            background-color: #f0f7ff;
+            transform: translateY(-2px);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .earnings-item-portfolio {
+            background-color: #f0f7ff;
+            border-left: 3px solid #28a745;
+        }
+        
+        .stock-info {
+            display: flex;
+            align-items: center;
+        }
+        
+        .stock-logo {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            margin-right: 10px;
+            object-fit: contain;
+            background-color: #fff;
+            border: 1px solid #e9ecef;
+        }
+        
+        .stock-details {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .stock-symbol {
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .stock-name {
+            font-size: 0.75rem;
+            color: #6c757d;
+        }
+        
+        .earnings-metrics {
+            font-size: 0.85rem;
+            margin-top: 5px;
+            color: #495057;
+        }
+        
+        .earnings-actions {
+            margin-top: 8px;
+            text-align: right;
+        }
+        
+        /* Filter redesign */
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .calendar-filter {
+            display: flex;
+            align-items: center;
+            background-color: #f0f2f5;
+            border-radius: 30px;
+            padding: 4px;
+        }
+        
+        .filter-item {
+            font-size: 0.9rem;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+        
+        .filter-item.active {
+            background-color: #4a6cfd;
+            color: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .filter-item:not(.active) {
+            color: #495057;
+        }
+        
+        .filter-item:hover:not(.active) {
+            background-color: #e9ecef;
+        }
+        
+        .calendar-refresh {
+            cursor: pointer;
+            padding: 8px 12px;
+            background-color: #f8f9fa;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+        }
+        
+        .calendar-refresh:hover {
+            background-color: #e9ecef;
+            transform: rotate(15deg);
+        }
+        
+        /* Research section improvements */
+        .research-card {
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+            margin-bottom: 24px;
+            overflow: hidden;
+            border: 1px solid #e9ecef;
+        }
+        
+        .research-card-header {
+            background: linear-gradient(90deg, #6a42c1 0%, #8e6ad1 100%);
+            color: white;
+            font-weight: 600;
+            padding: 15px 20px;
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .research-jobs {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        
+        .job-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid #e9ecef;
+            transition: all 0.2s ease;
+        }
+        
+        .job-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .job-item:last-child {
+            border-bottom: none;
+        }
+        
+        .job-details {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .job-symbol {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+        
+        .job-date {
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
+        
+        .job-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .status-pending {
+            background-color: #ffeeba;
+            color: #856404;
+        }
+        
+        .status-processing {
+            background-color: #b8daff;
+            color: #004085;
+        }
+        
+        .status-completed {
+            background-color: #d1e7dd;
+            color: #0f5132;
+        }
+        
+        .status-failed {
+            background-color: #f5c6cb;
+            color: #721c24;
+        }
+        
+        .loading-spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #4a6cfd;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 8px;
+        }
+        
+        /* Perplexity banner */
+        .ai-attribution {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+            text-align: center;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Chart container styling */
+        .chart-container {
+            background: linear-gradient(to bottom right, #ffffff, #f8f9fa);
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            padding: 15px;
+            margin: 15px 0;
+            border: 1px solid #e9ecef;
+            transition: all 0.3s ease;
+            position: relative;
+            max-height: 280px;
+            overflow: hidden;
+        }
+        
+        .chart-container.collapsed {
+            max-height: 50px;
+            overflow: hidden;
+        }
+        
+        .chart-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #4a6cfd;
+            text-align: center;
+            padding-bottom: 8px;
+            border-bottom: 1px dashed #e9ecef;
+            padding-right: 30px; /* Make space for the collapse button */
+        }
+        
+        .chart-collapse-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 10;
+            background: rgba(255,255,255,0.8);
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: #6c757d;
+            transition: all 0.2s ease;
+        }
+        
+        .chart-collapse-btn:hover {
+            background: rgba(230,230,230,0.9);
+            color: #495057;
+        }
+        
+        .chart-container:hover {
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+            transform: translateY(-3px);
+        }
+        
+        /* Sources styling */
+        .sources-section {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 30px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.03);
+        }
+        
+        .sources-section h2 {
+            color: #4a6cfd;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 10px;
+            margin-top: 0 !important;
+        }
+        
+        .source-item {
+            padding: 8px 0;
+            border-bottom: 1px dashed #e9ecef;
+            font-size: 0.9rem;
+        }
+        
+        .source-item:last-child {
+            border-bottom: none;
+        }
+        
+        .source-item a {
+            color: #4a6cfd;
+            text-decoration: none;
+        }
+        
+        .source-item a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="orglens-layout">
+        {% include 'sidebar.html' %}
+        
+        <div class="main-content">
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            <!-- Container for existing content -->
+            <div class="container-fluid mb-5">
+                <h1 class="mb-4">Earnings Companion</h1>
+                
+                <div class="container mt-5 mb-5">
+                    <div class="row">
+                        <!-- Left Column - Calendar -->
+                        <div class="col-lg-8">
+                            <div class="earnings-card">
+                                <div class="earnings-card-header">
+                                    <h5 class="mb-0">Upcoming Earnings Calendar</h5>
+                                    <span class="badge badge-light">Next 90 Days</span>
+                                </div>
+                                <div class="earnings-card-body">
+                                    <div class="calendar-header">
+                                        <div class="calendar-filter">
+                                            <div class="filter-item all-filter active" data-filter="all">All</div>
+                                            <div class="filter-item portfolio-filter" data-filter="portfolio">Portfolio Only</div>
+                                        </div>
+                                        <div class="calendar-refresh" id="refreshCalendar" title="Refresh Calendar">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-clockwise" viewBox="0 0 16 16">
+                                                <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+                                                <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+                                            </svg>
+                                            <div class="loading-spinner" id="refreshSpinner"></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- AI Attribution Banner -->
+                                    <div class="ai-attribution">
+                                        <div class="d-flex justify-content-center align-items-center">
+                                            <img src="{{ url_for('static', filename='img/icons/perplexity_icon.png') }}" alt="Perplexity AI" style="width: 24px; height: 24px; margin-right: 10px;" onerror="this.src='https://www.perplexity.ai/favicon.ico';">
+                                            <span style="font-size: 16px; font-weight: 600; color: #4a6cfd;">Powered by Perplexity DeepResearch — Model: sonar-deep-research</span>
+                                        </div>
+                                        <div class="text-center mt-2">
+                                            <small class="text-muted">Reports include comprehensive sources and interactive visualizations to help you make informed decisions</small>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="calendar-grid">
+                                        {% if earnings_by_week %}
+                                            {% for week_id, earnings in earnings_by_week.items() %}
+                                                <div class="calendar-week">
+                                                    <div class="calendar-week-header">
+                                                        {{ week_id }}
+                                                        <div class="week-dates">
+                                                            {% set first_date = earnings[0].earnings_date %}
+                                                            {% set last_date = earnings[-1].earnings_date %}
+                                                            {% set first_parts = first_date.split('-') %}
+                                                            {% set last_parts = last_date.split('-') %}
+                                                            {% set month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] %}
+                                                            
+                                                            {{ month_names[first_parts[1]|int - 1] }} {{ first_parts[2]|int }} - {{ month_names[last_parts[1]|int - 1] }} {{ last_parts[2]|int }}, {{ first_parts[0] }}
+                                                        </div>
+                                                    </div>
+                                                    <div class="calendar-week-body">
+                                                        <!-- Group earnings by date -->
+                                                        {% set dates_in_week = {} %}
+                                                        {% for earning in earnings %}
+                                                            {% if earning.earnings_date not in dates_in_week %}
+                                                                {% set dates_in_week = dates_in_week.update({earning.earnings_date: []}) or dates_in_week %}
+                                                            {% endif %}
+                                                            {% set _ = dates_in_week[earning.earnings_date].append(earning) %}
+                                                        {% endfor %}
+                                                        
+                                                        <!-- Render weekdays (Mon-Fri) -->
+                                                        <div class="calendar-days">
+                                                            {% set weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'] %}
+                                                            {% for weekday in weekdays %}
+                                                                {% set found = False %}
+                                                                {% for date, day_earnings in dates_in_week.items() %}
+                                                                    {% set date_parts = date.split('-') %}
+                                                                    {% set year = date_parts[0]|int %}
+                                                                    {% set month = date_parts[1]|int %}
+                                                                    {% set day = date_parts[2]|int %}
+                                                                    {% set date_obj = date|strptime('%Y-%m-%d') %}
+                                                                    {% set weekday_idx = date_obj.weekday() %}
+                                                                    {% set weekday_name = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][weekday_idx] %}
+                                                                    
+                                                                    {% if weekday_name == weekday and weekday_idx < 5 %}
+                                                                        {% set found = True %}
+                                                                        {% set is_today = date == today %}
+                                                                        <div class="calendar-day">
+                                                                            <div class="day-header {% if is_today %}today{% endif %}">
+                                                                                <div>{{ weekday }}</div>
+                                                                                <div>{{ month_names[month-1] }} {{ day }}</div>
+                                                                            </div>
+                                                                            <div class="day-content">
+                                                                                {% for earning in day_earnings %}
+                                                                                    {% set in_portfolio = earning.symbol in portfolio_symbols %}
+                                                                                    <div class="earnings-item {% if in_portfolio %}earnings-item-portfolio{% endif %}" data-symbol="{{ earning.symbol }}" data-in-portfolio="{{ in_portfolio|lower }}">
+                                                                                        <div class="stock-info">
+                                                                                            <img src="https://storage.googleapis.com/iex/api/logos/{{ earning.symbol }}.png" 
+                                                                                                 alt="{{ earning.symbol }} logo" 
+                                                                                                 class="stock-logo"
+                                                                                                 onerror="this.onerror=null;this.src='https://g.foolcdn.com/art/companylogos/mark/{{ earning.symbol|lower }}.png';">
+                                                                                            <div class="stock-details">
+                                                                                                <div class="stock-symbol">
+                                                                                                    {{ earning.symbol }}
+                                                                                                    {% if in_portfolio %}
+                                                                                                        <span class="portfolio-indicator">Portfolio</span>
+                                                                                                    {% endif %}
+                                                                                                    {% if earning.time_of_day %}
+                                                                                                        <span class="earnings-time {% if earning.time_of_day == 'BMO' %}bmo{% elif earning.time_of_day == 'AMC' %}amc{% endif %}">
+                                                                                                            {{ earning.time_of_day }}
+                                                                                                        </span>
+                                                                                                    {% endif %}
+                                                                                                </div>
+                                                                                                <div class="stock-name">{{ earning.company_name }}</div>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                        {% if earning.eps_estimate %}
+                                                                                            <div class="earnings-metrics">
+                                                                                                EPS Est: ${% if earning.eps_estimate is string %}{{ earning.eps_estimate }}{% else %}{{ "%.2f"|format(earning.eps_estimate) }}{% endif %}
+                                                                                                {% if in_portfolio %}
+                                                                                                    {% for stock in portfolio %}
+                                                                                                        {% if stock.Symbol == earning.symbol %}
+                                                                                                            <div class="position-info mt-1">
+                                                                                                                <small class="text-muted">Your position: {{ stock.CurrentShares|round|int }} shares
+                                                                                                                {% if current_prices.get(stock.Symbol) %}
+                                                                                                                    (~${{ (stock.CurrentShares * current_prices.get(stock.Symbol))|round|int }})
+                                                                                                                {% endif %}
+                                                                                                                </small>
+                                                                                                            </div>
+                                                                                                        {% endif %}
+                                                                                                    {% endfor %}
+                                                                                                {% endif %}
+                                                                                            </div>
+                                                                                        {% endif %}
+                                                                                        <div class="earnings-actions">
+                                                                                            <button class="btn btn-sm btn-primary research-btn" 
+                                                                                                    data-symbol="{{ earning.symbol }}" 
+                                                                                                    data-date="{{ earning.earnings_date }}"
+                                                                                                    data-toggle="modal" 
+                                                                                                    data-target="#researchModal">
+                                                                                                Research
+                                                                                            </button>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                {% endfor %}
+                                                                            </div>
+                                                                        </div>
+                                                                    {% endif %}
+                                                                {% endfor %}
+                                                                
+                                                                {% if not found %}
+                                                                    <div class="calendar-day">
+                                                                        <div class="day-header">
+                                                                            <div>{{ weekday }}</div>
+                                                                            <div>-</div>
+                                                                        </div>
+                                                                        <div class="day-content">
+                                                                            <div class="no-earnings">No earnings</div>
+                                                                        </div>
+                                                                    </div>
+                                                                {% endif %}
+                                                            {% endfor %}
+                                                        </div>
+                                                        
+                                                        <!-- Render weekend (Sat-Sun) -->
+                                                        <div class="calendar-weekend">
+                                                            {% set weekend_days = ['Saturday', 'Sunday'] %}
+                                                            {% for weekday in weekend_days %}
+                                                                {% set found = False %}
+                                                                {% for date, day_earnings in dates_in_week.items() %}
+                                                                    {% set date_parts = date.split('-') %}
+                                                                    {% set year = date_parts[0]|int %}
+                                                                    {% set month = date_parts[1]|int %}
+                                                                    {% set day = date_parts[2]|int %}
+                                                                    {% set date_obj = date|strptime('%Y-%m-%d') %}
+                                                                    {% set weekday_idx = date_obj.weekday() %}
+                                                                    {% set weekday_name = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][weekday_idx] %}
+                                                                    
+                                                                    {% if weekday_name == weekday and weekday_idx >= 5 %}
+                                                                        {% set found = True %}
+                                                                        {% set is_today = date == today %}
+                                                                        <div class="calendar-day">
+                                                                            <div class="day-header weekend {% if is_today %}today{% endif %}">
+                                                                                <div>{{ weekday }}</div>
+                                                                                <div>{{ month_names[month-1] }} {{ day }}</div>
+                                                                            </div>
+                                                                            <div class="day-content">
+                                                                                {% for earning in day_earnings %}
+                                                                                    {% set in_portfolio = earning.symbol in portfolio_symbols %}
+                                                                                    <div class="earnings-item {% if in_portfolio %}earnings-item-portfolio{% endif %}" data-symbol="{{ earning.symbol }}" data-in-portfolio="{{ in_portfolio|lower }}">
+                                                                                        <div class="stock-info">
+                                                                                            <img src="https://storage.googleapis.com/iex/api/logos/{{ earning.symbol }}.png" 
+                                                                                                 alt="{{ earning.symbol }} logo" 
+                                                                                                 class="stock-logo"
+                                                                                                 onerror="this.onerror=null;this.src='https://g.foolcdn.com/art/companylogos/mark/{{ earning.symbol|lower }}.png';">
+                                                                                            <div class="stock-details">
+                                                                                                <div class="stock-symbol">
+                                                                                                    {{ earning.symbol }}
+                                                                                                    {% if in_portfolio %}
+                                                                                                        <span class="portfolio-indicator">Portfolio</span>
+                                                                                                    {% endif %}
+                                                                                                    {% if earning.time_of_day %}
+                                                                                                        <span class="earnings-time {% if earning.time_of_day == 'BMO' %}bmo{% elif earning.time_of_day == 'AMC' %}amc{% endif %}">
+                                                                                                            {{ earning.time_of_day }}
+                                                                                                        </span>
+                                                                                                    {% endif %}
+                                                                                                </div>
+                                                                                                <div class="stock-name">{{ earning.company_name }}</div>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                        {% if earning.eps_estimate %}
+                                                                                            <div class="earnings-metrics">
+                                                                                                EPS Est: ${% if earning.eps_estimate is string %}{{ earning.eps_estimate }}{% else %}{{ "%.2f"|format(earning.eps_estimate) }}{% endif %}
+                                                                                                {% if in_portfolio %}
+                                                                                                    {% for stock in portfolio %}
+                                                                                                        {% if stock.Symbol == earning.symbol %}
+                                                                                                            <div class="position-info mt-1">
+                                                                                                                <small class="text-muted">Your position: {{ stock.CurrentShares|round|int }} shares
+                                                                                                                {% if current_prices.get(stock.Symbol) %}
+                                                                                                                    (~${{ (stock.CurrentShares * current_prices.get(stock.Symbol))|round|int }})
+                                                                                                                {% endif %}
+                                                                                                                </small>
+                                                                                                            </div>
+                                                                                                        {% endif %}
+                                                                                                    {% endfor %}
+                                                                                                {% endif %}
+                                                                                            </div>
+                                                                                        {% endif %}
+                                                                                        <div class="earnings-actions">
+                                                                                            <button class="btn btn-sm btn-primary research-btn" 
+                                                                                                    data-symbol="{{ earning.symbol }}" 
+                                                                                                    data-date="{{ earning.earnings_date }}"
+                                                                                                    data-toggle="modal" 
+                                                                                                    data-target="#researchModal">
+                                                                                                Research
+                                                                                            </button>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                {% endfor %}
+                                                                            </div>
+                                                                        </div>
+                                                                    {% endif %}
+                                                                {% endfor %}
+                                                                
+                                                                {% if not found %}
+                                                                    <div class="calendar-day">
+                                                                        <div class="day-header weekend">
+                                                                            <div>{{ weekday }}</div>
+                                                                            <div>-</div>
+                                                                        </div>
+                                                                        <div class="day-content">
+                                                                            <div class="no-earnings">No earnings</div>
+                                                                        </div>
+                                                                    </div>
+                                                                {% endif %}
+                                                            {% endfor %}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            {% endfor %}
+                                        {% else %}
+                                            <div class="alert alert-info">
+                                                No upcoming earnings found. Try refreshing the calendar.
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Right Column - AI Research Jobs -->
+                        <div class="col-lg-4">
+                            <div class="research-card">
+                                <div class="research-card-header">
+                                    <h5 class="mb-0">Earnings Research</h5>
+                                </div>
+                                <div class="earnings-card-body">
+                                    <p>Request detailed AI research on a company's upcoming earnings report to get insights on:</p>
+                                    
+                                    <ul class="mb-4">
+                                        <li>Recent company performance and key metrics</li>
+                                        <li>Analyst expectations for the upcoming report</li>
+                                        <li>Market sentiment and trading patterns</li>
+                                        <li>Potential impact on stock price post-earnings</li>
+                                    </ul>
+                                    
+                                    <div class="research-jobs">
+                                        <h6 class="mb-3">Recent Research</h6>
+                                        {% if earnings_jobs %}
+                                            {% for job in earnings_jobs %}
+                                                <div class="job-item">
+                                                    <div class="job-details">
+                                                        <div class="job-symbol">{{ job.symbol }}</div>
+                                                        <div class="job-date">Earnings: {{ job.earnings_date }}</div>
+                                                    </div>
+                                                    <div class="job-status">
+                                                        <span class="status-badge status-{{ job.status }}">{{ job.status|title }}</span>
+                                                        {% if job.status == 'completed' %}
+                                                            <button class="btn btn-sm btn-outline-primary ml-2 view-research-btn" 
+                                                                   data-job-id="{{ job.job_id }}" 
+                                                                   data-symbol="{{ job.symbol }}" 
+                                                                   data-date="{{ job.earnings_date }}"
+                                                                   data-toggle="modal" 
+                                                                   data-target="#researchResultModal">View</button>
+                                                        {% elif job.status == 'failed' %}
+                                                            <button class="btn btn-sm btn-outline-danger ml-2" data-toggle="tooltip" title="Research failed, try again">!</button>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            {% endfor %}
+                                        {% else %}
+                                            <div class="alert alert-light text-center">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-search mb-3" viewBox="0 0 16 16">
+                                                    <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+                                                </svg>
+                                                <p>No research jobs yet. Start by clicking "Research" on any upcoming earnings.</p>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Research Modal -->
+            <div class="modal fade" id="researchModal" tabindex="-1" role="dialog" aria-labelledby="researchModalLabel" aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="researchModalLabel">Request Earnings Research</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <form action="{{ url_for('earnings_companion') }}" method="post">
+                            <div class="modal-body">
+                                <div id="stockInfo" class="mb-3 p-3 bg-light rounded">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <img id="stockLogo" src="" alt="Stock Logo" class="mr-2" style="width: 30px; height: 30px;">
+                                        <h5 id="stockTitle" class="mb-0"></h5>
+                                    </div>
+                                    <div id="earningsDate" class="text-muted"></div>
+                                    <div id="portfolioStatus" class="mt-2"></div>
+                                </div>
+                                
+                                <p>Request detailed AI analysis on the upcoming earnings report. The analysis will include:</p>
+                                
+                                <ul class="mb-3">
+                                    <li>Recent company performance metrics</li>
+                                    <li>Analyst expectations and whisper numbers</li>
+                                    <li>Key focus areas for this report</li>
+                                    <li>Recent news that might impact results</li>
+                                    <li>Potential price movement scenarios</li>
+                                </ul>
+                                
+                                <div class="form-group">
+                                    <input type="hidden" class="form-control" id="symbol" name="symbol">
+                                    <input type="hidden" class="form-control" id="earnings_date" name="earnings_date">
+                                </div>
+                                
+                                <p class="text-muted">
+                                    <small>
+                                        Analysis is generated using Perplexity's {{ settings.perplexity_model }} model. 
+                                        Research will be available within 1-2 minutes after submission.
+                                    </small>
+                                </p>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-primary">Request Research</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Research Result Modal -->
+            <div class="modal fade" id="researchResultModal" tabindex="-1" role="dialog" aria-labelledby="researchResultModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document" style="max-width: 90vw;">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="researchResultModalLabel">Earnings Research Report</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <div id="researchContent" class="p-3">
+                                <div class="d-flex justify-content-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="sr-only">Loading...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <div class="text-center w-100">
+                                <small class="text-muted">Powered by Perplexity DeepResearch — Sources fully cited and verified</small>
+                            </div>
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Chart.js for interactive charts -->
+            <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+            
+            <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+            <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+            <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+            <script>
+                $(document).ready(function() {
+                    // Handle filter clicks
+                    $('.filter-item').click(function() {
+                        $('.filter-item').removeClass('active');
+                        $(this).addClass('active');
+                        
+                        const filter = $(this).data('filter');
+                        
+                        if (filter === 'all') {
+                            $('.earnings-item').show();
+                        } else if (filter === 'portfolio') {
+                            $('.earnings-item').hide();
+                            $('.earnings-item[data-in-portfolio="true"]').show();
+                        }
+                    });
+                    
+                    // Handle research button clicks with enhanced info
+                    $('.research-btn').click(function() {
+                        const symbol = $(this).data('symbol');
+                        const date = $(this).data('date');
+                        const inPortfolio = $(this).closest('.earnings-item').data('in-portfolio');
+                        const companyName = $(this).closest('.earnings-item').find('.stock-name').text();
+                        const logoUrl = $(this).closest('.earnings-item').find('.stock-logo').attr('src');
+                        
+                        // Format date for display
+                        const dateObj = new Date(date);
+                        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                        const formattedDate = dateObj.toLocaleDateString('en-US', options);
+                        
+                        // Update the modal with enhanced information
+                        $('#symbol').val(symbol);
+                        $('#earnings_date').val(date);
+                        $('#stockLogo').attr('src', logoUrl);
+                        $('#stockTitle').text(`${symbol} - ${companyName}`);
+                        $('#earningsDate').text(`Earnings Date: ${formattedDate}`);
+                        $('#researchModalLabel').text(`Earnings Research: ${symbol}`);
+                        
+                        // Add portfolio status if applicable
+                        if (inPortfolio) {
+                            let portfolioHtml = '<span class="badge badge-success">In Your Portfolio</span>';
+                            
+                            // Try to find position info
+                            const positionInfo = $(this).closest('.earnings-item').find('.position-info').text();
+                            if (positionInfo) {
+                                portfolioHtml += `<div class="mt-1"><small>${positionInfo}</small></div>`;
+                            }
+                            
+                            $('#portfolioStatus').html(portfolioHtml);
+                        } else {
+                            $('#portfolioStatus').html('<span class="badge badge-secondary">Not In Portfolio</span>');
+                        }
+                    });
+                    
+                    // Handle view research button clicks
+                    $('.view-research-btn').click(function() {
+                        const jobId = $(this).data('job-id');
+                        const symbol = $(this).data('symbol');
+                        const date = $(this).data('date');
+                        
+                        // Update modal title
+                        $('#researchResultModalLabel').text(`Earnings Research: ${symbol} (${date})`);
+                        
+                        // Show loading spinner
+                        $('#researchContent').html(`
+                            <div class="d-flex justify-content-center">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="sr-only">Loading...</span>
+                                </div>
+                            </div>
+                        `);
+                        
+                        // Fetch job data from API
+                        $.ajax({
+                            url: `{{ url_for('api_earnings_job', job_id='') }}${jobId}`,
+                            method: 'GET',
+                            success: function(response) {
+                                if (response && response.result) {
+                                    // Convert markdown to HTML
+                                    const converter = new showdown.Converter({
+                                        tables: true,
+                                        simplifiedAutoLink: true,
+                                        strikethrough: true,
+                                        tasklists: true
+                                    });
+                                    const html = converter.makeHtml(response.result);
+                                    
+                                    // Add CSS for better markdown rendering and prepare for chart rendering
+                                    $('#researchContent').html(`
+                                        <style>
+                                            .markdown-content h1 { font-size: 2rem; margin-bottom: 1rem; }
+                                            .markdown-content h2 { font-size: 1.6rem; margin-top: 1.5rem; margin-bottom: 0.8rem; border-bottom: 1px solid #eee; padding-bottom: 0.3rem; }
+                                            .markdown-content h3 { font-size: 1.3rem; margin-top: 1.2rem; margin-bottom: 0.6rem; }
+                                            .markdown-content h4 { font-size: 1.1rem; margin-top: 1rem; margin-bottom: 0.5rem; }
+                                            .markdown-content ul, .markdown-content ol { padding-left: 1.5rem; margin-bottom: 1rem; }
+                                            .markdown-content blockquote { padding: 0.5rem 1rem; border-left: 3px solid #ddd; background-color: #f8f9fa; }
+                                            .markdown-content table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
+                                            .markdown-content table th, .markdown-content table td { padding: 0.5rem; border: 1px solid #ddd; }
+                                            .markdown-content table th { background-color: #f0f0f0; }
+                                            .markdown-content p { margin-bottom: 0.8rem; }
+                                            .markdown-content code { font-family: monospace; background-color: #f0f0f0; padding: 0.1rem 0.3rem; border-radius: 3px; }
+                                            .markdown-content pre { background-color: #f5f5f5; padding: 1rem; border-radius: 5px; overflow-x: auto; margin-bottom: 1rem; }
+                                            
+                                            /* Sources styling */
+                                            .sources-section { 
+                                                background-color: #f8f9fa; 
+                                                border: 1px solid #eaeaea; 
+                                                border-radius: 8px; 
+                                                padding: 15px; 
+                                                margin-top: 25px;
+                                            }
+                                            .sources-section h2 { 
+                                                color: #4a6cfd; 
+                                                margin-top: 0 !important;
+                                                padding-bottom: 0.5rem;
+                                                border-bottom: 2px solid #e9ecef;
+                                            }
+                                            .source-item { 
+                                                padding: 8px 0; 
+                                                border-bottom: 1px dashed #e9ecef;
+                                            }
+                                            .source-item:last-child {
+                                                border-bottom: none;
+                                            }
+                                            
+                                            /* Chart controls */
+                                            .charts-control {
+                                                display: flex;
+                                                justify-content: flex-end;
+                                                margin-bottom: 15px;
+                                            }
+                                            .toggle-all-charts-btn {
+                                                background-color: #f8f9fa;
+                                                border: 1px solid #dee2e6;
+                                                border-radius: 4px;
+                                                padding: 5px 10px;
+                                                font-size: 0.9rem;
+                                                cursor: pointer;
+                                                transition: all 0.2s ease;
+                                            }
+                                            .toggle-all-charts-btn:hover {
+                                                background-color: #e9ecef;
+                                            }
+                                        </style>
+                                        <div class="charts-control">
+                                            <button class="toggle-all-charts-btn" id="toggleAllCharts">Collapse All Charts</button>
+                                        </div>
+                                        <div class="markdown-content">${html}</div>
+                                    `);
+                                    
+                                    // Format sources section with better styling
+                                    if ($('#researchContent .markdown-content h2:contains("Sources")').length) {
+                                        const sourcesHeader = $('#researchContent .markdown-content h2:contains("Sources")');
+                                        const sourcesContent = sourcesHeader.nextUntil('h2');
+                                        
+                                        // Wrap the sources in a styled container
+                                        sourcesHeader.wrap('<div class="sources-section"></div>');
+                                        sourcesContent.appendTo(sourcesHeader.parent());
+                                        
+                                        // Transform source links to be more readable
+                                        const sourcesList = sourcesHeader.parent().find('li, p');
+                                        sourcesList.each(function() {
+                                            $(this).addClass('source-item');
+                                        });
+                                    }
+                                    
+                                    // Insert charts after relevant sections
+                                    setTimeout(renderCharts, 100, symbol);
+                                    
+                                    // Add toggle all charts functionality
+                                    $('#toggleAllCharts').click(function() {
+                                        const allCharts = $('.chart-container');
+                                        const areAllCollapsed = allCharts.first().hasClass('collapsed');
+                                        
+                                        if (areAllCollapsed) {
+                                            // Expand all
+                                            allCharts.removeClass('collapsed');
+                                            $('.chart-collapse-btn').text('−');
+                                            $(this).text('Collapse All Charts');
+                                        } else {
+                                            // Collapse all
+                                            allCharts.addClass('collapsed');
+                                            $('.chart-collapse-btn').text('+');
+                                            $(this).text('Expand All Charts');
+                                        }
+                                    });
+                                } else {
+                                    $('#researchContent').html(`
+                                        <div class="alert alert-danger">
+                                            Error loading research results. Please try again.
+                                        </div>
+                                    `);
+                                }
+                            },
+                            error: function() {
+                                $('#researchContent').html(`
+                                    <div class="alert alert-danger">
+                                        Error loading research results. Please try again.
+                                    </div>
+                                `);
+                            }
+                        });
+                    });
+                    
+                    // Render interactive charts based on research content
+                    function renderCharts(symbol) {
+                        // Create price history chart
+                        insertPriceChart(symbol, 'Technical Analysis');
+                        
+                        // Create earnings comparison chart
+                        insertEarningsChart(symbol, 'Previous Earnings Performance');
+                        
+                        // Create sentiment pie chart
+                        insertSentimentChart('Investment Thesis');
+                        
+                        // Create industry comparison chart
+                        insertIndustryChart('Industry & Competitive Landscape');
+                    }
+                    
+                    // Function to insert a stock price chart with earnings dates
+                    function insertPriceChart(symbol, sectionTitle) {
+                        const section = $('#researchContent .markdown-content h2:contains("' + sectionTitle + '")');
+                        if (section.length) {
+                            // Create chart container
+                            const chartContainer = $('<div class="chart-container"><button class="chart-collapse-btn" title="Toggle chart visibility">−</button><div class="chart-title">Price History with Earnings Dates</div><canvas id="priceChart" height="220"></canvas></div>');
+                            section.after(chartContainer);
+                            
+                            // Add collapse functionality
+                            chartContainer.find('.chart-collapse-btn').click(function() {
+                                $(this).parent().toggleClass('collapsed');
+                                $(this).text($(this).parent().hasClass('collapsed') ? '+' : '−');
+                            });
+                            
+                            // Sample data - in a real app, you would fetch this from an API
+                            const ctx = document.getElementById('priceChart').getContext('2d');
+                            
+                            // Create a simulated price chart (this would typically use real data)
+                            const labels = [];
+                            const priceData = [];
+                            const earningsPoints = [];
+                            
+                            // Generate 90 days of simulated data
+                            const today = new Date();
+                            for (let i = 90; i >= 0; i--) {
+                                const date = new Date();
+                                date.setDate(today.getDate() - i);
+                                labels.push(date.toLocaleDateString('en-US', {month: 'short', day: 'numeric'}));
+                                
+                                // Generate semi-realistic looking price data
+                                const basePrice = 150 + Math.sin(i/10) * 20;
+                                const randomFactor = (Math.random() - 0.5) * 10;
+                                priceData.push(basePrice + randomFactor);
+                                
+                                // Mark simulated earnings dates
+                                if (i === 60 || i === 0) {
+                                    earningsPoints.push({
+                                        x: date.toLocaleDateString('en-US', {month: 'short', day: 'numeric'}),
+                                        y: basePrice + randomFactor
+                                    });
+                                }
+                            }
+                            
+                            new Chart(ctx, {
+                                type: 'line',
+                                data: {
+                                    labels: labels,
+                                    datasets: [
+                                        {
+                                            label: symbol + ' Price',
+                                            data: priceData,
+                                            borderColor: '#4a6cfd',
+                                            backgroundColor: 'rgba(74, 108, 253, 0.1)',
+                                            borderWidth: 2,
+                                            tension: 0.3,
+                                            fill: true
+                                        },
+                                        {
+                                            label: 'Earnings Dates',
+                                            data: earningsPoints,
+                                            pointStyle: 'rectRot',
+                                            pointRadius: 8,
+                                            pointBackgroundColor: '#e74c3c',
+                                            pointBorderColor: '#fff',
+                                            showLine: false,
+                                            parsing: false
+                                        }
+                                    ]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: {
+                                        legend: {
+                                            position: 'top',
+                                        },
+                                        tooltip: {
+                                            callbacks: {
+                                                label: function(context) {
+                                                    if (context.dataset.label === 'Earnings Dates') {
+                                                        return 'Earnings Announcement';
+                                                    }
+                                                    return context.dataset.label + ': $' + context.raw.toFixed(2);
+                                                }
+                                            }
+                                        }
+                                    },
+                                    scales: {
+                                        x: {
+                                            ticks: {
+                                                maxTicksLimit: 12
+                                            },
+                                            grid: {
+                                                display: false
+                                            }
+                                        },
+                                        y: {
+                                            title: {
+                                                display: true,
+                                                text: 'Price ($)'
+                                            }
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    }
+                    
+                    // Function to insert an earnings comparison chart
+                    function insertEarningsChart(symbol, sectionTitle) {
+                        const section = $('#researchContent .markdown-content h2:contains("' + sectionTitle + '")');
+                        if (section.length) {
+                            // Create chart container
+                            const chartContainer = $('<div class="chart-container"><button class="chart-collapse-btn" title="Toggle chart visibility">−</button><div class="chart-title">Quarterly EPS: Estimates vs Actual</div><canvas id="earningsChart" height="180"></canvas></div>');
+                            section.after(chartContainer);
+                            
+                            // Add collapse functionality
+                            chartContainer.find('.chart-collapse-btn').click(function() {
+                                $(this).parent().toggleClass('collapsed');
+                                $(this).text($(this).parent().hasClass('collapsed') ? '+' : '−');
+                            });
+                            
+                            const ctx = document.getElementById('earningsChart').getContext('2d');
+                            
+                            // Sample data - in a real app, you would extract this from the research text or API
+                            const quarters = ['Q2 2024', 'Q3 2024', 'Q4 2024', 'Q1 2025'];
+                            const estimatedEPS = [1.65, 1.72, 1.85, 1.95];
+                            const actualEPS = [1.78, 1.69, 1.92, null]; // Last quarter is upcoming
+                            
+                            new Chart(ctx, {
+                                type: 'bar',
+                                data: {
+                                    labels: quarters,
+                                    datasets: [
+                                        {
+                                            label: 'Estimated EPS',
+                                            data: estimatedEPS,
+                                            backgroundColor: 'rgba(255, 193, 7, 0.7)',
+                                            borderColor: 'rgba(255, 193, 7, 1)',
+                                            borderWidth: 1
+                                        },
+                                        {
+                                            label: 'Actual EPS',
+                                            data: actualEPS,
+                                            backgroundColor: 'rgba(74, 108, 253, 0.7)',
+                                            borderColor: 'rgba(74, 108, 253, 1)',
+                                            borderWidth: 1
+                                        }
+                                    ]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: {
+                                        legend: {
+                                            position: 'top',
+                                        },
+                                        tooltip: {
+                                            callbacks: {
+                                                label: function(context) {
+                                                    let label = context.dataset.label || '';
+                                                    if (context.raw !== null) {
+                                                        label += ': $' + context.raw.toFixed(2);
+                                                    } else {
+                                                        label += ': Not reported yet';
+                                                    }
+                                                    return label;
+                                                }
+                                            }
+                                        },
+                                        datalabels: {
+                                            align: 'center',
+                                            anchor: 'center',
+                                            formatter: function(value) {
+                                                if (value !== null) {
+                                                    return '$' + value.toFixed(2);
+                                                } else {
+                                                    return '';
+                                                }
+                                            },
+                                            font: {
+                                                weight: 'bold'
+                                            },
+                                            color: '#333'
+                                        }
+                                    },
+                                    scales: {
+                                        x: {
+                                            grid: {
+                                                display: false
+                                            }
+                                        },
+                                        y: {
+                                            title: {
+                                                display: true,
+                                                text: 'EPS ($)'
+                                            },
+                                            beginAtZero: true
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    }
+                    
+                    // Function to insert a sentiment analysis pie chart
+                    function insertSentimentChart(sectionTitle) {
+                        const section = $('#researchContent .markdown-content h2:contains("' + sectionTitle + '")');
+                        if (section.length) {
+                            // Create chart container
+                            const chartContainer = $('<div class="chart-container"><button class="chart-collapse-btn" title="Toggle chart visibility">−</button><div class="chart-title">Investment Sentiment Analysis</div><canvas id="sentimentChart" height="180"></canvas></div>');
+                            section.after(chartContainer);
+                            
+                            // Add collapse functionality
+                            chartContainer.find('.chart-collapse-btn').click(function() {
+                                $(this).parent().toggleClass('collapsed');
+                                $(this).text($(this).parent().hasClass('collapsed') ? '+' : '−');
+                            });
+                            
+                            const ctx = document.getElementById('sentimentChart').getContext('2d');
+                            
+                            // Sample data - in a real app, you would extract this from the NLP analysis
+                            new Chart(ctx, {
+                                type: 'pie',
+                                data: {
+                                    labels: ['Bullish', 'Neutral', 'Bearish'],
+                                    datasets: [{
+                                        data: [55, 30, 15],
+                                        backgroundColor: [
+                                            'rgba(39, 174, 96, 0.8)',  // Brighter green for bullish
+                                            'rgba(52, 152, 219, 0.8)', // Blue for neutral (instead of gray)
+                                            'rgba(231, 76, 60, 0.8)'   // Brighter red for bearish
+                                        ],
+                                        borderColor: [
+                                            'rgba(39, 174, 96, 1)',
+                                            'rgba(52, 152, 219, 1)',
+                                            'rgba(231, 76, 60, 1)'
+                                        ],
+                                        borderWidth: 1
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: {
+                                        legend: {
+                                            position: 'right',
+                                        },
+                                        tooltip: {
+                                            callbacks: {
+                                                label: function(context) {
+                                                    return context.label + ': ' + context.raw + '%';
+                                                }
+                                            }
+                                        },
+                                        datalabels: {
+                                            formatter: function(value) {
+                                                return value + '%';
+                                            },
+                                            color: '#fff',
+                                            font: {
+                                                weight: 'bold',
+                                                size: 14
+                                            }
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    }
+                    
+                    // Function to insert an industry comparison chart
+                    function insertIndustryChart(sectionTitle) {
+                        const section = $('#researchContent .markdown-content h2:contains("' + sectionTitle + '")');
+                        if (section.length) {
+                            // Create chart container
+                            const chartContainer = $('<div class="chart-container"><button class="chart-collapse-btn" title="Toggle chart visibility">−</button><div class="chart-title">Industry Revenue Growth Comparison</div><canvas id="industryChart" height="180"></canvas></div>');
+                            section.after(chartContainer);
+                            
+                            // Add collapse functionality
+                            chartContainer.find('.chart-collapse-btn').click(function() {
+                                $(this).parent().toggleClass('collapsed');
+                                $(this).text($(this).parent().hasClass('collapsed') ? '+' : '−');
+                            });
+                            
+                            const ctx = document.getElementById('industryChart').getContext('2d');
+                            
+                            // Sample data - in a real app, you would extract this from the research or API
+                            new Chart(ctx, {
+                                type: 'radar',
+                                data: {
+                                    labels: ['Revenue Growth', 'Profit Margin', 'Market Share', 'R&D Investment', 'Customer Retention'],
+                                    datasets: [
+                                        {
+                                            label: 'Company',
+                                            data: [75, 82, 68, 90, 85],
+                                            backgroundColor: 'rgba(74, 108, 253, 0.2)',
+                                            borderColor: 'rgba(74, 108, 253, 1)',
+                                            borderWidth: 2,
+                                            pointBackgroundColor: 'rgba(74, 108, 253, 1)',
+                                            pointRadius: 4
+                                        },
+                                        {
+                                            label: 'Industry Average',
+                                            data: [65, 70, 60, 65, 75],
+                                            backgroundColor: 'rgba(173, 181, 189, 0.2)',
+                                            borderColor: 'rgba(173, 181, 189, 1)',
+                                            borderWidth: 2,
+                                            pointBackgroundColor: 'rgba(173, 181, 189, 1)',
+                                            pointRadius: 4
+                                        }
+                                    ]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: {
+                                        legend: {
+                                            position: 'top',
+                                        },
+                                        tooltip: {
+                                            callbacks: {
+                                                label: function(context) {
+                                                    return context.dataset.label + ': ' + context.raw + '/100';
+                                                }
+                                            }
+                                        }
+                                    },
+                                    scales: {
+                                        r: {
+                                            angleLines: {
+                                                display: true
+                                            },
+                                            suggestedMin: 0,
+                                            suggestedMax: 100
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    }
+                    
+                    // Handle calendar refresh
+                    $('#refreshCalendar').click(function() {
+                        $('#refreshSpinner').show();
+                        
+                        // Call API to refresh the calendar
+                        $.ajax({
+                            url: '{{ url_for("api_update_earnings_calendar") }}',
+                            method: 'POST',
+                            success: function(response) {
+                                if (response.status === 'success') {
+                                    // Reload the page to show updated calendar
+                                    location.reload();
+                                } else {
+                                    alert('Failed to update calendar. Please try again.');
+                                    $('#refreshSpinner').hide();
+                                }
+                            },
+                            error: function() {
+                                alert('Failed to update calendar. Please try again.');
+                                $('#refreshSpinner').hide();
+                            }
+                        });
+                    });
+                    
+                    // Set auto-refresh for job status
+                    function checkPendingJobs() {
+                        const pendingJobs = $('.status-pending, .status-processing').length;
+                        if (pendingJobs > 0) {
+                            setTimeout(function() {
+                                location.reload();
+                            }, 30000); // Refresh every 30 seconds if there are pending jobs
+                        }
+                    }
+                    
+                    checkPendingJobs();
+                    
+                    // Initialize tooltips
+                    $('[data-toggle="tooltip"]').tooltip();
+                });
+            </script>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html> 

@@ -2,8 +2,12 @@ import os
 import csv
 import json
 import uuid
+import logging
+import traceback
+import sys
+import time
 from datetime import datetime, timedelta
-from flask import Flask, render_template, request, redirect, url_for, jsonify, flash, session
+from flask import Flask, render_template, request, redirect, url_for, jsonify, flash, session, send_from_directory
 import pandas as pd
 import sqlite3
 import yfinance as yf
@@ -17,6 +21,23 @@ import markdown
 import requests
 from itertools import groupby
 from dateutil.relativedelta import relativedelta
+import shutil
+from concurrent.futures import ThreadPoolExecutor, TimeoutError
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler('app.log')
+    ]
+)
+logger = logging.getLogger('tradelens')
+
+# Create the logo storage directory if it doesn't exist
+LOGO_DIR = os.path.join('static', 'img', 'logos')
+os.makedirs(LOGO_DIR, exist_ok=True)
 
 # Define MAG7 stocks
 MAG7_STOCKS = {
@@ -57,11 +78,14 @@ INVESTMENT_THESES = [
 # Set default model
 DEFAULT_PERPLEXITY_MODEL = 'sonar'
 
-# Load environment variables
+# Load environment variables from .env file
 load_dotenv()
 
+# Get OpenAI API key
+openai_api_key = os.getenv('OPENAI_API_KEY')
+
 # Initialize OpenAI client
-openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+openai_client = OpenAI(api_key=openai_api_key)
 
 # Initialize Perplexity client (fallback)
 perplexity_client = None
@@ -83,9 +107,15 @@ DEFAULT_SETTINGS = {
 
 # Function to get current settings
 def get_settings():
-    if 'settings' not in session:
-        session['settings'] = DEFAULT_SETTINGS.copy()
-    return session['settings']
+    try:
+        # Check if we have a Flask request context
+        if 'settings' not in session:
+            session['settings'] = DEFAULT_SETTINGS.copy()
+        return session['settings']
+    except RuntimeError:
+        # If there's no request context, return default settings
+        logger.warning("No request context available for settings, using defaults")
+        return DEFAULT_SETTINGS.copy()
 
 def get_stock_splits(symbol, start_date=None):
     """
@@ -451,16 +481,17 @@ def process_transactions(transactions):
     processed = []
     for t in transactions:
         try:
-            date_obj = datetime.strptime(t['Date'], '%Y-%m-%d')
+            # Convert date string to datetime object
+            date_obj = datetime.strptime(t['Date'], '%Y-%m-%d') if isinstance(t['Date'], str) else t['Date']
             
             # Convert text values to float, handling possible null values
             try:
-                price = float(t['AveragePrice']) if t['AveragePrice'] and t['AveragePrice'].lower() != 'null' else None
+                price = float(t['AveragePrice']) if t['AveragePrice'] and str(t['AveragePrice']).lower() != 'null' else None
             except (ValueError, TypeError, AttributeError):
                 price = None
                 
             try:
-                qty = float(t['Qty']) if t['Qty'] and t['Qty'].lower() != 'null' else None
+                qty = float(t['Qty']) if t['Qty'] and str(t['Qty']).lower() != 'null' else None
             except (ValueError, TypeError, AttributeError):
                 qty = None
             
@@ -472,7 +503,7 @@ def process_transactions(transactions):
                 'Name': t['Name'],
                 'Type': t['Type'],
                 'Side': t['Side'],
-                'AveragePrice': price,
+                'AveragePrice': price,  # Always use the converted float or None
                 'Qty': qty,
                 'State': t['State'],
                 'Fees': t['Fees'],
@@ -480,6 +511,17 @@ def process_transactions(transactions):
             })
         except (ValueError, TypeError) as e:
             print(f"Error processing transaction: {t}, Error: {e}")
+            # Even in error case, try to convert price and quantity
+            try:
+                price = float(t['AveragePrice']) if t['AveragePrice'] and str(t['AveragePrice']).lower() != 'null' else None
+            except (ValueError, TypeError, AttributeError):
+                price = None
+                
+            try:
+                qty = float(t['Qty']) if t['Qty'] and str(t['Qty']).lower() != 'null' else None
+            except (ValueError, TypeError, AttributeError):
+                qty = None
+                
             processed.append({
                 'Id': t['Id'],
                 'Date': date_obj if 'date_obj' in locals() else None,
@@ -488,8 +530,8 @@ def process_transactions(transactions):
                 'Name': t['Name'],
                 'Type': t['Type'],
                 'Side': t['Side'],
-                'AveragePrice': t['AveragePrice'],
-                'Qty': t['Qty'],
+                'AveragePrice': price,  # Use converted float or None, not raw string
+                'Qty': qty,
                 'State': t['State'],
                 'Fees': t['Fees'],
                 'HasSplitAdjustment': False
@@ -714,6 +756,7 @@ def index():
                          stocks=categorized_stocks,
                          page=page,
                          total_pages=total_pages,
+                         per_page=per_page,
                          current_filter=None,
                          active_tab=active_tab)
 
@@ -842,6 +885,7 @@ def stock_detail(symbol):
                          stock_name=stock_name,
                          page=page,
                          total_pages=total_pages,
+                         per_page=per_page,
                          price_data=price_data,
                          selected_side=side,
                          selected_range=range_,
@@ -1217,205 +1261,347 @@ def analyze_tariff_risk(current_stock=None):
 @app.route('/api/chat', methods=['POST'])
 def chat():
     """API endpoint to process chat messages and return responses using ChatGPT API"""
-    data = request.get_json()
-    message = data.get('message', '')
-    current_stock = data.get('stock', None)  # Get the current stock from the request
+    request_id = str(uuid.uuid4())[:8]  # Generate a request ID for tracking
+    start_time = time.time()
     
-    # Get current settings
-    settings = get_settings()
+    logger.info(f"[{request_id}] New chat request received")
     
-    # Check if we're just checking API availability
-    if message == 'check_api':
-        openai_available = bool(os.getenv('OPENAI_API_KEY'))
-        perplexity_available = bool(os.getenv('PERPLEXITY_API_KEY'))
-        return jsonify({
-            "openai_available": openai_available,
-            "perplexity_available": perplexity_available,
-            "api_available": openai_available or perplexity_available,
-            "current_settings": settings
-        })
-    
-    if not message:
-        return jsonify({"response": "Please enter a message."})
-    
-    # Get application context to provide to AI models
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute('SELECT COUNT(*) FROM transactions')
-    total_transactions = cursor.fetchone()[0]
-    cursor.execute('SELECT DISTINCT Symbol FROM transactions')
-    symbols = [row['Symbol'] for row in cursor.fetchall()]
-    
-    # Stock-specific context if the user is viewing a stock page
-    stock_specific_context = ""
-    if current_stock:
-        # Get current stock price and recent performance
-        price_data = get_stock_price(current_stock)
+    try:
+        data = request.get_json()
+        message = data.get('message', '')
+        current_stock = data.get('stock', None)  # Get the current stock from the request
         
-        # Get transactions for this specific stock
-        cursor.execute('''
-            SELECT * FROM transactions 
-            WHERE Symbol = ? 
-            ORDER BY Date DESC, Time DESC
-        ''', (current_stock,))
-        stock_transactions = cursor.fetchall()
+        logger.info(f"[{request_id}] Message: '{message[:50]}...' for stock: {current_stock}")
         
-        # Calculate stats for this stock
-        stats = calculate_transaction_stats(stock_transactions)
+        # Get current settings
+        settings = get_settings()
+        logger.info(f"[{request_id}] Current settings: {settings}")
         
-        # Calculate average buy/sell prices
-        total_buy_amount = 0
-        total_buy_qty = 0
-        total_sell_amount = 0
-        total_sell_qty = 0
+        # Check if we're just checking API availability
+        if message == 'check_api':
+            openai_available = bool(os.getenv('OPENAI_API_KEY'))
+            perplexity_available = bool(os.getenv('PERPLEXITY_API_KEY'))
+            logger.info(f"[{request_id}] API availability check - OpenAI: {openai_available}, Perplexity: {perplexity_available}")
+            return jsonify({
+                "openai_available": openai_available,
+                "perplexity_available": perplexity_available,
+                "api_available": openai_available or perplexity_available,
+                "current_settings": settings
+            })
         
-        for tx in stock_transactions:
+        if not message:
+            logger.warning(f"[{request_id}] Empty message received")
+            return jsonify({"response": "Please enter a message."})
+        
+        # Enhanced logging for request size and context
+        message_length = len(message)
+        logger.info(f"[{request_id}] Message length: {message_length} characters")
+        if message_length > 1000:
+            logger.warning(f"[{request_id}] Long message detected ({message_length} chars), may increase processing time")
+            
+        # Set up timeout protection 
+        request_timeout = 55  # Shorter than client timeout
+        
+        # Capture current request for use in the thread
+        ctx_app = app.app_context()
+        ctx_req = request._get_current_object()
+        
+        def process_api_request_with_timeout():
+            """Wrapper function for API processing with timeout"""
+            with ctx_app:  # Establish app context within the thread
+                try:
+                    # Get application context to provide to AI models
+                    conn = get_db_connection()
+                    cursor = conn.cursor()
+                    cursor.execute('SELECT COUNT(*) FROM transactions')
+                    total_transactions = cursor.fetchone()[0]
+                    cursor.execute('SELECT DISTINCT Symbol FROM transactions')
+                    symbols = [row['Symbol'] for row in cursor.fetchall()]
+                    logger.debug(f"[{request_id}] Portfolio context loaded: {total_transactions} transactions, {len(symbols)} symbols")
+                    
+                    # Stock-specific context if the user is viewing a stock page
+                    stock_specific_context = ""
+                    if current_stock:
+                        logger.info(f"[{request_id}] Preparing stock-specific context for {current_stock}")
+                        # Get current stock price and recent performance
+                        price_data = get_stock_price(current_stock)
+                        
+                        # Get transactions for this specific stock
+                        cursor.execute('''
+                            SELECT * FROM transactions 
+                            WHERE Symbol = ? 
+                            ORDER BY Date DESC, Time DESC
+                        ''', (current_stock,))
+                        stock_transactions = cursor.fetchall()
+                        
+                        # Calculate stats for this stock
+                        stats = calculate_transaction_stats(stock_transactions)
+                        
+                        # Calculate average buy/sell prices
+                        total_buy_amount = 0
+                        total_buy_qty = 0
+                        total_sell_amount = 0
+                        total_sell_qty = 0
+                        
+                        for tx in stock_transactions:
+                            try:
+                                qty = float(tx['Qty'])
+                                price = float(tx['AveragePrice'])
+                                amount = price * qty
+                                
+                                if tx['Side'].lower() == 'buy':
+                                    total_buy_amount += amount
+                                    total_buy_qty += qty
+                                elif tx['Side'].lower() == 'sell':
+                                    total_sell_amount += amount
+                                    total_sell_qty += qty
+                            except (ValueError, TypeError):
+                                continue
+                        
+                        avg_buy_price = total_buy_amount / total_buy_qty if total_buy_qty > 0 else 0
+                        avg_sell_price = total_sell_amount / total_sell_qty if total_sell_qty > 0 else 0
+                        
+                        # Get the first and last transaction dates
+                        cursor.execute('''
+                            SELECT MIN(Date), MAX(Date) FROM transactions 
+                            WHERE Symbol = ?
+                        ''', (current_stock,))
+                        first_date, last_date = cursor.fetchone()
+                        
+                        # Create stock-specific context
+                        current_price = price_data.get('current_price', 'Unknown')
+                        change_percent = price_data.get('change_percent', 'Unknown')
+                        
+                        # Format the change percentage correctly
+                        if isinstance(change_percent, (int, float)):
+                            change_percent_display = f"{change_percent:.2f}%"
+                        else:
+                            change_percent_display = "Unknown"
+                        
+                        stock_specific_context = f"""
+                        The user is currently viewing the {current_stock} stock page.
+                        
+                        Stock details:
+                        - Current price: ${current_price if current_price != 'Unknown' else 'Unknown'}
+                        - Today's change: {change_percent_display}
+                        - User's average buy price: ${avg_buy_price:.2f}
+                        - User's average sell price: ${avg_sell_price:.2f}
+                        - First transaction: {first_date}
+                        - Most recent transaction: {last_date}
+                        - Total shares bought: {stats['total_stocks_bought']}
+                        - Total shares sold: {stats['total_stocks_sold']}
+                        - Net shares: {stats['total_stocks_bought'] - stats['total_stocks_sold']}
+                        
+                        The user may want recommendations about:
+                        1. Is it the right time to buy {current_stock} based on their transaction history and current price
+                        2. Whether they have made impulse buys or panic sells with this stock
+                        3. Analysis of their trading pattern with {current_stock}
+                        """
+                    
+                    conn.close()
+                    
+                    context = f"""
+                    You are a helpful assistant for a stock transactions analyzer application.
+                    The app allows users to analyze their stock portfolio and transactions.
+                    
+                    Key application features:
+                    - View stock transactions with filtering options (buy/sell, date ranges)
+                    - Charts showing stock price history and transaction points
+                    - MAG7 stocks section (Apple, Microsoft, Google, Amazon, Meta, NVIDIA, Tesla)
+                    - Other stocks section
+                    - Unlisted stocks section
+                    
+                    The user has {total_transactions} total stock transactions in their portfolio.
+                    Their portfolio includes stocks like: {', '.join(symbols[:10])}
+                    
+                    {stock_specific_context}
+                    
+                    Keep your responses concise, focused on stocks and the application features.
+                    If the user asks about buy timing or trading patterns for the current stock, provide personalized insights based on their transaction history.
+                    """
+                    
+                    # Log the context size for debugging
+                    context_size = len(context)
+                    logger.debug(f"[{request_id}] Context size: {context_size} characters")
+                    
+                    # Determine AI provider based on settings
+                    ai_provider = settings.get('ai_provider', 'perplexity')
+                    
+                    # Try Perplexity first if available and selected
+                    perplexity_client = None
+                    if os.getenv('PERPLEXITY_API_KEY') and ai_provider == 'perplexity':
+                        try:
+                            import openai
+                            perplexity_client = openai.OpenAI(
+                                api_key=os.getenv('PERPLEXITY_API_KEY'),
+                                base_url="https://api.perplexity.ai",
+                            )
+                        except ImportError:
+                            logger.error(f"[{request_id}] OpenAI SDK not installed for Perplexity API")
+                        except Exception as e:
+                            logger.error(f"[{request_id}] Error initializing Perplexity client: {e}")
+                    
+                    if perplexity_client:
+                        logger.info(f"[{request_id}] Attempting to use Perplexity API")
+                        try:
+                            # Get the selected model from settings
+                            selected_model = settings.get('perplexity_model', 'sonar')
+                            
+                            # Map names to actual model IDs
+                            PERPLEXITY_MODELS = {
+                                'sonar': 'sonar',
+                                'mixtral': 'mixtral-8x7b-instruct',
+                                'claude': 'claude-3-sonnet-20240229',
+                                'sonar-medium': 'sonar-medium-online',
+                                'sonar-small': 'sonar-small-online',
+                                'codellama': 'codellama-70b-instruct',
+                                'sonar-deep-research': 'deepseek-research-1.3b'
+                            }
+                            
+                            # Use model ID from mapping or fallback to sonar
+                            model_id = PERPLEXITY_MODELS.get(selected_model, 'sonar')
+                            logger.info(f"[{request_id}] Using Perplexity model: {selected_model} (ID: {model_id})")
+                            
+                            perplexity_start = time.time()
+                            # Call Perplexity API using the OpenAI client interface
+                            response = perplexity_client.chat.completions.create(
+                                model=model_id,  # Use the model ID from the mapping
+                                messages=[
+                                    {"role": "system", "content": context},
+                                    {"role": "user", "content": message}
+                                ],
+                                max_tokens=1000
+                            )
+                            perplexity_time = time.time() - perplexity_start
+                            logger.info(f"[{request_id}] Perplexity API call successful in {perplexity_time:.2f}s")
+                            
+                            # Extract the response text
+                            chat_response = response.choices[0].message.content.strip()
+                            total_time = time.time() - start_time
+                            logger.info(f"[{request_id}] Total request time: {total_time:.2f}s")
+                            
+                            response_data = {
+                                "response": chat_response, 
+                                "provider": "perplexity",
+                                "model": selected_model
+                            }
+                            return response_data
+                            
+                        except Exception as e:
+                            logger.error(f"[{request_id}] Error calling Perplexity API: {str(e)}")
+                            logger.error(f"[{request_id}] Perplexity API error details: {traceback.format_exc()}")
+                            logger.info(f"[{request_id}] Falling back to OpenAI API...")
+                            # Continue to OpenAI fallback
+                    
+                    # Try OpenAI if Perplexity failed or isn't available or OpenAI is selected
+                    openai_client = None
+                    if os.getenv('OPENAI_API_KEY') and (ai_provider == 'openai' or not perplexity_client):
+                        try:
+                            import openai
+                            openai_client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+                        except ImportError:
+                            logger.error(f"[{request_id}] OpenAI SDK not installed")
+                        except Exception as e:
+                            logger.error(f"[{request_id}] Error initializing OpenAI client: {e}")
+                    
+                    if openai_client:
+                        logger.info(f"[{request_id}] Attempting to use OpenAI API")
+                        try:
+                            openai_start = time.time()
+                            # Log API request details
+                            logger.debug(f"[{request_id}] OpenAI API request: model=gpt-3.5-turbo, message_length={len(message)}")
+                            
+                            # Call OpenAI API
+                            response = openai_client.chat.completions.create(
+                                model="gpt-3.5-turbo",
+                                messages=[
+                                    {"role": "system", "content": context},
+                                    {"role": "user", "content": message}
+                                ],
+                                max_tokens=1000,
+                                temperature=0.7,
+                                presence_penalty=0.6,
+                                frequency_penalty=0.2,
+                                stream=False
+                            )
+                            
+                            openai_time = time.time() - openai_start
+                            logger.info(f"[{request_id}] OpenAI API call successful in {openai_time:.2f}s")
+                            
+                            # Log response details
+                            response_id = getattr(response, 'id', 'unknown')
+                            model = getattr(response, 'model', 'gpt-3.5-turbo')
+                            usage = getattr(response, 'usage', {})
+                            logger.debug(f"[{request_id}] OpenAI response ID: {response_id}, model: {model}")
+                            logger.debug(f"[{request_id}] Token usage: {usage}")
+                            
+                            # Extract the response text
+                            chat_response = response.choices[0].message.content.strip()
+                            total_time = time.time() - start_time
+                            logger.info(f"[{request_id}] Total request time: {total_time:.2f}s")
+                            
+                            response_data = {
+                                "response": chat_response, 
+                                "provider": "openai",
+                                "model": "gpt-3.5-turbo"
+                            }
+                            return response_data
+                            
+                        except Exception as e:
+                            logger.error(f"[{request_id}] Unexpected error calling OpenAI API: {str(e)}")
+                            logger.error(f"[{request_id}] Error details: {traceback.format_exc()}")
+                            logger.info(f"[{request_id}] Falling back to simple chat due to unexpected error")
+                            chat_response = handle_simple_chat(message, current_stock)
+                            if isinstance(chat_response, dict):
+                                return chat_response
+                            return {
+                                "response": "Sorry, an error occurred while processing your message. Please try again later.",
+                                "provider": "error",
+                                "error": str(e)
+                            }
+                    
+                    # If both fail, use simple chat fallback
+                    logger.warning(f"[{request_id}] No AI provider available, using simple chat fallback")
+                    chat_response = handle_simple_chat(message, current_stock)
+                    if isinstance(chat_response, dict):
+                        return chat_response
+                    return {
+                        "response": str(chat_response),
+                        "provider": "fallback"
+                    }
+                except Exception as e:
+                    logger.error(f"[{request_id}] Error in API processing: {str(e)}")
+                    logger.error(f"[{request_id}] API processing error details: {traceback.format_exc()}")
+                    return {
+                        "response": "Sorry, an error occurred while processing your message. Please try again later.",
+                        "provider": "error",
+                        "error": str(e)
+                    }
+        
+        # Use a thread with timeout to prevent hanging the server
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(process_api_request_with_timeout)
             try:
-                qty = float(tx['Qty'])
-                price = float(tx['AveragePrice'])
-                amount = price * qty
-                
-                if tx['Side'].lower() == 'buy':
-                    total_buy_amount += amount
-                    total_buy_qty += qty
-                elif tx['Side'].lower() == 'sell':
-                    total_sell_amount += amount
-                    total_sell_qty += qty
-            except (ValueError, TypeError):
-                continue
+                result = future.result(timeout=request_timeout)
+                return jsonify(result)
+            except TimeoutError:
+                logger.error(f"[{request_id}] API processing timed out after {request_timeout} seconds")
+                return jsonify({
+                    "response": "Sorry, the request took too long to process. Please try again with a simpler query.",
+                    "provider": "timeout",
+                    "error": "API processing timeout"
+                }), 500
+    except Exception as e:
+        logger.error(f"[{request_id}] Critical error in chat endpoint: {str(e)}")
+        logger.error(f"[{request_id}] Critical error details: {traceback.format_exc()}")
+        total_time = time.time() - start_time
+        logger.info(f"[{request_id}] Failed request completed in {total_time:.2f}s")
         
-        avg_buy_price = total_buy_amount / total_buy_qty if total_buy_qty > 0 else 0
-        avg_sell_price = total_sell_amount / total_sell_qty if total_sell_qty > 0 else 0
-        
-        # Get the first and last transaction dates
-        cursor.execute('''
-            SELECT MIN(Date), MAX(Date) FROM transactions 
-            WHERE Symbol = ?
-        ''', (current_stock,))
-        first_date, last_date = cursor.fetchone()
-        
-        # Create stock-specific context
-        current_price = price_data.get('current_price', 'Unknown')
-        change_percent = price_data.get('change_percent', 'Unknown')
-        
-        # Format the change percentage correctly
-        if isinstance(change_percent, (int, float)):
-            change_percent_display = f"{change_percent:.2f}%"
-        else:
-            change_percent_display = "Unknown"
-        
-        stock_specific_context = f"""
-        The user is currently viewing the {current_stock} stock page.
-        
-        Stock details:
-        - Current price: ${current_price if current_price != 'Unknown' else 'Unknown'}
-        - Today's change: {change_percent_display}
-        - User's average buy price: ${avg_buy_price:.2f}
-        - User's average sell price: ${avg_sell_price:.2f}
-        - First transaction: {first_date}
-        - Most recent transaction: {last_date}
-        - Total shares bought: {stats['total_stocks_bought']}
-        - Total shares sold: {stats['total_stocks_sold']}
-        - Net shares: {stats['total_stocks_bought'] - stats['total_stocks_sold']}
-        
-        The user may want recommendations about:
-        1. Is it the right time to buy {current_stock} based on their transaction history and current price
-        2. Whether they have made impulse buys or panic sells with this stock
-        3. Analysis of their trading pattern with {current_stock}
-        """
-    
-    conn.close()
-    
-    context = f"""
-    You are a helpful assistant for a stock transactions analyzer application.
-    The app allows users to analyze their stock portfolio and transactions.
-    
-    Key application features:
-    - View stock transactions with filtering options (buy/sell, date ranges)
-    - Charts showing stock price history and transaction points
-    - MAG7 stocks section (Apple, Microsoft, Google, Amazon, Meta, NVIDIA, Tesla)
-    - Other stocks section
-    - Unlisted stocks section
-    
-    The user has {total_transactions} total stock transactions in their portfolio.
-    Their portfolio includes stocks like: {', '.join(symbols[:10])}
-    
-    {stock_specific_context}
-    
-    Keep your responses concise, focused on stocks and the application features.
-    If the user asks about buy timing or trading patterns for the current stock, provide personalized insights based on their transaction history.
-    """
-    
-    # Try Perplexity first if available
-    if perplexity_client:
-        try:
-            # Get the selected model from settings
-            selected_model = settings.get('perplexity_model', 'sonar')
-            
-            # Map the selected model name to the actual model ID
-            model_id = PERPLEXITY_MODELS.get(selected_model, PERPLEXITY_MODELS['sonar'])
-            
-            # Call Perplexity API using the OpenAI client interface
-            response = perplexity_client.chat.completions.create(
-                model=model_id,  # Use the model ID from the mapping
-                messages=[
-                    {"role": "system", "content": context},
-                    {"role": "user", "content": message}
-                ],
-                max_tokens=1000
-            )
-            
-            # Extract the response text
-            chat_response = response.choices[0].message.content.strip()
-            return jsonify({
-                "response": chat_response, 
-                "provider": "perplexity",
-                "model": selected_model
-            })
-            
-        except Exception as e:
-            print(f"Error calling Perplexity API: {str(e)}")
-            print("Falling back to OpenAI API...")
-            # Continue to OpenAI fallback
-    
-    # Try OpenAI if Perplexity failed or isn't available
-    if os.getenv('OPENAI_API_KEY'):
-        try:
-            # Call OpenAI API
-            response = openai_client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": context},
-                    {"role": "user", "content": message}
-                ],
-                max_tokens=1000,
-                temperature=0.7,
-                presence_penalty=0.6,
-                frequency_penalty=0.2,
-                stream=False
-            )
-            
-            # Extract the response text
-            chat_response = response.choices[0].message.content.strip()
-            return jsonify({
-                "response": chat_response, 
-                "provider": "openai",
-                "model": "gpt-3.5-turbo"
-            })
-            
-        except (openai.RateLimitError, openai.APIError) as e:
-            print(f"OpenAI API error (possibly rate limit): {str(e)}")
-            # Fallback to simple chat
-            print("No API available, using simple chat")
-            return handle_simple_chat(message, current_stock)
-                
-        except Exception as e:
-            print(f"Error calling OpenAI API: {str(e)}")
-            # Fallback to simple response if API fails
-            return handle_simple_chat(message, current_stock)
-    
-    # If we got here, neither API is available or both failed
-    return handle_simple_chat(message, current_stock)
+        return jsonify({
+            "response": "Sorry, an unexpected error occurred while processing your request. Please try again later.",
+            "provider": "error",
+            "error": str(e)
+        }), 500
 
 @app.route('/api/risk/tariff', methods=['GET'])
 def api_tariff_risk():
@@ -1437,6 +1623,15 @@ def api_tariff_risk():
 
 def handle_simple_chat(message, current_stock=None):
     """Handle a simple chat message with the AI assistant."""
+    request_id = str(uuid.uuid4())[:8]  # Generate a request ID for tracking
+    logger.info(f"[{request_id}] Starting handle_simple_chat fallback with message: '{message[:50]}...'")
+    
+    # Make sure we're in an application context
+    if not app.app_context.top:
+        logger.info(f"[{request_id}] Creating app context for handle_simple_chat")
+        ctx = app.app_context()
+        ctx.push()
+    
     # Look for indicators of questions needing portfolio risk data
     need_risk_data = False
     risk_keywords = ['risk', 'tariff', 'trade war', 'china', 'supply chain', 'import tax', 'export', 'trade policy']
@@ -1444,26 +1639,41 @@ def handle_simple_chat(message, current_stock=None):
     for keyword in risk_keywords:
         if keyword.lower() in message.lower():
             need_risk_data = True
+            logger.info(f"[{request_id}] Risk keyword detected: '{keyword}'")
             break
     
     # Get risk analysis data if needed
     risk_data = None
     if need_risk_data:
-        risk_data = analyze_tariff_risk(current_stock)
+        logger.info(f"[{request_id}] Gathering risk analysis data for {current_stock if current_stock else 'portfolio'}")
+        try:
+            risk_data = analyze_tariff_risk(current_stock)
+            logger.debug(f"[{request_id}] Risk data gathered successfully")
+        except Exception as e:
+            logger.error(f"[{request_id}] Error gathering risk data: {str(e)}")
+            logger.error(f"[{request_id}] Risk data error details: {traceback.format_exc()}")
     
     # Format transactions for context
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    if current_stock:
-        # Get transactions for the current stock
-        cursor.execute('SELECT * FROM transactions WHERE Symbol = ? ORDER BY Date DESC, Time DESC LIMIT 20', (current_stock,))
-    else:
-        # Get recent transactions
-        cursor.execute('SELECT * FROM transactions ORDER BY Date DESC, Time DESC LIMIT 10')
-    
-    transactions = cursor.fetchall()
-    conn.close()
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        if current_stock:
+            logger.info(f"[{request_id}] Fetching transactions for {current_stock}")
+            # Get transactions for the current stock
+            cursor.execute('SELECT * FROM transactions WHERE Symbol = ? ORDER BY Date DESC, Time DESC LIMIT 20', (current_stock,))
+        else:
+            logger.info(f"[{request_id}] Fetching recent transactions for portfolio")
+            # Get recent transactions
+            cursor.execute('SELECT * FROM transactions ORDER BY Date DESC, Time DESC LIMIT 10')
+        
+        transactions = cursor.fetchall()
+        conn.close()
+        logger.debug(f"[{request_id}] Retrieved {len(transactions)} transactions for context")
+    except Exception as e:
+        logger.error(f"[{request_id}] Error retrieving transactions: {str(e)}")
+        logger.error(f"[{request_id}] Transaction retrieval error details: {traceback.format_exc()}")
+        transactions = []
     
     # Format transactions for context
     transaction_context = ""
@@ -1474,13 +1684,15 @@ def handle_simple_chat(message, current_stock=None):
                 # Convert AveragePrice to float if it's a string
                 avg_price = float(t['AveragePrice']) if isinstance(t['AveragePrice'], str) else t['AveragePrice']
                 transaction_context += f"- {t['Date']} {t['Symbol']} {t['Side'].upper()} {t['Qty']} shares at ${avg_price:.2f}\n"
-            except (ValueError, TypeError):
+            except (ValueError, TypeError) as e:
+                logger.warning(f"[{request_id}] Error formatting transaction {t.get('Id', 'unknown')}: {str(e)}")
                 # Fallback to string format if conversion fails
                 transaction_context += f"- {t['Date']} {t['Symbol']} {t['Side'].upper()} {t['Qty']} shares at ${t['AveragePrice']}\n"
     
     # Include risk analysis if available
     risk_context = ""
     if risk_data:
+        logger.debug(f"[{request_id}] Adding risk context to prompt")
         # Add general tariff context
         risk_context += "\nTariff Risk Context:\n"
         risk_context += f"- Recent Developments: {risk_data['tariff_context']['recent_developments']}\n"
@@ -1506,8 +1718,16 @@ def handle_simple_chat(message, current_stock=None):
             for factor in stock_risk['risk_factors']:
                 risk_context += f"  * {factor}\n"
     
-    settings = get_settings()
-    ai_provider = settings.get('ai_provider', DEFAULT_SETTINGS['ai_provider'])
+    # Get settings in a way that doesn't require request context
+    try:
+        settings = get_settings()  # This might still fail if it uses session
+        ai_provider = settings.get('ai_provider', DEFAULT_SETTINGS['ai_provider'])
+    except RuntimeError:
+        logger.warning(f"[{request_id}] Could not access session for settings, using defaults")
+        settings = DEFAULT_SETTINGS.copy()
+        ai_provider = settings.get('ai_provider', 'perplexity')
+    
+    logger.info(f"[{request_id}] Fallback using AI provider preference: {ai_provider}")
     
     # Check if the message is specifically about tariffs or risk
     is_risk_question = need_risk_data
@@ -1522,6 +1742,7 @@ def handle_simple_chat(message, current_stock=None):
     
     # Add tariff-specific instructions if needed
     if is_risk_question:
+        logger.info(f"[{request_id}] Using risk-specific system prompt")
         system_prompt += (
             "Focus especially on tariff and trade policy risks in your analysis. "
             "Consider how supply chain disruptions, increased import costs, and "
@@ -1539,11 +1760,16 @@ def handle_simple_chat(message, current_stock=None):
     if is_risk_question and risk_context:
         user_prompt = f"Risk analysis context:\n{risk_context}\n\n" + user_prompt
     
+    logger.debug(f"[{request_id}] Prompt size - System: {len(system_prompt)} chars, User: {len(user_prompt)} chars")
+    
     # Try to use Perplexity first if configured
     if ai_provider == 'perplexity' and perplexity_client:
+        logger.info(f"[{request_id}] Attempting to use Perplexity API in fallback mode")
         try:
             model = settings.get('perplexity_model', DEFAULT_PERPLEXITY_MODEL)
+            logger.debug(f"[{request_id}] Using Perplexity model: {model}")
             
+            start_time = time.time()
             response = perplexity_client.chat.completions.create(
                 model=model,
                 messages=[
@@ -1552,18 +1778,24 @@ def handle_simple_chat(message, current_stock=None):
                 ],
                 temperature=0.7
             )
-            return jsonify({
+            elapsed_time = time.time() - start_time
+            logger.info(f"[{request_id}] Perplexity API call in fallback mode successful in {elapsed_time:.2f}s")
+            
+            return {
                 "response": response.choices[0].message.content,
                 "provider": "Perplexity",
                 "model": model
-            })
+            }
         except Exception as e:
-            print(f"Error with Perplexity API: {e}")
+            logger.error(f"[{request_id}] Error with Perplexity API in fallback mode: {str(e)}")
+            logger.error(f"[{request_id}] Perplexity fallback error details: {traceback.format_exc()}")
             # Fall back to OpenAI if available
     
     # Use OpenAI if Perplexity failed or not configured
     if openai_client:
+        logger.info(f"[{request_id}] Attempting to use OpenAI API in fallback mode")
         try:
+            start_time = time.time()
             response = openai_client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
@@ -1572,25 +1804,30 @@ def handle_simple_chat(message, current_stock=None):
                 ],
                 temperature=0.7
             )
-            return jsonify({
+            elapsed_time = time.time() - start_time
+            logger.info(f"[{request_id}] OpenAI API call in fallback mode successful in {elapsed_time:.2f}s")
+            
+            return {
                 "response": response.choices[0].message.content,
                 "provider": "OpenAI",
                 "model": "gpt-3.5-turbo"
-            })
+            }
         except Exception as e:
-            print(f"Error with OpenAI API: {e}")
+            logger.error(f"[{request_id}] Error with OpenAI API in fallback mode: {str(e)}")
+            logger.error(f"[{request_id}] OpenAI fallback error details: {traceback.format_exc()}")
     
     # If both APIs failed, return a helpful error message
+    logger.warning(f"[{request_id}] All API attempts failed, returning default response")
     if is_risk_question:
         default_response = "I'm sorry, I couldn't access the AI services to analyze your portfolio risk. From the available data, stocks in technology and consumer electronics sectors are generally most affected by tariffs due to supply chain dependencies on China. Consider diversifying your portfolio to reduce exposure to these sectors."
     else:
         default_response = "I'm sorry, there was an error processing your request. Please try again later or check your API settings."
     
-    return jsonify({
+    return {
         "response": default_response,
         "provider": "Fallback",
         "model": "Internal"
-    })
+    }
 
 def get_stock_sector(symbol):
     """
@@ -2742,7 +2979,7 @@ def earnings_companion():
 
 @app.route('/earnings-job/<job_id>')
 def earnings_job(job_id):
-    """Route to get a specific earnings job"""
+    """View earnings research job"""
     # Get current settings
     settings = get_settings()
     
@@ -2754,10 +2991,21 @@ def earnings_job(job_id):
     session['settings'] = settings
     
     job = get_earnings_job(job_id)
-    
     if not job:
-        flash("Job not found", "error")
+        flash('Job not found.', 'danger')
         return redirect(url_for('earnings_companion'))
+    
+    # If job is completed, convert markdown to HTML
+    if job['status'] == 'completed' and job['result']:
+        # Use the Python markdown library to convert markdown to HTML
+        import markdown
+        try:
+            job['result'] = markdown.markdown(
+                job['result'], 
+                extensions=['tables', 'fenced_code', 'nl2br', 'extra']
+            )
+        except Exception as e:
+            logger.error(f"Error converting markdown: {e}")
     
     # Restore user's original model selection before rendering
     settings['perplexity_model'] = original_model
@@ -3222,6 +3470,237 @@ def api_update_events():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
+def get_company_logo(symbol):
+    """
+    Fetch and cache company logo for a given stock symbol.
+    Returns the path to the cached logo or None if unable to fetch.
+    """
+    symbol = symbol.upper()
+    local_path = os.path.join(LOGO_DIR, f"{symbol}.png")
+    
+    # Check if we already have this logo cached
+    if os.path.exists(local_path):
+        return url_for('static', filename=f'img/logos/{symbol}.png')
+    
+    # Try primary source: IEX Cloud API
+    try:
+        primary_url = f"https://storage.googleapis.com/iex/api/logos/{symbol}.png"
+        response = requests.get(primary_url, stream=True, timeout=5)
+        if response.status_code == 200:
+            with open(local_path, 'wb') as f:
+                response.raw.decode_content = True
+                shutil.copyfileobj(response.raw, f)
+            return url_for('static', filename=f'img/logos/{symbol}.png')
+    except Exception as e:
+        print(f"Error fetching primary logo for {symbol}: {e}")
+    
+    # Try alternate source: Fool.com
+    try:
+        alternate_url = f"https://g.foolcdn.com/art/companylogos/mark/{symbol.lower()}.png"
+        response = requests.get(alternate_url, stream=True, timeout=5)
+        if response.status_code == 200:
+            with open(local_path, 'wb') as f:
+                response.raw.decode_content = True
+                shutil.copyfileobj(response.raw, f)
+            return url_for('static', filename=f'img/logos/{symbol}.png')
+    except Exception as e:
+        print(f"Error fetching alternate logo for {symbol}: {e}")
+    
+    # Return a default placeholder if both sources fail
+    return url_for('static', filename='img/logo.png')
+
+# Add route to fetch company logo
+@app.route('/api/company-logo/<symbol>')
+def api_company_logo(symbol):
+    """API endpoint to fetch and return a cached company logo"""
+    logo_path = get_company_logo(symbol)
+    if logo_path:
+        return jsonify({'status': 'success', 'logo_url': logo_path})
+    return jsonify({'status': 'error', 'message': 'Logo not found'})
+
+# Add route to serve logo files directly
+@app.route('/company-logo/<symbol>')
+def company_logo(symbol):
+    """Serve a company logo from cache or fetch it if not available"""
+    symbol = symbol.upper()
+    logo_path = get_company_logo(symbol)  # This will fetch and cache the logo if needed
+    return redirect(logo_path)
+
+def check_openai_api_health():
+    """
+    Check the health of the OpenAI API connection and log detailed information.
+    Returns a dict with status information.
+    """
+    request_id = str(uuid.uuid4())[:8]
+    logger.info(f"[{request_id}] Checking OpenAI API health")
+    
+    result = {
+        "status": "unknown",
+        "latency_ms": None,
+        "error": None,
+        "api_key_configured": False,
+        "models_available": [],
+        "details": {}
+    }
+    
+    # Check if API key is configured
+    api_key = os.getenv('OPENAI_API_KEY')
+    if not api_key:
+        logger.error(f"[{request_id}] OpenAI API key not configured in environment variables")
+        result["status"] = "failed"
+        result["error"] = "API key not configured"
+        return result
+    
+    # Mark that API key is configured
+    result["api_key_configured"] = True
+    
+    # Check first 8 chars of API key (safe to log)
+    key_prefix = api_key[:8] if len(api_key) >= 8 else "too_short"
+    logger.info(f"[{request_id}] Using OpenAI API key with prefix: {key_prefix}...")
+    
+    # Try a simple API call to check connectivity
+    try:
+        start_time = time.time()
+        
+        # Try to list models as a simple API check
+        models_response = openai_client.models.list()
+        
+        # Calculate latency
+        latency = (time.time() - start_time) * 1000  # Convert to milliseconds
+        result["latency_ms"] = round(latency, 2)
+        
+        # Get available models
+        available_models = [model.id for model in models_response.data]
+        result["models_available"] = available_models
+        
+        # Check if our main model (gpt-3.5-turbo) is available
+        if "gpt-3.5-turbo" in available_models:
+            result["status"] = "healthy"
+            logger.info(f"[{request_id}] OpenAI API health check successful. Latency: {latency:.2f}ms")
+            logger.info(f"[{request_id}] Available models: {', '.join(available_models[:5])}...")
+        else:
+            result["status"] = "degraded"
+            result["error"] = "Required model 'gpt-3.5-turbo' not available"
+            logger.warning(f"[{request_id}] OpenAI API is reachable but required model not available")
+        
+        # Now try a simple completion to fully verify API functionality
+        start_time = time.time()
+        completion = openai_client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": "Say 'API is working' if you can see this message."}
+            ],
+            max_tokens=20
+        )
+        
+        # Calculate completion latency
+        completion_latency = (time.time() - start_time) * 1000  # Convert to milliseconds
+        result["details"]["completion_latency_ms"] = round(completion_latency, 2)
+        
+        # Check if we got a reasonable response
+        response_content = completion.choices[0].message.content.strip()
+        result["details"]["test_response"] = response_content
+        
+        if "API is working" in response_content or "working" in response_content.lower():
+            result["status"] = "healthy"
+            logger.info(f"[{request_id}] OpenAI completion test successful. Latency: {completion_latency:.2f}ms")
+        else:
+            result["status"] = "degraded"
+            result["error"] = "Unexpected response from completion test"
+            logger.warning(f"[{request_id}] OpenAI API completion test received unexpected response: {response_content}")
+            
+        # Add token usage information
+        result["details"]["usage"] = {
+            "prompt_tokens": completion.usage.prompt_tokens,
+            "completion_tokens": completion.usage.completion_tokens,
+            "total_tokens": completion.usage.total_tokens
+        }
+        
+    except openai.RateLimitError as e:
+        result["status"] = "rate_limited"
+        result["error"] = str(e)
+        logger.error(f"[{request_id}] OpenAI API rate limit exceeded: {str(e)}")
+        
+    except openai.APITimeoutError as e:
+        result["status"] = "timeout"
+        result["error"] = str(e)
+        logger.error(f"[{request_id}] OpenAI API timeout error: {str(e)}")
+        
+    except openai.APIConnectionError as e:
+        result["status"] = "connection_error"
+        result["error"] = str(e)
+        logger.error(f"[{request_id}] OpenAI API connection error: {str(e)}")
+        
+        # Check if it's a DNS resolution issue
+        if "Could not resolve host" in str(e):
+            logger.error(f"[{request_id}] DNS resolution issue detected. Cannot reach OpenAI API servers.")
+            result["details"]["dns_issue"] = True
+            
+        # Check if it's a proxy issue
+        if "Proxy" in str(e) or "proxy" in str(e):
+            logger.error(f"[{request_id}] Possible proxy configuration issue.")
+            result["details"]["proxy_issue"] = True
+        
+    except openai.AuthenticationError as e:
+        result["status"] = "auth_error"
+        result["error"] = "Authentication error - API key may be invalid"
+        logger.error(f"[{request_id}] OpenAI API authentication error: {str(e)}")
+        
+    except openai.BadRequestError as e:
+        result["status"] = "bad_request"
+        result["error"] = str(e)
+        logger.error(f"[{request_id}] OpenAI API bad request error: {str(e)}")
+        
+    except openai.APIError as e:
+        result["status"] = "api_error"
+        result["error"] = str(e)
+        logger.error(f"[{request_id}] OpenAI API error: {str(e)}")
+        
+    except Exception as e:
+        result["status"] = "error"
+        result["error"] = str(e)
+        logger.error(f"[{request_id}] Unexpected error checking OpenAI API health: {str(e)}")
+        logger.error(f"[{request_id}] Error details: {traceback.format_exc()}")
+    
+    # Add network connectivity check
+    try:
+        # Test basic connectivity to OpenAI's domain
+        response = requests.get("https://api.openai.com/health", timeout=5)
+        result["details"]["network_connectivity"] = {
+            "status_code": response.status_code,
+            "reachable": True
+        }
+    except requests.RequestException as e:
+        result["details"]["network_connectivity"] = {
+            "reachable": False,
+            "error": str(e)
+        }
+        logger.error(f"[{request_id}] Network connectivity issue to OpenAI API: {str(e)}")
+    
+    # Add system information
+    result["details"]["system_info"] = {
+        "platform": sys.platform,
+        "python_version": sys.version.split()[0],
+        "openai_package_version": openai.__version__
+    }
+    
+    return result
+
+@app.route('/api/check_openai', methods=['GET'])
+def api_check_openai():
+    """API endpoint to check OpenAI API health and return status information"""
+    try:
+        result = check_openai_api_health()
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Error in API health check endpoint: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return jsonify({
+            "status": "error",
+            "error": f"Error checking API health: {str(e)}"
+        }), 500
+
 if __name__ == '__main__':
     # Make sure the database exists
     init_db()
@@ -3249,4 +3728,6 @@ if __name__ == '__main__':
         except Exception as e:
             print(f"Error initializing earnings data: {e}")
     
-    app.run(debug=True) 
+    # Run the app on port 10000 with increased request timeout
+    app.config['TIMEOUT'] = 120  # 2 minute timeout for requests
+    app.run(debug=True, port=10000, threaded=True) 

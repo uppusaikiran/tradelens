@@ -6,7 +6,7 @@
     <title>TradeLens</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/navbar.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/sidebar.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         .custom-file {
@@ -198,390 +198,417 @@
     </style>
 </head>
 <body>
-    <!-- Modern Navbar with Title and Upload Form -->
-    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top" style="padding: 0.7rem 2vw; z-index: 100;">
-        <div class="container-fluid">
-            <a class="navbar-brand d-flex align-items-center" href="/">
-                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="App Logo" class="title-icon mr-2" style="width:1.8rem;height:1.8rem;">
-                TradeLens
-            </a>
-            <div class="d-flex align-items-center">
-                <a href="{{ url_for('index') }}" class="nav-link mr-3 active">📊 Dashboard</a>
-                <a href="{{ url_for('risk_review') }}" class="nav-link mr-3">⚠️ Risk Review</a>
-                <a href="{{ url_for('strategy_backtesting') }}" class="nav-link mr-3">📈 Strategy Backtesting</a>
-                <a href="{{ url_for('thesis_validation') }}" class="nav-link mr-3">🔍 Thesis Validation</a>
-                <a href="{{ url_for('earnings_companion') }}" class="nav-link mr-3">💰 Earnings Companion</a>
-                <a href="{{ url_for('event_risk_calendar') }}" class="nav-link mr-3">📅 Event Risk Calendar</a>
-                <a href="{{ url_for('settings') }}" class="nav-settings" title="AI Settings">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-gear" viewBox="0 0 16 16">
-                        <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
-                        <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115l.094-.319z"/>
-                    </svg>
-                </a>
-            </div>
-        </div>
-    </nav>
-    <div class="container mt-5">
-        <!-- Flash Messages -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-
-        <div class="row mb-4">
-            <div class="col-12">
-                <!-- Stock Categories Tabs -->
-                <ul class="nav nav-tabs mb-3" id="stockTabs" role="tablist">
-                    <li class="nav-item">
-                        <a class="nav-link {% if active_tab == 'mag7' %}active{% endif %}" 
-                           id="mag7-tab" 
-                           data-toggle="tab" 
-                           href="#mag7" 
-                           role="tab" 
-                           aria-controls="mag7" 
-                           aria-selected="{{ 'true' if active_tab == 'mag7' else 'false' }}">MAG7 Stocks</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if active_tab == 'other' %}active{% endif %}" 
-                           id="other-tab" 
-                           data-toggle="tab" 
-                           href="#other" 
-                           role="tab" 
-                           aria-controls="other" 
-                           aria-selected="{{ 'true' if active_tab == 'other' else 'false' }}">Other Stocks</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if active_tab == 'unlisted' %}active{% endif %}" 
-                           id="unlisted-tab" 
-                           data-toggle="tab" 
-                           href="#unlisted" 
-                           role="tab" 
-                           aria-controls="unlisted" 
-                           aria-selected="{{ 'true' if active_tab == 'unlisted' else 'false' }}">Unlisted Stocks</a>
-                    </li>
-                </ul>
-
-                <!-- Tab Content -->
-                <div class="tab-content" id="stockTabsContent">
-                    <!-- MAG7 Stocks Tab -->
-                    <div class="tab-pane fade {% if active_tab == 'mag7' %}show active{% endif %}" 
-                         id="mag7" 
-                         role="tabpanel" 
-                         aria-labelledby="mag7-tab">
-                        <div class="stock-boxes">
-                            {% for stock in stocks.mag7 %}
-                            <a href="{{ url_for('stock_detail', symbol=stock.symbol, tab='mag7') }}#transactions" 
-                               class="stock-box {% if current_filter == stock.symbol %}active{% endif %}"
-                               data-scroll-to="transactions">
-                                <img src="https://storage.googleapis.com/iex/api/logos/{{ stock.symbol }}.png" 
-                                     alt="{{ stock.symbol }} logo" 
-                                     class="stock-logo"
-                                     onerror="this.onerror=null;this.src='https://g.foolcdn.com/art/companylogos/mark/{{ stock.symbol|lower }}.png';">
-                                <div class="stock-symbol">{{ stock.symbol }}</div>
-                                <div class="stock-name">{{ stock.name }}</div>
-                            </a>
-                            {% endfor %}
-                        </div>
-                    </div>
-
-                    <!-- Other Stocks Tab -->
-                    <div class="tab-pane fade {% if active_tab == 'other' %}show active{% endif %}" 
-                         id="other" 
-                         role="tabpanel" 
-                         aria-labelledby="other-tab">
-                        <div class="stock-boxes">
-                            {% for stock in stocks.other %}
-                            <a href="{{ url_for('stock_detail', symbol=stock.symbol, tab='other') }}#transactions" 
-                               class="stock-box {% if current_filter == stock.symbol %}active{% endif %}"
-                               data-scroll-to="transactions">
-                                <img src="https://storage.googleapis.com/iex/api/logos/{{ stock.symbol }}.png" 
-                                     alt="{{ stock.symbol }} logo" 
-                                     class="stock-logo"
-                                     onerror="this.onerror=null;this.src='https://g.foolcdn.com/art/companylogos/mark/{{ stock.symbol|lower }}.png';">
-                                <div class="stock-symbol">{{ stock.symbol }}</div>
-                                <div class="stock-name">{{ stock.name }}</div>
-                            </a>
-                            {% endfor %}
-                        </div>
-                    </div>
-
-                    <!-- Unlisted Stocks Tab -->
-                    <div class="tab-pane fade {% if active_tab == 'unlisted' %}show active{% endif %}" 
-                         id="unlisted" 
-                         role="tabpanel" 
-                         aria-labelledby="unlisted-tab">
-                        <div class="stock-boxes">
-                            {% for stock in stocks.unlisted %}
-                            <a href="{{ url_for('stock_detail', symbol=stock.symbol, tab='unlisted') }}#transactions" 
-                               class="stock-box {% if current_filter == stock.symbol %}active{% endif %}"
-                               data-scroll-to="transactions">
-                                <img src="https://storage.googleapis.com/iex/api/logos/{{ stock.symbol }}.png" 
-                                     alt="{{ stock.symbol }} logo" 
-                                     class="stock-logo"
-                                     onerror="this.onerror=null;this.src='https://g.foolcdn.com/art/companylogos/mark/{{ stock.symbol|lower }}.png';">
-                                <div class="stock-symbol">{{ stock.symbol }}</div>
-                                <div class="stock-name">{{ stock.name }}</div>
-                            </a>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="orglens-layout">
+        {% include 'sidebar.html' %}
         
-        {% if current_filter %}
-        <div class="row mb-2">
-            <div class="col-12 d-flex flex-wrap align-items-center justify-content-between">
-                <!-- Hidden field to store current stock symbol for the chat feature -->
-                <input type="hidden" id="currentFilter" value="{{ current_filter }}">
-                <input type="hidden" id="current-stock" value="{{ current_filter }}">
-                
-                <!-- Add hidden inputs with static paths for JS to use -->
-                <input type="hidden" id="perplexity-icon-path" value="{{ url_for('static', filename='img/icons/perplexity_icon.svg') }}">
-                <input type="hidden" id="chat-icon-path" value="{{ url_for('static', filename='img/icons/chat-icon.svg') }}">
-                <input type="hidden" id="openai-icon-path" value="https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/ChatGPT_logo.svg/512px-ChatGPT_logo.svg.png">
-                
-                <div class="btn-group mb-2" role="group" aria-label="Transaction Side Filter">
-                    <a href="{{ url_for('stock_detail', symbol=current_filter, side='all', range=selected_range) }}" class="btn btn-outline-primary {% if selected_side == 'all' %}active{% endif %}">All</a>
-                    <a href="{{ url_for('stock_detail', symbol=current_filter, side='buy', range=selected_range) }}" class="btn btn-outline-success {% if selected_side == 'buy' %}active{% endif %}">Buy</a>
-                    <a href="{{ url_for('stock_detail', symbol=current_filter, side='sell', range=selected_range) }}" class="btn btn-outline-danger {% if selected_side == 'sell' %}active{% endif %}">Sell</a>
-                </div>
-                <div class="btn-group mb-2" role="group" aria-label="Time Range Filter">
-                    <a href="{{ url_for('stock_detail', symbol=current_filter, side=selected_side, range='all') }}" class="btn btn-outline-secondary {% if selected_range == 'all' %}active{% endif %}">All</a>
-                    <a href="{{ url_for('stock_detail', symbol=current_filter, side=selected_side, range='ytd') }}" class="btn btn-outline-secondary {% if selected_range == 'ytd' %}active{% endif %}">YTD</a>
-                    <a href="{{ url_for('stock_detail', symbol=current_filter, side=selected_side, range='1y') }}" class="btn btn-outline-secondary {% if selected_range == '1y' %}active{% endif %}">1Y</a>
-                    <a href="{{ url_for('stock_detail', symbol=current_filter, side=selected_side, range='2y') }}" class="btn btn-outline-secondary {% if selected_range == '2y' %}active{% endif %}">2Y</a>
-                    <a href="{{ url_for('stock_detail', symbol=current_filter, side=selected_side, range='5y') }}" class="btn btn-outline-secondary {% if selected_range == '5y' %}active{% endif %}">5Y</a>
-                    <a href="{{ url_for('stock_detail', symbol=current_filter, side=selected_side, range='max') }}" class="btn btn-outline-secondary {% if selected_range == 'max' %}active{% endif %}">MAX</a>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-        
-        {% if current_filter and price_data %}
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-4">
-                                <h3 class="mb-0">{{ current_filter }}</h3>
-                                <p class="text-muted">{{ stock_name }}</p>
-                                {% if price_data.error %}
-                                    <div class="alert alert-warning text-center" role="alert">
-                                        Price data unavailable.<br>
-                                        <small>{{ price_data.error }}</small>
-                                    </div>
-                                {% else %}
-                                    <h2 class="mb-0">
-                                        {% if price_data.current_price is not none %}
-                                            ${{ "%.2f"|format(price_data.current_price) }}
-                                        {% else %}
-                                            N/A
-                                        {% endif %}
-                                    </h2>
-                                    <p class="{% if price_data.change is not none and price_data.change >= 0 %}text-success{% else %}text-danger{% endif %} mb-0">
-                                        {% if price_data.change is not none and price_data.change_percent is not none %}
-                                            {{ "%+.2f"|format(price_data.change) }} ({{ "%+.2f"|format(price_data.change_percent) }}%)
-                                        {% else %}
-                                            N/A
-                                        {% endif %}
-                                    </p>
-                                    <small class="text-muted">Previous Close:
-                                        {% if price_data.previous_close is not none %}
-                                            ${{ "%.2f"|format(price_data.previous_close) }}
-                                        {% else %}
-                                            N/A
-                                        {% endif %}
-                                    </small>
-                                {% endif %}
-                            </div>
-                            <div class="col-md-8">
-                                <div id="chart-container" style="height:400px; min-height:300px;">
-                                    <div id="stockChartApex"></div>
-                                    <div id="chart-loading" style="display:flex;align-items:center;justify-content:center;height:100%;">
-                                        <div class="spinner-border text-primary" role="status">
-                                            <span class="sr-only">Loading...</span>
-                                        </div>
-                                    </div>
-                                    <div id="chart-error" class="alert alert-warning text-center mt-2" style="display:none;"></div>
-                                </div>
-                            </div>
+        <div class="main-content">
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
                         </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-        
-        <div class="row mb-4">
-            <div class="col-12">
-                <h2 id="transactions">
-                    {% if current_filter %}
-                        Transactions for {{ current_filter }} ({{ stock_name }})
-                    {% else %}
-                        All Transactions
-                    {% endif %}
-                </h2>
-                
-                {% if current_filter and transaction_stats %}
-                <div class="card mt-3 mb-4">
-                    <div class="card-body">
-                        <h5 class="card-title mb-3">Stats</h5>
-                        <div class="row">
-                            <div class="col-md-3 col-sm-6 mb-3">
-                                <div class="stats-item">
-                                    <div class="stats-label text-muted">Total Stocks Bought</div>
-                                    <div class="stats-value text-success">{{ transaction_stats.total_stocks_bought }}</div>
-                                </div>
-                            </div>
-                            <div class="col-md-3 col-sm-6 mb-3">
-                                <div class="stats-item">
-                                    <div class="stats-label text-muted">Total Stocks Sold</div>
-                                    <div class="stats-value text-danger">{{ transaction_stats.total_stocks_sold }}</div>
-                                </div>
-                            </div>
-                            <div class="col-md-3 col-sm-6 mb-3">
-                                <div class="stats-item">
-                                    <div class="stats-label text-muted">Total Amount Bought</div>
-                                    <div class="stats-value text-success">${{ "{:,.2f}".format(transaction_stats.total_amount_bought) }}</div>
-                                </div>
-                            </div>
-                            <div class="col-md-3 col-sm-6 mb-3">
-                                <div class="stats-item">
-                                    <div class="stats-label text-muted">Total Amount Sold</div>
-                                    <div class="stats-value text-danger">${{ "{:,.2f}".format(transaction_stats.total_amount_sold) }}</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-        
-        <div class="table-responsive">
-            <table class="table table-striped table-hover">
-                <thead class="thead-dark">
-                    <tr>
-                        <th>Date</th>
-                        <th>Time</th>
-                        <th>Symbol</th>
-                        <th>Name</th>
-                        <th>Type</th>
-                        <th>Side</th>
-                        <th>Price</th>
-                        <th>Quantity</th>
-                        <th>State</th>
-                        <th>Fees</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for transaction in transactions %}
-                    <tr data-transaction-id="{{ transaction.Id }}" {% if transaction.HasSplitAdjustment %}class="split-adjusted"{% endif %}>
-                        <td>{{ transaction.Date.strftime('%m/%d/%Y') }}</td>
-                        <td>{{ transaction.Time }}</td>
-                        <td>
-                            <a href="{{ url_for('stock_detail', symbol=transaction.Symbol) }}#transactions">
-                                {{ transaction.Symbol }}
-                            </a>
-                        </td>
-                        <td>{{ transaction.Name }}</td>
-                        <td>{{ transaction.Type }}</td>
-                        <td class="{% if transaction.Side == 'buy' %}text-success{% else %}text-danger{% endif %}">
-                            {{ transaction.Side|upper }}
-                        </td>
-                        <td>
-                            $ {{ "%.2f"|format(transaction.AveragePrice) if transaction.AveragePrice is not none else "N/A" }}
-                            {% if transaction.HasSplitAdjustment %}
-                            <div class="split-info">
-                                <small class="text-muted">
-                                    Original: $ {{ "%.2f"|format(transaction.OriginalPrice) if transaction.OriginalPrice is not none else "N/A" }}
-                                </small>
-                                <span class="split-indicator" title="Split Adjusted">📊</span>
-                            </div>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {{ "%.2f"|format(transaction.Qty) if transaction.Qty is not none else "N/A" }}
-                            {% if transaction.HasSplitAdjustment %}
-                            <div class="split-info">
-                                <small class="text-muted">
-                                    Original: {{ "%.2f"|format(transaction.OriginalQty) if transaction.OriginalQty is not none else "N/A" }}
-                                </small>
-                            </div>
-                            {% endif %}
-                        </td>
-                        <td>{{ transaction.State }}</td>
-                        <td>${{ transaction.Fees }}</td>
-                    </tr>
                     {% endfor %}
-                </tbody>
-            </table>
+                {% endif %}
+            {% endwith %}
+
+            <!-- Welcome Widget -->
+            {% if not current_filter %}
+            <div class="welcome-widget">
+                <div class="welcome-widget-content">
+                    <div class="welcome-header">
+                        <img src="{{ url_for('static', filename='img/logos/tradelens-logo.svg') }}" alt="TradeLens Logo" class="welcome-logo" onerror="this.src='{{ url_for('static', filename='img/icons/chat-icon.svg') }}'">
+                        <div class="welcome-title-container">
+                            <h1 class="welcome-title">Welcome to TradeLens</h1>
+                            <p class="welcome-subtitle">Your personal stock portfolio tracker and analysis platform</p>
+                        </div>
+                    </div>
+                    
+                    <div class="welcome-stats">
+                        <div class="welcome-stat-item">
+                            <div class="stat-value">{{ stocks.mag7|length + stocks.other|length + stocks.unlisted|length }}</div>
+                            <div class="stat-label">Total Stocks</div>
+                        </div>
+                        <div class="welcome-stat-item">
+                            <div class="stat-value">{{ stocks.mag7|length }}</div>
+                            <div class="stat-label">MAG7 Stocks</div>
+                        </div>
+                        <div class="welcome-stat-item">
+                            <div class="stat-value">{{ total_pages * per_page }}</div>
+                            <div class="stat-label">Transactions</div>
+                        </div>
+                    </div>
+                    
+                    <div class="welcome-features">
+                        <div class="welcome-feature">
+                            <div class="feature-icon">📊</div>
+                            <div class="feature-text">Track and analyze your stock portfolio performance</div>
+                        </div>
+                        <div class="welcome-feature">
+                            <div class="feature-icon">🔍</div>
+                            <div class="feature-text">Research stocks with AI-powered insights</div>
+                        </div>
+                        <div class="welcome-feature">
+                            <div class="feature-icon">📅</div>
+                            <div class="feature-text">Monitor earnings dates and market events</div>
+                        </div>
+                        <div class="welcome-feature">
+                            <div class="feature-icon">🧠</div>
+                            <div class="feature-text">Validate investment theses with AI analysis</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="row mb-4">
+                <div class="col-12">
+                    <!-- Stock Categories Tabs -->
+                    <ul class="nav nav-tabs mb-3" id="stockTabs" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link {% if active_tab == 'mag7' %}active{% endif %}" 
+                               id="mag7-tab" 
+                               data-toggle="tab" 
+                               href="#mag7" 
+                               role="tab" 
+                               aria-controls="mag7" 
+                               aria-selected="{{ 'true' if active_tab == 'mag7' else 'false' }}">MAG7 Stocks</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if active_tab == 'other' %}active{% endif %}" 
+                               id="other-tab" 
+                               data-toggle="tab" 
+                               href="#other" 
+                               role="tab" 
+                               aria-controls="other" 
+                               aria-selected="{{ 'true' if active_tab == 'other' else 'false' }}">Other Stocks</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if active_tab == 'unlisted' %}active{% endif %}" 
+                               id="unlisted-tab" 
+                               data-toggle="tab" 
+                               href="#unlisted" 
+                               role="tab" 
+                               aria-controls="unlisted" 
+                               aria-selected="{{ 'true' if active_tab == 'unlisted' else 'false' }}">Unlisted Stocks</a>
+                        </li>
+                    </ul>
+
+                    <!-- Tab Content -->
+                    <div class="tab-content" id="stockTabsContent">
+                        <!-- MAG7 Stocks Tab -->
+                        <div class="tab-pane fade {% if active_tab == 'mag7' %}show active{% endif %}" 
+                             id="mag7" 
+                             role="tabpanel" 
+                             aria-labelledby="mag7-tab">
+                            <div class="stock-boxes">
+                                {% for stock in stocks.mag7 %}
+                                <a href="{{ url_for('stock_detail', symbol=stock.symbol, tab='mag7') }}#transactions" 
+                                   class="stock-box {% if current_filter == stock.symbol %}active{% endif %}"
+                                   data-scroll-to="transactions">
+                                    <img src="{{ url_for('company_logo', symbol=stock.symbol) }}" 
+                                         alt="{{ stock.symbol }} logo" 
+                                         class="stock-logo">
+                                    <div class="stock-symbol">{{ stock.symbol }}</div>
+                                    <div class="stock-name">{{ stock.name }}</div>
+                                </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- Other Stocks Tab -->
+                        <div class="tab-pane fade {% if active_tab == 'other' %}show active{% endif %}" 
+                             id="other" 
+                             role="tabpanel" 
+                             aria-labelledby="other-tab">
+                            <div class="stock-boxes">
+                                {% for stock in stocks.other %}
+                                <a href="{{ url_for('stock_detail', symbol=stock.symbol, tab='other') }}#transactions" 
+                                   class="stock-box {% if current_filter == stock.symbol %}active{% endif %}"
+                                   data-scroll-to="transactions">
+                                    <img src="{{ url_for('company_logo', symbol=stock.symbol) }}" 
+                                         alt="{{ stock.symbol }} logo" 
+                                         class="stock-logo">
+                                    <div class="stock-symbol">{{ stock.symbol }}</div>
+                                    <div class="stock-name">{{ stock.name }}</div>
+                                </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- Unlisted Stocks Tab -->
+                        <div class="tab-pane fade {% if active_tab == 'unlisted' %}show active{% endif %}" 
+                             id="unlisted" 
+                             role="tabpanel" 
+                             aria-labelledby="unlisted-tab">
+                            <div class="stock-boxes">
+                                {% for stock in stocks.unlisted %}
+                                <a href="{{ url_for('stock_detail', symbol=stock.symbol, tab='unlisted') }}#transactions" 
+                                   class="stock-box {% if current_filter == stock.symbol %}active{% endif %}"
+                                   data-scroll-to="transactions">
+                                    <img src="{{ url_for('company_logo', symbol=stock.symbol) }}" 
+                                         alt="{{ stock.symbol }} logo" 
+                                         class="stock-logo">
+                                    <div class="stock-symbol">{{ stock.symbol }}</div>
+                                    <div class="stock-name">{{ stock.name }}</div>
+                                </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            {% if current_filter %}
+            <div class="row mb-2">
+                <div class="col-12 d-flex flex-wrap align-items-center justify-content-between">
+                    <!-- Hidden field to store current stock symbol for the chat feature -->
+                    <input type="hidden" id="currentFilter" value="{{ current_filter }}">
+                    <input type="hidden" id="current-stock" value="{{ current_filter }}">
+                    
+                    <!-- Add hidden inputs with static paths for JS to use -->
+                    <input type="hidden" id="perplexity-icon-path" value="{{ url_for('static', filename='img/icons/perplexity_icon.svg') }}">
+                    <input type="hidden" id="chat-icon-path" value="{{ url_for('static', filename='img/icons/chat-icon.svg') }}">
+                    <input type="hidden" id="openai-icon-path" value="https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/ChatGPT_logo.svg/512px-ChatGPT_logo.svg.png">
+                    
+                    <div class="btn-group mb-2" role="group" aria-label="Transaction Side Filter">
+                        <a href="{{ url_for('stock_detail', symbol=current_filter, side='all', range=selected_range) }}" class="btn btn-outline-primary {% if selected_side == 'all' %}active{% endif %}">All</a>
+                        <a href="{{ url_for('stock_detail', symbol=current_filter, side='buy', range=selected_range) }}" class="btn btn-outline-success {% if selected_side == 'buy' %}active{% endif %}">Buy</a>
+                        <a href="{{ url_for('stock_detail', symbol=current_filter, side='sell', range=selected_range) }}" class="btn btn-outline-danger {% if selected_side == 'sell' %}active{% endif %}">Sell</a>
+                    </div>
+                    <div class="btn-group mb-2" role="group" aria-label="Time Range Filter">
+                        <a href="{{ url_for('stock_detail', symbol=current_filter, side=selected_side, range='all') }}" class="btn btn-outline-secondary {% if selected_range == 'all' %}active{% endif %}">All</a>
+                        <a href="{{ url_for('stock_detail', symbol=current_filter, side=selected_side, range='ytd') }}" class="btn btn-outline-secondary {% if selected_range == 'ytd' %}active{% endif %}">YTD</a>
+                        <a href="{{ url_for('stock_detail', symbol=current_filter, side=selected_side, range='1y') }}" class="btn btn-outline-secondary {% if selected_range == '1y' %}active{% endif %}">1Y</a>
+                        <a href="{{ url_for('stock_detail', symbol=current_filter, side=selected_side, range='2y') }}" class="btn btn-outline-secondary {% if selected_range == '2y' %}active{% endif %}">2Y</a>
+                        <a href="{{ url_for('stock_detail', symbol=current_filter, side=selected_side, range='5y') }}" class="btn btn-outline-secondary {% if selected_range == '5y' %}active{% endif %}">5Y</a>
+                        <a href="{{ url_for('stock_detail', symbol=current_filter, side=selected_side, range='max') }}" class="btn btn-outline-secondary {% if selected_range == 'max' %}active{% endif %}">MAX</a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if current_filter and price_data %}
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <h3 class="mb-0">{{ current_filter }}</h3>
+                                    <p class="text-muted">{{ stock_name }}</p>
+                                    {% if price_data.error %}
+                                        <div class="alert alert-warning text-center" role="alert">
+                                            Price data unavailable.<br>
+                                            <small>{{ price_data.error }}</small>
+                                        </div>
+                                    {% else %}
+                                        <h2 class="mb-0">
+                                            {% if price_data.current_price is not none %}
+                                                ${{ "%.2f"|format(price_data.current_price) }}
+                                            {% else %}
+                                                N/A
+                                            {% endif %}
+                                        </h2>
+                                        <p class="{% if price_data.change is not none and price_data.change >= 0 %}text-success{% else %}text-danger{% endif %} mb-0">
+                                            {% if price_data.change is not none and price_data.change_percent is not none %}
+                                                {{ "%+.2f"|format(price_data.change) }} ({{ "%+.2f"|format(price_data.change_percent) }}%)
+                                            {% else %}
+                                                N/A
+                                            {% endif %}
+                                        </p>
+                                        <small class="text-muted">Previous Close:
+                                            {% if price_data.previous_close is not none %}
+                                                ${{ "%.2f"|format(price_data.previous_close) }}
+                                            {% else %}
+                                                N/A
+                                            {% endif %}
+                                        </small>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-8">
+                                    <div id="chart-container" style="height:400px; min-height:300px;">
+                                        <div id="stockChartApex"></div>
+                                        <div id="chart-loading" style="display:flex;align-items:center;justify-content:center;height:100%;">
+                                            <div class="spinner-border text-primary" role="status">
+                                                <span class="sr-only">Loading...</span>
+                                            </div>
+                                        </div>
+                                        <div id="chart-error" class="alert alert-warning text-center mt-2" style="display:none;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h2 id="transactions">
+                        {% if current_filter %}
+                            Transactions for {{ current_filter }} ({{ stock_name }})
+                        {% else %}
+                            All Transactions
+                        {% endif %}
+                    </h2>
+                    
+                    {% if current_filter and transaction_stats %}
+                    <div class="card mt-3 mb-4">
+                        <div class="card-body">
+                            <h5 class="card-title mb-3">Stats</h5>
+                            <div class="row">
+                                <div class="col-md-3 col-sm-6 mb-3">
+                                    <div class="stats-item">
+                                        <div class="stats-label text-muted">Total Stocks Bought</div>
+                                        <div class="stats-value text-success">{{ transaction_stats.total_stocks_bought }}</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 col-sm-6 mb-3">
+                                    <div class="stats-item">
+                                        <div class="stats-label text-muted">Total Stocks Sold</div>
+                                        <div class="stats-value text-danger">{{ transaction_stats.total_stocks_sold }}</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 col-sm-6 mb-3">
+                                    <div class="stats-item">
+                                        <div class="stats-label text-muted">Total Amount Bought</div>
+                                        <div class="stats-value text-success">${{ "{:,.2f}".format(transaction_stats.total_amount_bought) }}</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 col-sm-6 mb-3">
+                                    <div class="stats-item">
+                                        <div class="stats-label text-muted">Total Amount Sold</div>
+                                        <div class="stats-value text-danger">${{ "{:,.2f}".format(transaction_stats.total_amount_sold) }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Symbol</th>
+                            <th>Name</th>
+                            <th>Type</th>
+                            <th>Side</th>
+                            <th>Price</th>
+                            <th>Quantity</th>
+                            <th>State</th>
+                            <th>Fees</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for transaction in transactions %}
+                        <tr data-transaction-id="{{ transaction.Id }}" {% if transaction.HasSplitAdjustment %}class="split-adjusted"{% endif %}>
+                            <td>{{ transaction.Date.strftime('%m/%d/%Y') }}</td>
+                            <td>{{ transaction.Time }}</td>
+                            <td>
+                                <a href="{{ url_for('stock_detail', symbol=transaction.Symbol) }}#transactions">
+                                    {{ transaction.Symbol }}
+                                </a>
+                            </td>
+                            <td>{{ transaction.Name }}</td>
+                            <td>{{ transaction.Type }}</td>
+                            <td class="{% if transaction.Side == 'buy' %}text-success{% else %}text-danger{% endif %}">
+                                {{ transaction.Side|upper }}
+                            </td>
+                            <td>
+                                $ {{ "%.2f"|format(transaction.AveragePrice) if transaction.AveragePrice is not none else "N/A" }}
+                                {% if transaction.HasSplitAdjustment %}
+                                <div class="split-info">
+                                    <small class="text-muted">
+                                        Original: $ {{ "%.2f"|format(transaction.OriginalPrice) if transaction.OriginalPrice is not none else "N/A" }}
+                                    </small>
+                                    <span class="split-indicator" title="Split Adjusted">📊</span>
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {{ "%.2f"|format(transaction.Qty) if transaction.Qty is not none else "N/A" }}
+                                {% if transaction.HasSplitAdjustment %}
+                                <div class="split-info">
+                                    <small class="text-muted">
+                                        Original: {{ "%.2f"|format(transaction.OriginalQty) if transaction.OriginalQty is not none else "N/A" }}
+                                    </small>
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td>{{ transaction.State }}</td>
+                            <td>${{ transaction.Fees }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    {% if page > 1 %}
+                    <li class="page-item">
+                        {% if current_filter %}
+                        <a class="page-link" href="{{ url_for('stock_detail', symbol=current_filter, page=page-1, range=selected_range, side=selected_side) }}#transactions">Previous</a>
+                        {% else %}
+                        <a class="page-link" href="{{ url_for('index', page=page-1) }}#transactions">Previous</a>
+                        {% endif %}
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">Previous</span>
+                    </li>
+                    {% endif %}
+                    
+                    {% for i in range(1, total_pages + 1) %}
+                      {% if i == page %}
+                      <li class="page-item active">
+                        <span class="page-link">{{ i }}</span>
+                      </li>
+                      {% elif i <= 5 or i >= total_pages - 4 or (i >= page - 2 and i <= page + 2) %}
+                      <li class="page-item">
+                        {% if current_filter %}
+                        <a class="page-link" href="{{ url_for('stock_detail', symbol=current_filter, page=i, range=selected_range, side=selected_side) }}#transactions">{{ i }}</a>
+                        {% else %}
+                        <a class="page-link" href="{{ url_for('index', page=i) }}#transactions">{{ i }}</a>
+                        {% endif %}
+                      </li>
+                      {% elif i == 6 or i == total_pages - 5 %}
+                      <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                      </li>
+                      {% endif %}
+                    {% endfor %}
+                    
+                    {% if page < total_pages %}
+                    <li class="page-item">
+                        {% if current_filter %}
+                        <a class="page-link" href="{{ url_for('stock_detail', symbol=current_filter, page=page+1, range=selected_range, side=selected_side) }}#transactions">Next</a>
+                        {% else %}
+                        <a class="page-link" href="{{ url_for('index', page=page+1) }}#transactions">Next</a>
+                        {% endif %}
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">Next</span>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
         </div>
-        
-        <!-- Pagination -->
-        <nav aria-label="Page navigation">
-            <ul class="pagination justify-content-center">
-                {% if page > 1 %}
-                <li class="page-item">
-                    {% if current_filter %}
-                    <a class="page-link" href="{{ url_for('stock_detail', symbol=current_filter, page=page-1, range=selected_range, side=selected_side) }}#transactions">Previous</a>
-                    {% else %}
-                    <a class="page-link" href="{{ url_for('index', page=page-1) }}#transactions">Previous</a>
-                    {% endif %}
-                </li>
-                {% else %}
-                <li class="page-item disabled">
-                    <span class="page-link">Previous</span>
-                </li>
-                {% endif %}
-                
-                {% for i in range(1, total_pages + 1) %}
-                  {% if i == page %}
-                  <li class="page-item active">
-                    <span class="page-link">{{ i }}</span>
-                  </li>
-                  {% elif i <= 5 or i >= total_pages - 4 or (i >= page - 2 and i <= page + 2) %}
-                  <li class="page-item">
-                    {% if current_filter %}
-                    <a class="page-link" href="{{ url_for('stock_detail', symbol=current_filter, page=i, range=selected_range, side=selected_side) }}#transactions">{{ i }}</a>
-                    {% else %}
-                    <a class="page-link" href="{{ url_for('index', page=i) }}#transactions">{{ i }}</a>
-                    {% endif %}
-                  </li>
-                  {% elif i == 6 or i == total_pages - 5 %}
-                  <li class="page-item disabled">
-                    <span class="page-link">...</span>
-                  </li>
-                  {% endif %}
-                {% endfor %}
-                
-                {% if page < total_pages %}
-                <li class="page-item">
-                    {% if current_filter %}
-                    <a class="page-link" href="{{ url_for('stock_detail', symbol=current_filter, page=page+1, range=selected_range, side=selected_side) }}#transactions">Next</a>
-                    {% else %}
-                    <a class="page-link" href="{{ url_for('index', page=page+1) }}#transactions">Next</a>
-                    {% endif %}
-                </li>
-                {% else %}
-                <li class="page-item disabled">
-                    <span class="page-link">Next</span>
-                </li>
-                {% endif %}
-            </ul>
-        </nav>
     </div>
-    
+
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
@@ -1021,5 +1048,44 @@
             </div>
         </div>
     </div>
+
+    <script>
+        // Preload all company logos for stocks in the portfolio
+        function preloadCompanyLogos() {
+            // Get all unique stock symbols from the page
+            const symbols = [];
+            
+            // Collect from stock boxes
+            document.querySelectorAll('.stock-box').forEach(box => {
+                const symbol = box.dataset.symbol || box.querySelector('.stock-symbol').textContent.trim();
+                if (symbol && !symbols.includes(symbol)) {
+                    symbols.push(symbol);
+                }
+            });
+            
+            // Collect from transaction rows
+            document.querySelectorAll('tr[data-transaction-id]').forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length > 2) {
+                    const symbol = cells[2].textContent.trim();
+                    if (symbol && !symbols.includes(symbol)) {
+                        symbols.push(symbol);
+                    }
+                }
+            });
+            
+            // Preload each logo
+            symbols.forEach(symbol => {
+                fetch(`/company-logo/${symbol}`).then(response => {
+                    console.log(`Preloaded logo for ${symbol}`);
+                }).catch(error => {
+                    console.error(`Error preloading logo for ${symbol}:`, error);
+                });
+            });
+        }
+        
+        // Run the preload function when the page loads
+        window.addEventListener('DOMContentLoaded', preloadCompanyLogos);
+    </script>
 </body>
 </html> 

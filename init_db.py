@@ -4,10 +4,13 @@ from datetime import datetime
 import uuid
 
 def safe_float(value):
+    """Safely convert a value to float, handling null values and invalid formats"""
+    if not value or str(value).lower() == 'null':
+        return None
     try:
-        return float(value) if value and value.lower() != 'null' else 0.0
-    except ValueError:
-        return 0.0
+        return float(value)
+    except (ValueError, TypeError):
+        return None
 
 def init_db():
     # Connect to SQLite database (creates it if it doesn't exist)

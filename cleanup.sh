@@ -2,14 +2,19 @@
 
 # Script to clean up unwanted files across the repository
 
-echo "Cleaning up repository..."
+echo "Cleaning up database and cache files..."
 
-# Remove Python cache files
-echo "Removing Python cache files..."
-find . -name "__pycache__" -type d -exec rm -rf {} +
+# Remove the database
+rm -f stock_transactions.db
+
+# Clean up any temporary files
 find . -name "*.pyc" -delete
-find . -name "*.pyo" -delete
-find . -name "*.pyd" -delete
+find . -name "__pycache__" -exec rm -rf {} +
+find . -name ".DS_Store" -delete
+
+# Clean up the logo cache directory
+echo "Cleaning up logo cache..."
+rm -rf static/img/logos/*
 
 # Remove empty or temporary files
 echo "Removing temporary files..."

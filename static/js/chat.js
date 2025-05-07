@@ -31,64 +31,101 @@ document.addEventListener('DOMContentLoaded', function() {
         window.TradeLensChat.isAvailable();
     }
     
-    // Call the API to check availability and get current settings
-    fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            message: 'check_api',
-            stock: currentStock
-        }),
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.api_available) {
-            // Display model info banner
-            updateModelInfoBanner(data.current_settings);
-            
-            // Add chat suggestions if API is available and on stock page
-            if (currentStock) {
-                const suggestionMessage = document.createElement('div');
-                suggestionMessage.classList.add('chat-bot-message', 'bot');
-                
-                const suggestionContent = document.createElement('div');
-                suggestionContent.classList.add('chat-bot-message-content');
-                suggestionContent.innerHTML = `
-                    <div class="chat-suggestions">
-                        <button class="chat-suggestion" data-text="Is it a good time to buy ${currentStock} based on my transaction history?">
-                            Is it a good time to buy ${currentStock}?
-                        </button>
-                        <button class="chat-suggestion" data-text="Have I made impulse buys or panic sells with ${currentStock}?">
-                            Analyze my trading patterns with ${currentStock}
-                        </button>
-                    </div>
-                `;
-                
-                suggestionMessage.appendChild(suggestionContent);
-                chatBotMessages.appendChild(suggestionMessage);
-                
-                // Add click event to suggestions
-                document.querySelectorAll('.chat-suggestion').forEach(button => {
-                    button.addEventListener('click', () => {
-                        const text = button.dataset.text;
-                        chatBotInput.value = text;
-                        sendMessage();
-                    });
-                });
-                
-                // Scroll to bottom
-                chatBotMessages.scrollTop = chatBotMessages.scrollHeight;
+    // Function to check server availability
+    function checkServerAvailability() {
+        console.log('Checking server availability...');
+        fetch('/api/chat', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                message: 'check_api',
+                stock: currentStock
+            }),
+            // Short timeout for availability check
+            signal: AbortSignal.timeout(5000)
+        })
+        .then(response => {
+            if (!response.ok) {
+                console.warn('Server responded but status not OK:', response.status);
+                showServerOfflineMessage();
+                return;
             }
-        } else {
-            // Display message if no API is available
-            addMessage('bot', 'No AI provider is available. Please configure your API keys in the .env file.');
-        }
-    })
-    .catch(error => {
-        console.error('Error checking API availability:', error);
-    });
+            return response.json();
+        })
+        .then(data => {
+            if (data && data.api_available) {
+                console.log('Server is available, API status:', data);
+                
+                // Display model info banner
+                updateModelInfoBanner(data.current_settings);
+                
+                // Add chat suggestions if API is available and on stock page
+                if (currentStock) {
+                    addChatSuggestions();
+                }
+            } else {
+                console.warn('Server responded but API is not available');
+                showApiUnavailableMessage();
+            }
+        })
+        .catch(error => {
+            console.error('Error checking server availability:', error);
+            if (error.name === 'TimeoutError' || error.name === 'AbortError') {
+                showServerOfflineMessage();
+            } else {
+                showApiUnavailableMessage();
+            }
+        });
+    }
+    
+    // Function to show server offline message
+    function showServerOfflineMessage() {
+        addMessage('bot', 'The server appears to be offline or restarting. Please try again in a moment.');
+    }
+    
+    // Function to show API unavailable message
+    function showApiUnavailableMessage() {
+        addMessage('bot', 'No AI provider is available. Please configure your API keys in the .env file.');
+    }
+    
+    // Function to add chat suggestions
+    function addChatSuggestions() {
+        const suggestionMessage = document.createElement('div');
+        suggestionMessage.classList.add('chat-bot-message', 'bot');
+        
+        const suggestionContent = document.createElement('div');
+        suggestionContent.classList.add('chat-bot-message-content');
+        suggestionContent.innerHTML = `
+            <div class="chat-suggestions">
+                <button class="chat-suggestion" data-text="Is it a good time to buy ${currentStock} based on my transaction history?">
+                    Is it a good time to buy ${currentStock}?
+                </button>
+                <button class="chat-suggestion" data-text="Have I made impulse buys or panic sells with ${currentStock}?">
+                    Analyze my trading patterns with ${currentStock}
+                </button>
+            </div>
+        `;
+        
+        suggestionMessage.appendChild(suggestionContent);
+        chatBotMessages.appendChild(suggestionMessage);
+        
+        // Add click event to suggestions
+        document.querySelectorAll('.chat-suggestion').forEach(button => {
+            button.addEventListener('click', () => {
+                const text = button.dataset.text;
+                chatBotInput.value = text;
+                sendMessage();
+            });
+        });
+        
+        // Scroll to bottom
+        chatBotMessages.scrollTop = chatBotMessages.scrollHeight;
+    }
+    
+    // Call the API to check availability and get current settings
+    checkServerAvailability();
     
     // Function to update model info banner
     function updateModelInfoBanner(settings) {
@@ -261,7 +298,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Set a timeout for the API call
         const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('Request timeout')), 30000); // 30 seconds timeout
+            setTimeout(() => reject(new Error('Request timeout')), 60000); // 60 seconds timeout
         });
         
         // Create the fetch promise
@@ -276,104 +313,170 @@ document.addEventListener('DOMContentLoaded', function() {
             }),
         });
         
-        // Race between fetch and timeout
-        Promise.race([fetchPromise, timeoutPromise])
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json();
-            })
-            .then(data => {
-                // Remove typing indicator
-                chatBotMessages.removeChild(typingIndicator);
-                
-                // Add response to chat
-                if (data.response) {
-                    // Check if marked library is available
-                    let formattedResponse;
-                    if (typeof marked !== 'undefined') {
-                        // Parse markdown using marked library
-                        formattedResponse = marked.parse(data.response);
-                    } else {
-                        // Fallback to basic formatting if marked isn't available
-                        formattedResponse = data.response
-                            .replace(/\n\n/g, '<br><br>')
-                            .replace(/\n/g, '<br>')
-                            .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank">$1</a>');
+        // Race between fetch and timeout with retry functionality
+        let retryCount = 0;
+        const maxRetries = 2;
+        
+        function attemptFetch() {
+            // Race between fetch and timeout
+            Promise.race([fetchPromise, timeoutPromise])
+                .then(response => {
+                    if (!response.ok) {
+                        // Handle HTTP error responses (400-599)
+                        let errorMessage = `Server error: ${response.status}`;
+                        console.error(errorMessage);
+                        throw new Error(errorMessage);
                     }
-                    
-                    // Create formatted response element
-                    const messageElement = document.createElement('div');
-                    messageElement.classList.add('chat-bot-message', 'bot');
-                    
-                    const messageContent = document.createElement('div');
-                    messageContent.classList.add('chat-bot-message-content');
-                    messageContent.innerHTML = formattedResponse;
-                    
-                    // Add model info if available
-                    if (data.model || data.provider) {
-                        const modelInfoElement = document.createElement('div');
-                        modelInfoElement.classList.add('model-info');
-                        
-                        let modelText = '';
-                        if (data.provider) {
-                            modelText += data.provider;
-                        }
-                        if (data.model) {
-                            if (modelText) modelText += ' - ';
-                            modelText += data.model;
-                        }
-                        
-                        modelInfoElement.textContent = modelText;
-                        messageContent.appendChild(modelInfoElement);
-                    }
-                    
-                    messageElement.appendChild(messageContent);
-                    chatBotMessages.appendChild(messageElement);
-                } else {
-                    addMessage('bot', 'Sorry, I couldn\'t process your request.');
-                }
-                
-                // Scroll to bottom
-                chatBotMessages.scrollTop = chatBotMessages.scrollHeight;
-                
-                // Re-enable input
-                chatBotInput.disabled = false;
-                if (chatBotSend) chatBotSend.disabled = false;
-                chatBotInput.focus();
-            })
-            .catch(error => {
-                console.error('Error sending message to API:', error);
-                
-                // Remove typing indicator
-                if (typingIndicator.parentNode) {
+                    return response.json();
+                })
+                .then(data => {
+                    // Remove typing indicator
                     chatBotMessages.removeChild(typingIndicator);
-                }
-                
-                // Show error message
-                const errorMessage = document.createElement('div');
-                errorMessage.classList.add('chat-bot-message', 'bot', 'error');
-                
-                // Provide a more helpful error message
-                let errorText = 'Sorry, there was an error processing your request. ';
-                if (error.message === 'Request timeout') {
-                    errorText += 'The request timed out. The server might be busy, please try again later.';
-                } else {
-                    errorText += 'Please try again later.';
-                }
-                
-                errorMessage.innerHTML = `
-                    <div class="chat-bot-message-content">
-                        ${errorText}
-                    </div>
-                `;
-                chatBotMessages.appendChild(errorMessage);
-                
-                // Re-enable input
-                chatBotInput.disabled = false;
-                if (chatBotSend) chatBotSend.disabled = false;
-            });
+                    
+                    // Check if error was returned from server
+                    if (data.error) {
+                        throw new Error(`Server error: ${data.error}`);
+                    }
+                    
+                    // Add response to chat
+                    if (data.response) {
+                        // Check if marked library is available
+                        let formattedResponse;
+                        if (typeof marked !== 'undefined') {
+                            // Parse markdown using marked library
+                            formattedResponse = marked.parse(data.response);
+                        } else {
+                            // Fallback to basic formatting if marked isn't available
+                            formattedResponse = data.response
+                                .replace(/\n\n/g, '<br><br>')
+                                .replace(/\n/g, '<br>')
+                                .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank">$1</a>');
+                        }
+                        
+                        // Create formatted response element
+                        const messageElement = document.createElement('div');
+                        messageElement.classList.add('chat-bot-message', 'bot');
+                        
+                        const messageContent = document.createElement('div');
+                        messageContent.classList.add('chat-bot-message-content');
+                        messageContent.innerHTML = formattedResponse;
+                        
+                        // Add model info if available
+                        if (data.model || data.provider) {
+                            const modelInfoElement = document.createElement('div');
+                            modelInfoElement.classList.add('model-info');
+                            
+                            let modelText = '';
+                            if (data.provider) {
+                                modelText += data.provider;
+                            }
+                            if (data.model) {
+                                if (modelText) modelText += ' - ';
+                                modelText += data.model;
+                            }
+                            
+                            modelInfoElement.textContent = modelText;
+                            messageContent.appendChild(modelInfoElement);
+                        }
+                        
+                        messageElement.appendChild(messageContent);
+                        chatBotMessages.appendChild(messageElement);
+                    } else {
+                        addMessage('bot', 'Sorry, I couldn\'t process your request.');
+                    }
+                    
+                    // Scroll to bottom
+                    chatBotMessages.scrollTop = chatBotMessages.scrollHeight;
+                    
+                    // Re-enable input
+                    chatBotInput.disabled = false;
+                    if (chatBotSend) chatBotSend.disabled = false;
+                    chatBotInput.focus();
+                })
+                .catch(error => {
+                    console.error('Error sending message to API:', error);
+                    
+                    // Check if we should retry
+                    if (retryCount < maxRetries && 
+                        (error.message.includes('Failed to fetch') || 
+                         error.message.includes('NetworkError') || 
+                         error.message.includes('ERR_EMPTY_RESPONSE'))) {
+                        
+                        retryCount++;
+                        console.log(`Retrying fetch (${retryCount}/${maxRetries})...`);
+                        
+                        // Let user know we're retrying
+                        if (typingIndicator.parentNode) {
+                            const retryText = document.createElement('span');
+                            retryText.classList.add('retry-text');
+                            retryText.textContent = ` Retrying (${retryCount}/${maxRetries})...`;
+                            typingIndicator.querySelector('.chat-bot-message-content').appendChild(retryText);
+                        }
+                        
+                        // Wait before retrying
+                        setTimeout(() => {
+                            attemptFetch();
+                        }, 2000); // 2 second delay before retry
+                        return;
+                    }
+                    
+                    // No more retries or different error
+                    // Remove typing indicator
+                    if (typingIndicator.parentNode) {
+                        chatBotMessages.removeChild(typingIndicator);
+                    }
+                    
+                    // Show error message
+                    const errorMessage = document.createElement('div');
+                    errorMessage.classList.add('chat-bot-message', 'bot', 'error');
+                    
+                    // Provide a more helpful error message
+                    let errorText = 'Sorry, there was an error processing your request. ';
+                    if (error.message === 'Request timeout') {
+                        errorText += 'The AI service is taking too long to respond. This could be due to high server load or a complex query. Please try a shorter or simpler question, or try again later.';
+                        
+                        // Add retry button for timeout errors
+                        errorText += '<div class="retry-container"><button class="retry-button">Retry</button></div>';
+                    } else if (error.message.includes('NetworkError') || error.message.includes('Failed to fetch') || error.message.includes('ERR_EMPTY_RESPONSE')) {
+                        errorText += 'There appears to be a network connectivity issue or the server is restarting. Please wait a moment and try again.';
+                        
+                        // Add retry button for network errors
+                        errorText += '<div class="retry-container"><button class="retry-button">Retry</button></div>';
+                    } else if (error.message.includes('Server error')) {
+                        errorText += 'The server encountered an issue processing your request. Please try a different question or try again later.';
+                        
+                        // Add retry button for server errors too
+                        errorText += '<div class="retry-container"><button class="retry-button">Retry</button></div>';
+                    } else {
+                        errorText += 'Please try again later.';
+                    }
+                    
+                    errorMessage.innerHTML = `
+                        <div class="chat-bot-message-content">
+                            ${errorText}
+                        </div>
+                    `;
+                    chatBotMessages.appendChild(errorMessage);
+                    
+                    // Add event listener to retry button if present
+                    const retryButton = errorMessage.querySelector('.retry-button');
+                    if (retryButton) {
+                        retryButton.addEventListener('click', () => {
+                            // Remove error message
+                            chatBotMessages.removeChild(errorMessage);
+                            // Retry sending the message
+                            sendToAPI(message);
+                        });
+                    }
+                    
+                    // Re-enable input
+                    chatBotInput.disabled = false;
+                    if (chatBotSend) chatBotSend.disabled = false;
+                });
+        }
+        
+        // Start the fetch process
+        attemptFetch();
     }
     
     // Remove error message when user starts typing

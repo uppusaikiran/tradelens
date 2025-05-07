@@ -6,8 +6,10 @@
     <title>TradeLens - Earnings Research</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/navbar.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/sidebar.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown-light.min.css">
+    <!-- Chart.js for graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Showdown.js for Markdown conversion -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/1.9.1/showdown.min.js"></script>
     <style>
@@ -173,133 +175,209 @@
                 margin-bottom: 4px;
             }
         }
+
+        /* Additional styles for charts */
+        .chart-container {
+            position: relative;
+            margin: 20px 0;
+            height: 400px;
+            width: 100%;
+        }
+
+        /* Improved table styles */
+        .markdown-body table {
+            width: 100%;
+            margin: 20px 0;
+            border-collapse: collapse;
+        }
+
+        .markdown-body table th,
+        .markdown-body table td {
+            padding: 12px;
+            border: 1px solid #e9ecef;
+        }
+
+        .markdown-body table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+
+        .markdown-body table tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        /* Code block improvements */
+        .markdown-body pre {
+            background-color: #f6f8fa;
+            border-radius: 6px;
+            padding: 16px;
+            overflow: auto;
+        }
+
+        .markdown-body code {
+            font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+            font-size: 85%;
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+        }
     </style>
 </head>
 <body>
-    <!-- Modern Navbar with Title -->
-    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top" style="padding: 0.7rem 2vw; z-index: 100;">
-        <div class="container-fluid">
-            <a class="navbar-brand d-flex align-items-center" href="/">
-                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="App Logo" class="title-icon mr-2" style="width:1.8rem;height:1.8rem;">
-                TradeLens
-            </a>
-            <div class="d-flex align-items-center ml-auto">
-                <a href="{{ url_for('index') }}" class="nav-link mr-3">Dashboard</a>
-                <a href="{{ url_for('risk_review') }}" class="nav-link mr-3">Risk Review</a>
-                <a href="{{ url_for('strategy_backtesting') }}" class="nav-link mr-3">Strategy Backtesting</a>
-                <a href="{{ url_for('thesis_validation') }}" class="nav-link mr-3">Thesis Validation</a>
-                <a href="{{ url_for('earnings_companion') }}" class="nav-link mr-3 active">Earnings Companion</a>
-                <a href="{{ url_for('settings') }}" class="nav-settings" title="AI Settings">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-gear" viewBox="0 0 16 16">
-                        <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
-                        <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319z"/>
+    <div class="orglens-layout">
+        {% include 'sidebar.html' %}
+        
+        <div class="main-content">
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <!-- Top Navigation -->
+            <div class="mb-4">
+                <a href="{{ url_for('earnings_companion') }}" class="btn btn-sm btn-outline-secondary">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-left" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
                     </svg>
+                    Back to Earnings Calendar
                 </a>
             </div>
-        </div>
-    </nav>
-    
-    <div class="container mt-5 mb-5">
-        <!-- Flash Messages -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-        
-        <!-- Top Navigation -->
-        <div class="mb-4">
-            <a href="{{ url_for('earnings_companion') }}" class="text-decoration-none">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-left" viewBox="0 0 16 16">
-                    <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
-                </svg>
-                Back to Earnings Calendar
-            </a>
-        </div>
-        
-        <div class="earnings-card">
-            <div class="earnings-card-header">
-                <h4 class="mb-0">Earnings Research: {{ job.symbol }}</h4>
-                <span class="status-badge status-{{ job.status }}">{{ job.status|title }}</span>
-            </div>
-            <div class="earnings-card-body">
-                <div class="job-meta">
-                    <div class="job-meta-item">
-                        <div class="job-meta-label">Stock Symbol:</div>
-                        <div class="job-meta-value">{{ job.symbol }}</div>
-                    </div>
-                    <div class="job-meta-item">
-                        <div class="job-meta-label">Earnings Date:</div>
-                        <div class="job-meta-value">{{ job.earnings_date }}</div>
-                    </div>
-                    <div class="job-meta-item">
-                        <div class="job-meta-label">Request Created:</div>
-                        <div class="job-meta-value">{{ job.created_at }}</div>
-                    </div>
-                    {% if job.completed_at %}
-                    <div class="job-meta-item">
-                        <div class="job-meta-label">Completed:</div>
-                        <div class="job-meta-value">{{ job.completed_at }}</div>
-                    </div>
-                    {% endif %}
-                    <div class="job-meta-item">
-                        <div class="job-meta-label">AI Provider:</div>
-                        <div class="job-meta-value">
-                            {% if settings.ai_provider == 'perplexity' %}
-                                Perplexity AI ({{ settings.perplexity_model }})
-                            {% else %}
-                                OpenAI
-                            {% endif %}
-                        </div>
-                    </div>
+            
+            <div class="earnings-card">
+                <div class="earnings-card-header">
+                    <h4 class="mb-0">Earnings Preview: {{ job.symbol }} - {{ job.earnings_date }}</h4>
+                    <span class="status-badge status-{{ job.status }}">{{ job.status|title }}</span>
                 </div>
-                
-                {% if job.status == 'completed' %}
-                    <div class="job-content">
-                        <div class="markdown-body">
-                            {{ job.result|markdown }}
+                <div class="earnings-card-body">
+                    <div class="job-meta">
+                        <div class="job-meta-item">
+                            <div class="job-meta-label">Stock Symbol:</div>
+                            <div class="job-meta-value">{{ job.symbol }}</div>
+                        </div>
+                        <div class="job-meta-item">
+                            <div class="job-meta-label">Earnings Date:</div>
+                            <div class="job-meta-value">{{ job.earnings_date }}</div>
+                        </div>
+                        <div class="job-meta-item">
+                            <div class="job-meta-label">Request Created:</div>
+                            <div class="job-meta-value">{{ job.created_at }}</div>
+                        </div>
+                        {% if job.completed_at %}
+                        <div class="job-meta-item">
+                            <div class="job-meta-label">Completed:</div>
+                            <div class="job-meta-value">{{ job.completed_at }}</div>
+                        </div>
+                        {% endif %}
+                        <div class="job-meta-item">
+                            <div class="job-meta-label">AI Provider:</div>
+                            <div class="job-meta-value">
+                                {% if settings.ai_provider == 'perplexity' %}
+                                    Perplexity AI ({{ settings.perplexity_model }})
+                                {% else %}
+                                    OpenAI
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
-                {% elif job.status == 'processing' %}
-                    <div class="d-flex justify-content-center align-items-center p-5">
-                        <div class="text-center">
-                            <div class="spinner-border text-primary mb-3" role="status">
-                                <span class="sr-only">Loading...</span>
+                    
+                    {% if job.status == 'completed' %}
+                        <div class="job-content">
+                            <div class="markdown-body" id="markdownContent">
+                                {{ job.result|safe }}
                             </div>
-                            <h5>Processing Research Request</h5>
-                            <p class="text-muted">This may take a minute or two. Please wait or check back later.</p>
+                        </div>
+                    {% elif job.status == 'processing' %}
+                        <div class="d-flex justify-content-center align-items-center p-5">
+                            <div class="text-center">
+                                <div class="spinner-border text-primary mb-3" role="status">
+                                    <span class="sr-only">Loading...</span>
+                                </div>
+                                <h5>Processing Research Request</h5>
+                                <p class="text-muted">This may take a minute or two. Please wait or check back later.</p>
+                                <button class="btn btn-outline-primary mt-2" onclick="location.reload()">Refresh Status</button>
+                            </div>
+                        </div>
+                    {% elif job.status == 'pending' %}
+                        <div class="alert alert-info text-center p-4">
+                            <h5>Research Request Pending</h5>
+                            <p>Your research request is in the queue and will be processed shortly.</p>
                             <button class="btn btn-outline-primary mt-2" onclick="location.reload()">Refresh Status</button>
                         </div>
-                    </div>
-                {% elif job.status == 'pending' %}
-                    <div class="alert alert-info text-center p-4">
-                        <h5>Research Request Pending</h5>
-                        <p>Your research request is in the queue and will be processed shortly.</p>
-                        <button class="btn btn-outline-primary mt-2" onclick="location.reload()">Refresh Status</button>
-                    </div>
-                {% elif job.status == 'failed' %}
-                    <div class="alert alert-danger text-center p-4">
-                        <h5>Research Request Failed</h5>
-                        <p>There was an error processing your research request. Please try again.</p>
-                        <p class="text-muted"><small>Error: {{ job.result }}</small></p>
-                        <a href="{{ url_for('earnings_companion') }}" class="btn btn-primary mt-2">Back to Earnings Calendar</a>
-                    </div>
-                {% endif %}
+                    {% elif job.status == 'failed' %}
+                        <div class="alert alert-danger text-center p-4">
+                            <h5>Research Request Failed</h5>
+                            <p>There was an error processing your research request. Please try again.</p>
+                            <p class="text-muted"><small>Error: {{ job.result }}</small></p>
+                            <a href="{{ url_for('earnings_companion') }}" class="btn btn-primary mt-2">Back to Earnings Calendar</a>
+                        </div>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>
-    
+
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-    
+
+    {% if job.status == 'completed' %}
+    <script>
+        $(document).ready(function() {
+            // Find and render all chart elements
+            $('canvas[data-chart]').each(function() {
+                try {
+                    const chartData = JSON.parse($(this).attr('data-chart'));
+                    const ctx = this.getContext('2d');
+                    new Chart(ctx, {
+                        type: chartData.type || 'line',
+                        data: chartData.data || {},
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'top'
+                                }
+                            }
+                        }
+                    });
+                } catch (e) {
+                    console.error('Error creating chart:', e);
+                }
+            });
+
+            // Add copy button to code blocks
+            $('pre code').each(function() {
+                const $this = $(this);
+                const $button = $('<button class="btn btn-sm btn-outline-secondary copy-btn" style="position: absolute; top: 8px; right: 8px;">Copy</button>');
+                $this.parent().css('position', 'relative').append($button);
+                
+                $button.click(function() {
+                    const code = $this.text();
+                    navigator.clipboard.writeText(code).then(function() {
+                        $button.text('Copied!');
+                        setTimeout(function() {
+                            $button.text('Copy');
+                        }, 2000);
+                    });
+                });
+            });
+
+            // Enhance tables
+            $('.markdown-body table').addClass('table table-bordered table-hover');
+            $('.markdown-body thead').addClass('thead-light');
+        });
+    </script>
+    {% endif %}
+
     {% if job.status == 'processing' or job.status == 'pending' %}
     <script>
         // Auto-refresh the page every 10 seconds if the job is still processing

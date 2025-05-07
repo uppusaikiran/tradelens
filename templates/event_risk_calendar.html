@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Event Risk Calendar - TradeLens</title>
+    <title>TradeLens - Event Risk Calendar</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/navbar.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/sidebar.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         /* Calendar specific styles */
@@ -145,183 +145,159 @@
     </style>
 </head>
 <body>
-    <!-- Modern Navbar with Title -->
-    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top" style="padding: 0.7rem 2vw; z-index: 100;">
-        <div class="container-fluid">
-            <a class="navbar-brand d-flex align-items-center" href="/">
-                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="App Logo" class="title-icon mr-2" style="width:1.8rem;height:1.8rem;">
-                TradeLens
-            </a>
-            <div class="d-flex align-items-center">
-                <a href="{{ url_for('index') }}" class="nav-link mr-3">📊 Dashboard</a>
-                <a href="{{ url_for('risk_review') }}" class="nav-link mr-3">⚠️ Risk Review</a>
-                <a href="{{ url_for('strategy_backtesting') }}" class="nav-link mr-3">📈 Strategy Backtesting</a>
-                <a href="{{ url_for('thesis_validation') }}" class="nav-link mr-3">🔍 Thesis Validation</a>
-                <a href="{{ url_for('earnings_companion') }}" class="nav-link mr-3">💰 Earnings Companion</a>
-                <a href="{{ url_for('event_risk_calendar') }}" class="nav-link mr-3 active">📅 Event Risk Calendar</a>
-                <a href="{{ url_for('settings') }}" class="nav-settings" title="AI Settings">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-gear" viewBox="0 0 16 16">
-                        <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
-                        <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115l.094-.319z"/>
-                    </svg>
-                </a>
-            </div>
-        </div>
-    </nav>
-    
-    <div class="container my-5">
-        <!-- Flash Messages -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
+    <div class="orglens-layout">
+        {% include 'sidebar.html' %}
+        
+        <div class="main-content">
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <h1 class="mb-4">Event Risk Calendar</h1>
+            <p class="text-muted">Track important market events that may impact your portfolio</p>
+
+            <!-- Filter Section -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="filter-section">
+                        <form id="eventFilterForm" method="GET" action="{{ url_for('event_risk_calendar') }}" class="row">
+                            <div class="col-md-3 mb-3">
+                                <label for="startDate">Start Date</label>
+                                <input type="date" class="form-control" id="startDate" name="start_date" value="{{ start_date }}">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label for="endDate">End Date</label>
+                                <input type="date" class="form-control" id="endDate" name="end_date" value="{{ end_date }}">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label for="eventTypes">Event Types</label>
+                                <select class="form-control" id="eventTypes" name="event_types" multiple>
+                                    <option value="earnings" {% if 'earnings' in selected_event_types %}selected{% endif %}>Earnings</option>
+                                    <option value="fomc" {% if 'fomc' in selected_event_types %}selected{% endif %}>FOMC Meetings</option>
+                                    <option value="cpi" {% if 'cpi' in selected_event_types %}selected{% endif %}>CPI Reports</option>
+                                    <option value="split" {% if 'split' in selected_event_types %}selected{% endif %}>Stock Splits</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label for="symbol">Symbol</label>
+                                <input type="text" class="form-control" id="symbol" name="symbol" placeholder="E.g. AAPL" value="{{ symbol }}">
+                            </div>
+                            <div class="col-12 d-flex justify-content-end">
+                                <button type="submit" class="btn btn-primary">Apply Filters</button>
+                            </div>
+                        </form>
                     </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-
-        <div class="row">
-            <div class="col-12">
-                <h1 class="mb-4">Event Risk Calendar</h1>
-                <p class="text-muted">Track important market events that may impact your portfolio</p>
-            </div>
-        </div>
-
-        <!-- Filter Section -->
-        <div class="row">
-            <div class="col-12">
-                <div class="filter-section">
-                    <form id="eventFilterForm" method="GET" action="{{ url_for('event_risk_calendar') }}" class="row">
-                        <div class="col-md-3 mb-3">
-                            <label for="startDate">Start Date</label>
-                            <input type="date" class="form-control" id="startDate" name="start_date" value="{{ start_date }}">
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <label for="endDate">End Date</label>
-                            <input type="date" class="form-control" id="endDate" name="end_date" value="{{ end_date }}">
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <label for="eventTypes">Event Types</label>
-                            <select class="form-control" id="eventTypes" name="event_types" multiple>
-                                <option value="earnings" {% if 'earnings' in selected_event_types %}selected{% endif %}>Earnings</option>
-                                <option value="fomc" {% if 'fomc' in selected_event_types %}selected{% endif %}>FOMC Meetings</option>
-                                <option value="cpi" {% if 'cpi' in selected_event_types %}selected{% endif %}>CPI Reports</option>
-                                <option value="split" {% if 'split' in selected_event_types %}selected{% endif %}>Stock Splits</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <label for="symbol">Symbol</label>
-                            <input type="text" class="form-control" id="symbol" name="symbol" placeholder="E.g. AAPL" value="{{ symbol }}">
-                        </div>
-                        <div class="col-12 d-flex justify-content-end">
-                            <button type="submit" class="btn btn-primary">Apply Filters</button>
-                        </div>
-                    </form>
                 </div>
             </div>
-        </div>
 
-        <!-- Calendar Navigation -->
-        <div class="row">
-            <div class="col-12">
-                <div class="calendar-nav">
-                    <a href="{{ url_for('event_risk_calendar', start_date=prev_period_start, end_date=prev_period_end, event_types=selected_event_types, symbol=symbol) }}" class="btn btn-outline-secondary">
-                        <i class="fas fa-chevron-left"></i> Previous Period
-                    </a>
-                    <div class="date-range-display">{{ start_date_formatted }} - {{ end_date_formatted }}</div>
-                    <a href="{{ url_for('event_risk_calendar', start_date=next_period_start, end_date=next_period_end, event_types=selected_event_types, symbol=symbol) }}" class="btn btn-outline-secondary">
-                        Next Period <i class="fas fa-chevron-right"></i>
-                    </a>
+            <!-- Calendar Navigation -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="calendar-nav">
+                        <a href="{{ url_for('event_risk_calendar', start_date=prev_period_start, end_date=prev_period_end, event_types=selected_event_types, symbol=symbol) }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-chevron-left"></i> Previous Period
+                        </a>
+                        <div class="date-range-display">{{ start_date_formatted }} - {{ end_date_formatted }}</div>
+                        <a href="{{ url_for('event_risk_calendar', start_date=next_period_start, end_date=next_period_end, event_types=selected_event_types, symbol=symbol) }}" class="btn btn-outline-secondary">
+                            Next Period <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Events Display -->
-        <div class="row">
-            <div class="col-12">
-                {% if events %}
-                    {% for date, date_events in events|groupby('date') %}
-                        <div class="date-header">{{ date|strptime('%Y-%m-%d')|strftime('%A, %B %d, %Y') }}</div>
-                        <div class="row">
-                            {% for event in date_events %}
-                                <div class="col-md-6 col-lg-4">
-                                    <div class="card event-card {{ event.type }}">
-                                        <div class="card-body">
-                                            <span class="event-tag {{ event.type }}">{{ event.type|title }}</span>
-                                            <h5 class="card-title">{{ event.title }}</h5>
-                                            <h6 class="card-subtitle">{{ event.subtitle }}</h6>
-                                            <p class="card-text">{{ event.description }}</p>
-                                            <div class="event-meta">
-                                                <div class="impact-indicator impact-{{ event.impact }}">
-                                                    <span class="impact-dot"></span>
-                                                    <span>{{ event.impact|title }} Impact</span>
+            <!-- Events Display -->
+            <div class="row">
+                <div class="col-12">
+                    {% if events %}
+                        {% for date, date_events in events|groupby('date') %}
+                            <div class="date-header">{{ date|strptime('%Y-%m-%d')|strftime('%A, %B %d, %Y') }}</div>
+                            <div class="row">
+                                {% for event in date_events %}
+                                    <div class="col-md-6 col-lg-4">
+                                        <div class="card event-card {{ event.type }}">
+                                            <div class="card-body">
+                                                <span class="event-tag {{ event.type }}">{{ event.type|title }}</span>
+                                                <h5 class="card-title">{{ event.title }}</h5>
+                                                <h6 class="card-subtitle">{{ event.subtitle }}</h6>
+                                                <p class="card-text">{{ event.description }}</p>
+                                                <div class="event-meta">
+                                                    <div class="impact-indicator impact-{{ event.impact }}">
+                                                        <span class="impact-dot"></span>
+                                                        <span>{{ event.impact|title }} Impact</span>
+                                                    </div>
+                                                    {% if event.time %}
+                                                        <div class="event-time">{{ event.time }}</div>
+                                                    {% endif %}
                                                 </div>
-                                                {% if event.time %}
-                                                    <div class="event-time">{{ event.time }}</div>
-                                                {% endif %}
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            {% endfor %}
+                                {% endfor %}
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="alert alert-info text-center my-5">
+                            <h4>No events found</h4>
+                            <p>Try adjusting your filters or date range to see more events.</p>
                         </div>
-                    {% endfor %}
-                {% else %}
-                    <div class="alert alert-info text-center my-5">
-                        <h4>No events found</h4>
-                        <p>Try adjusting your filters or date range to see more events.</p>
-                    </div>
-                {% endif %}
+                    {% endif %}
+                </div>
             </div>
-        </div>
 
-        <!-- Calendar Legend -->
-        <div class="row mt-4">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0">Event Legend</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-3 mb-2">
-                                <span class="event-tag earnings">Earnings</span>
-                                <span>Company earnings reports</span>
-                            </div>
-                            <div class="col-md-3 mb-2">
-                                <span class="event-tag fomc">FOMC</span>
-                                <span>Federal Reserve meetings</span>
-                            </div>
-                            <div class="col-md-3 mb-2">
-                                <span class="event-tag cpi">CPI</span>
-                                <span>Consumer Price Index reports</span>
-                            </div>
-                            <div class="col-md-3 mb-2">
-                                <span class="event-tag split">Split</span>
-                                <span>Stock splits</span>
-                            </div>
+            <!-- Calendar Legend -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Event Legend</h5>
                         </div>
-                        <div class="row mt-3">
-                            <div class="col-md-4 mb-2">
-                                <div class="impact-indicator impact-high">
-                                    <span class="impact-dot"></span>
-                                    <span>High Impact: Significant market or price movement expected</span>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-3 mb-2">
+                                    <span class="event-tag earnings">Earnings</span>
+                                    <span>Company earnings reports</span>
+                                </div>
+                                <div class="col-md-3 mb-2">
+                                    <span class="event-tag fomc">FOMC</span>
+                                    <span>Federal Reserve meetings</span>
+                                </div>
+                                <div class="col-md-3 mb-2">
+                                    <span class="event-tag cpi">CPI</span>
+                                    <span>Consumer Price Index reports</span>
+                                </div>
+                                <div class="col-md-3 mb-2">
+                                    <span class="event-tag split">Split</span>
+                                    <span>Stock splits</span>
                                 </div>
                             </div>
-                            <div class="col-md-4 mb-2">
-                                <div class="impact-indicator impact-medium">
-                                    <span class="impact-dot"></span>
-                                    <span>Medium Impact: Moderate market or price movement possible</span>
+                            <div class="row mt-3">
+                                <div class="col-md-4 mb-2">
+                                    <div class="impact-indicator impact-high">
+                                        <span class="impact-dot"></span>
+                                        <span>High Impact: Significant market or price movement expected</span>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="col-md-4 mb-2">
-                                <div class="impact-indicator impact-low">
-                                    <span class="impact-dot"></span>
-                                    <span>Low Impact: Minor market or price movement expected</span>
+                                <div class="col-md-4 mb-2">
+                                    <div class="impact-indicator impact-medium">
+                                        <span class="impact-dot"></span>
+                                        <span>Medium Impact: Moderate market or price movement possible</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <div class="impact-indicator impact-low">
+                                        <span class="impact-dot"></span>
+                                        <span>Low Impact: Minor market or price movement expected</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -331,23 +307,8 @@
         </div>
     </div>
 
-    <!-- Footer Scripts -->
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-    <script src="https://kit.fontawesome.com/a076d05399.js"></script>
-    <script>
-        $(document).ready(function() {
-            // Initialize multiple select with better UX
-            $('#eventTypes').on('click', function(e) {
-                e.stopPropagation();
-            });
-            
-            // Auto-submit form when filters change (except for text inputs)
-            $('#startDate, #endDate, #eventTypes').on('change', function() {
-                $('#eventFilterForm').submit();
-            });
-        });
-    </script>
 </body>
 </html> 

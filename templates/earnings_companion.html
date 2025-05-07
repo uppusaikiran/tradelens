@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TradeLens - Earnings Season Companion</title>
+    <title>TradeLens - Earnings Companion</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/navbar.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/sidebar.css') }}">
     <!-- Showdown.js for Markdown conversion -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/1.9.1/showdown.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         .earnings-card {
             border-radius: 12px;
@@ -489,1050 +490,1060 @@
     </style>
 </head>
 <body>
-    <!-- Modern Navbar with Title -->
-    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top" style="padding: 0.7rem 2vw; z-index: 100;">
-        <div class="container-fluid">
-            <a class="navbar-brand d-flex align-items-center" href="/">
-                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="App Logo" class="title-icon mr-2" style="width:1.8rem;height:1.8rem;">
-                TradeLens
-            </a>
-            <div class="d-flex align-items-center ml-auto">
-                <a href="{{ url_for('index') }}" class="nav-link mr-3">📊 Dashboard</a>
-                <a href="{{ url_for('risk_review') }}" class="nav-link mr-3">⚠️ Risk Review</a>
-                <a href="{{ url_for('strategy_backtesting') }}" class="nav-link mr-3">📈 Strategy Backtesting</a>
-                <a href="{{ url_for('thesis_validation') }}" class="nav-link mr-3">🔍 Thesis Validation</a>
-                <a href="{{ url_for('earnings_companion') }}" class="nav-link mr-3 active">💰 Earnings Companion</a>
-                <a href="{{ url_for('event_risk_calendar') }}" class="nav-link mr-3">📅 Event Risk Calendar</a>
-                <a href="{{ url_for('settings') }}" class="nav-settings" title="AI Settings">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-gear" viewBox="0 0 16 16">
-                        <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
-                        <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115l.094-.319z"/>
-                    </svg>
-                </a>
-            </div>
-        </div>
-    </nav>
-    
-    <div class="container mt-5 mb-5">
-        <!-- Flash Messages -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
+    <div class="orglens-layout">
+        {% include 'sidebar.html' %}
         
-        <h1 class="mb-4">Earnings Season Companion</h1>
-        
-        <div class="row">
-            <!-- Left Column - Calendar -->
-            <div class="col-lg-8">
-                <div class="earnings-card">
-                    <div class="earnings-card-header">
-                        <h5 class="mb-0">Upcoming Earnings Calendar</h5>
-                        <span class="badge badge-light">Next 90 Days</span>
-                    </div>
-                    <div class="earnings-card-body">
-                        <div class="calendar-header">
-                            <div class="calendar-filter">
-                                <div class="filter-item all-filter active" data-filter="all">All</div>
-                                <div class="filter-item portfolio-filter" data-filter="portfolio">Portfolio Only</div>
-                            </div>
-                            <div class="calendar-refresh" id="refreshCalendar" title="Refresh Calendar">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-clockwise" viewBox="0 0 16 16">
-                                    <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
-                                    <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
-                                </svg>
-                                <div class="loading-spinner" id="refreshSpinner"></div>
-                            </div>
+        <div class="main-content">
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
                         </div>
-                        
-                        <!-- AI Attribution Banner -->
-                        <div class="ai-attribution">
-                            <div class="d-flex justify-content-center align-items-center">
-                                <img src="{{ url_for('static', filename='img/icons/perplexity_icon.png') }}" alt="Perplexity AI" style="width: 24px; height: 24px; margin-right: 10px;" onerror="this.src='https://www.perplexity.ai/favicon.ico';">
-                                <span style="font-size: 16px; font-weight: 600; color: #4a6cfd;">Powered by Perplexity DeepResearch — Model: sonar-deep-research</span>
-                            </div>
-                            <div class="text-center mt-2">
-                                <small class="text-muted">Reports include comprehensive sources and interactive visualizations to help you make informed decisions</small>
-                            </div>
-                        </div>
-                        
-                        <div class="calendar-grid">
-                            {% if earnings_by_week %}
-                                {% for week_id, earnings in earnings_by_week.items() %}
-                                    <div class="calendar-week">
-                                        <div class="calendar-week-header">
-                                            {{ week_id }}
-                                            <div class="week-dates">
-                                                {% set first_date = earnings[0].earnings_date %}
-                                                {% set last_date = earnings[-1].earnings_date %}
-                                                {% set first_parts = first_date.split('-') %}
-                                                {% set last_parts = last_date.split('-') %}
-                                                {% set month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] %}
-                                                
-                                                {{ month_names[first_parts[1]|int - 1] }} {{ first_parts[2]|int }} - {{ month_names[last_parts[1]|int - 1] }} {{ last_parts[2]|int }}, {{ first_parts[0] }}
-                                            </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            <!-- Container for existing content -->
+            <div class="container-fluid mb-5">
+                <h1 class="mb-4">Earnings Companion</h1>
+                
+                <div class="container mt-5 mb-5">
+                    <div class="row">
+                        <!-- Left Column - Calendar -->
+                        <div class="col-lg-8">
+                            <div class="earnings-card">
+                                <div class="earnings-card-header">
+                                    <h5 class="mb-0">Upcoming Earnings Calendar</h5>
+                                    <span class="badge badge-light">Next 90 Days</span>
+                                </div>
+                                <div class="earnings-card-body">
+                                    <div class="calendar-header">
+                                        <div class="calendar-filter">
+                                            <div class="filter-item all-filter active" data-filter="all">All</div>
+                                            <div class="filter-item portfolio-filter" data-filter="portfolio">Portfolio Only</div>
                                         </div>
-                                        <div class="calendar-week-body">
-                                            <!-- Group earnings by date -->
-                                            {% set dates_in_week = {} %}
-                                            {% for earning in earnings %}
-                                                {% if earning.earnings_date not in dates_in_week %}
-                                                    {% set dates_in_week = dates_in_week.update({earning.earnings_date: []}) or dates_in_week %}
-                                                {% endif %}
-                                                {% set _ = dates_in_week[earning.earnings_date].append(earning) %}
+                                        <div class="calendar-refresh" id="refreshCalendar" title="Refresh Calendar">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-clockwise" viewBox="0 0 16 16">
+                                                <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+                                                <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+                                            </svg>
+                                            <div class="loading-spinner" id="refreshSpinner"></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- AI Attribution Banner -->
+                                    <div class="ai-attribution">
+                                        <div class="d-flex justify-content-center align-items-center">
+                                            <img src="{{ url_for('static', filename='img/icons/perplexity_icon.png') }}" alt="Perplexity AI" style="width: 24px; height: 24px; margin-right: 10px;" onerror="this.src='https://www.perplexity.ai/favicon.ico';">
+                                            <span style="font-size: 16px; font-weight: 600; color: #4a6cfd;">Powered by Perplexity DeepResearch — Model: sonar-deep-research</span>
+                                        </div>
+                                        <div class="text-center mt-2">
+                                            <small class="text-muted">Reports include comprehensive sources and interactive visualizations to help you make informed decisions</small>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="calendar-grid">
+                                        {% if earnings_by_week %}
+                                            {% for week_id, earnings in earnings_by_week.items() %}
+                                                <div class="calendar-week">
+                                                    <div class="calendar-week-header">
+                                                        {{ week_id }}
+                                                        <div class="week-dates">
+                                                            {% set first_date = earnings[0].earnings_date %}
+                                                            {% set last_date = earnings[-1].earnings_date %}
+                                                            {% set first_parts = first_date.split('-') %}
+                                                            {% set last_parts = last_date.split('-') %}
+                                                            {% set month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] %}
+                                                            
+                                                            {{ month_names[first_parts[1]|int - 1] }} {{ first_parts[2]|int }} - {{ month_names[last_parts[1]|int - 1] }} {{ last_parts[2]|int }}, {{ first_parts[0] }}
+                                                        </div>
+                                                    </div>
+                                                    <div class="calendar-week-body">
+                                                        <!-- Group earnings by date -->
+                                                        {% set dates_in_week = {} %}
+                                                        {% for earning in earnings %}
+                                                            {% if earning.earnings_date not in dates_in_week %}
+                                                                {% set dates_in_week = dates_in_week.update({earning.earnings_date: []}) or dates_in_week %}
+                                                            {% endif %}
+                                                            {% set _ = dates_in_week[earning.earnings_date].append(earning) %}
+                                                        {% endfor %}
+                                                        
+                                                        <!-- Render weekdays (Mon-Fri) -->
+                                                        <div class="calendar-days">
+                                                            {% set weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'] %}
+                                                            {% for weekday in weekdays %}
+                                                                {% set found = False %}
+                                                                {% for date, day_earnings in dates_in_week.items() %}
+                                                                    {% set date_parts = date.split('-') %}
+                                                                    {% set year = date_parts[0]|int %}
+                                                                    {% set month = date_parts[1]|int %}
+                                                                    {% set day = date_parts[2]|int %}
+                                                                    {% set date_obj = date|strptime('%Y-%m-%d') %}
+                                                                    {% set weekday_idx = date_obj.weekday() %}
+                                                                    {% set weekday_name = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][weekday_idx] %}
+                                                                    
+                                                                    {% if weekday_name == weekday and weekday_idx < 5 %}
+                                                                        {% set found = True %}
+                                                                        {% set is_today = date == today %}
+                                                                        <div class="calendar-day">
+                                                                            <div class="day-header {% if is_today %}today{% endif %}">
+                                                                                <div>{{ weekday }}</div>
+                                                                                <div>{{ month_names[month-1] }} {{ day }}</div>
+                                                                            </div>
+                                                                            <div class="day-content">
+                                                                                {% for earning in day_earnings %}
+                                                                                    {% set in_portfolio = earning.symbol in portfolio_symbols %}
+                                                                                    <div class="earnings-item {% if in_portfolio %}earnings-item-portfolio{% endif %}" data-symbol="{{ earning.symbol }}" data-in-portfolio="{{ in_portfolio|lower }}">
+                                                                                        <div class="stock-info">
+                                                                                            <img src="{{ url_for('company_logo', symbol=earning.symbol) }}" 
+                                                                                                 alt="{{ earning.symbol }} logo" 
+                                                                                                 class="stock-logo">
+                                                                                            <div class="stock-details">
+                                                                                                <div class="stock-symbol">
+                                                                                                    {{ earning.symbol }}
+                                                                                                    {% if in_portfolio %}
+                                                                                                        <span class="portfolio-indicator">Portfolio</span>
+                                                                                                    {% endif %}
+                                                                                                    {% if earning.time_of_day %}
+                                                                                                        <span class="earnings-time {% if earning.time_of_day == 'BMO' %}bmo{% elif earning.time_of_day == 'AMC' %}amc{% endif %}">
+                                                                                                            {{ earning.time_of_day }}
+                                                                                                        </span>
+                                                                                                    {% endif %}
+                                                                                                </div>
+                                                                                                <div class="stock-name">{{ earning.company_name }}</div>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                        {% if earning.eps_estimate %}
+                                                                                            <div class="earnings-metrics">
+                                                                                                EPS Est: ${% if earning.eps_estimate is string %}{{ earning.eps_estimate }}{% else %}{{ "%.2f"|format(earning.eps_estimate) }}{% endif %}
+                                                                                                {% if in_portfolio %}
+                                                                                                    {% for stock in portfolio %}
+                                                                                                        {% if stock.Symbol == earning.symbol %}
+                                                                                                            <div class="position-info mt-1">
+                                                                                                                <small class="text-muted">Your position: {{ stock.CurrentShares|round|int }} shares
+                                                                                                                {% if current_prices.get(stock.Symbol) %}
+                                                                                                                    (~${{ (stock.CurrentShares * current_prices.get(stock.Symbol))|round|int }})
+                                                                                                                {% endif %}
+                                                                                                                </small>
+                                                                                                            </div>
+                                                                                                        {% endif %}
+                                                                                                    {% endfor %}
+                                                                                                {% endif %}
+                                                                                            </div>
+                                                                                        {% endif %}
+                                                                                        <div class="earnings-actions">
+                                                                                            <button class="btn btn-sm btn-primary research-btn" 
+                                                                                                    data-symbol="{{ earning.symbol }}" 
+                                                                                                    data-date="{{ earning.earnings_date }}"
+                                                                                                    data-toggle="modal" 
+                                                                                                    data-target="#researchModal">
+                                                                                                Research
+                                                                                            </button>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                {% endfor %}
+                                                                            </div>
+                                                                        </div>
+                                                                    {% endif %}
+                                                                {% endfor %}
+                                                                
+                                                                {% if not found %}
+                                                                    <div class="calendar-day">
+                                                                        <div class="day-header">
+                                                                            <div>{{ weekday }}</div>
+                                                                            <div>-</div>
+                                                                        </div>
+                                                                        <div class="day-content">
+                                                                            <div class="no-earnings">No earnings</div>
+                                                                        </div>
+                                                                    </div>
+                                                                {% endif %}
+                                                            {% endfor %}
+                                                        </div>
+                                                        
+                                                        <!-- Render weekend (Sat-Sun) -->
+                                                        <div class="calendar-weekend">
+                                                            {% set weekend_days = ['Saturday', 'Sunday'] %}
+                                                            {% for weekday in weekend_days %}
+                                                                {% set found = False %}
+                                                                {% for date, day_earnings in dates_in_week.items() %}
+                                                                    {% set date_parts = date.split('-') %}
+                                                                    {% set year = date_parts[0]|int %}
+                                                                    {% set month = date_parts[1]|int %}
+                                                                    {% set day = date_parts[2]|int %}
+                                                                    {% set date_obj = date|strptime('%Y-%m-%d') %}
+                                                                    {% set weekday_idx = date_obj.weekday() %}
+                                                                    {% set weekday_name = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][weekday_idx] %}
+                                                                    
+                                                                    {% if weekday_name == weekday and weekday_idx >= 5 %}
+                                                                        {% set found = True %}
+                                                                        {% set is_today = date == today %}
+                                                                        <div class="calendar-day">
+                                                                            <div class="day-header weekend {% if is_today %}today{% endif %}">
+                                                                                <div>{{ weekday }}</div>
+                                                                                <div>{{ month_names[month-1] }} {{ day }}</div>
+                                                                            </div>
+                                                                            <div class="day-content">
+                                                                                {% for earning in day_earnings %}
+                                                                                    {% set in_portfolio = earning.symbol in portfolio_symbols %}
+                                                                                    <div class="earnings-item {% if in_portfolio %}earnings-item-portfolio{% endif %}" data-symbol="{{ earning.symbol }}" data-in-portfolio="{{ in_portfolio|lower }}">
+                                                                                        <div class="stock-info">
+                                                                                            <img src="{{ url_for('company_logo', symbol=earning.symbol) }}" 
+                                                                                                 alt="{{ earning.symbol }} logo" 
+                                                                                                 class="stock-logo">
+                                                                                            <div class="stock-details">
+                                                                                                <div class="stock-symbol">
+                                                                                                    {{ earning.symbol }}
+                                                                                                    {% if in_portfolio %}
+                                                                                                        <span class="portfolio-indicator">Portfolio</span>
+                                                                                                    {% endif %}
+                                                                                                    {% if earning.time_of_day %}
+                                                                                                        <span class="earnings-time {% if earning.time_of_day == 'BMO' %}bmo{% elif earning.time_of_day == 'AMC' %}amc{% endif %}">
+                                                                                                            {{ earning.time_of_day }}
+                                                                                                        </span>
+                                                                                                    {% endif %}
+                                                                                                </div>
+                                                                                                <div class="stock-name">{{ earning.company_name }}</div>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                        {% if earning.eps_estimate %}
+                                                                                            <div class="earnings-metrics">
+                                                                                                EPS Est: ${% if earning.eps_estimate is string %}{{ earning.eps_estimate }}{% else %}{{ "%.2f"|format(earning.eps_estimate) }}{% endif %}
+                                                                                                {% if in_portfolio %}
+                                                                                                    {% for stock in portfolio %}
+                                                                                                        {% if stock.Symbol == earning.symbol %}
+                                                                                                            <div class="position-info mt-1">
+                                                                                                                <small class="text-muted">Your position: {{ stock.CurrentShares|round|int }} shares
+                                                                                                                {% if current_prices.get(stock.Symbol) %}
+                                                                                                                    (~${{ (stock.CurrentShares * current_prices.get(stock.Symbol))|round|int }})
+                                                                                                                {% endif %}
+                                                                                                                </small>
+                                                                                                            </div>
+                                                                                                        {% endif %}
+                                                                                                    {% endfor %}
+                                                                                                {% endif %}
+                                                                                            </div>
+                                                                                        {% endif %}
+                                                                                        <div class="earnings-actions">
+                                                                                            <button class="btn btn-sm btn-primary research-btn" 
+                                                                                                    data-symbol="{{ earning.symbol }}" 
+                                                                                                    data-date="{{ earning.earnings_date }}"
+                                                                                                    data-toggle="modal" 
+                                                                                                    data-target="#researchModal">
+                                                                                                Research
+                                                                                            </button>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                {% endfor %}
+                                                                            </div>
+                                                                        </div>
+                                                                    {% endif %}
+                                                                {% endfor %}
+                                                                
+                                                                {% if not found %}
+                                                                    <div class="calendar-day">
+                                                                        <div class="day-header weekend">
+                                                                            <div>{{ weekday }}</div>
+                                                                            <div>-</div>
+                                                                        </div>
+                                                                        <div class="day-content">
+                                                                            <div class="no-earnings">No earnings</div>
+                                                                        </div>
+                                                                    </div>
+                                                                {% endif %}
+                                                            {% endfor %}
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             {% endfor %}
-                                            
-                                            <!-- Render weekdays (Mon-Fri) -->
-                                            <div class="calendar-days">
-                                                {% set weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'] %}
-                                                {% for weekday in weekdays %}
-                                                    {% set found = False %}
-                                                    {% for date, day_earnings in dates_in_week.items() %}
-                                                        {% set date_parts = date.split('-') %}
-                                                        {% set year = date_parts[0]|int %}
-                                                        {% set month = date_parts[1]|int %}
-                                                        {% set day = date_parts[2]|int %}
-                                                        {% set date_obj = date|strptime('%Y-%m-%d') %}
-                                                        {% set weekday_idx = date_obj.weekday() %}
-                                                        {% set weekday_name = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][weekday_idx] %}
-                                                        
-                                                        {% if weekday_name == weekday and weekday_idx < 5 %}
-                                                            {% set found = True %}
-                                                            {% set is_today = date == today %}
-                                                            <div class="calendar-day">
-                                                                <div class="day-header {% if is_today %}today{% endif %}">
-                                                                    <div>{{ weekday }}</div>
-                                                                    <div>{{ month_names[month-1] }} {{ day }}</div>
-                                                                </div>
-                                                                <div class="day-content">
-                                                                    {% for earning in day_earnings %}
-                                                                        {% set in_portfolio = earning.symbol in portfolio_symbols %}
-                                                                        <div class="earnings-item {% if in_portfolio %}earnings-item-portfolio{% endif %}" data-symbol="{{ earning.symbol }}" data-in-portfolio="{{ in_portfolio|lower }}">
-                                                                            <div class="stock-info">
-                                                                                <img src="https://storage.googleapis.com/iex/api/logos/{{ earning.symbol }}.png" 
-                                                                                     alt="{{ earning.symbol }} logo" 
-                                                                                     class="stock-logo"
-                                                                                     onerror="this.onerror=null;this.src='https://g.foolcdn.com/art/companylogos/mark/{{ earning.symbol|lower }}.png';">
-                                                                                <div class="stock-details">
-                                                                                    <div class="stock-symbol">
-                                                                                        {{ earning.symbol }}
-                                                                                        {% if in_portfolio %}
-                                                                                            <span class="portfolio-indicator">Portfolio</span>
-                                                                                        {% endif %}
-                                                                                        {% if earning.time_of_day %}
-                                                                                            <span class="earnings-time {% if earning.time_of_day == 'BMO' %}bmo{% elif earning.time_of_day == 'AMC' %}amc{% endif %}">
-                                                                                                {{ earning.time_of_day }}
-                                                                                            </span>
-                                                                                        {% endif %}
-                                                                                    </div>
-                                                                                    <div class="stock-name">{{ earning.company_name }}</div>
-                                                                                </div>
-                                                                            </div>
-                                                                            {% if earning.eps_estimate %}
-                                                                                <div class="earnings-metrics">
-                                                                                    EPS Est: ${% if earning.eps_estimate is string %}{{ earning.eps_estimate }}{% else %}{{ "%.2f"|format(earning.eps_estimate) }}{% endif %}
-                                                                                    {% if in_portfolio %}
-                                                                                        {% for stock in portfolio %}
-                                                                                            {% if stock.Symbol == earning.symbol %}
-                                                                                                <div class="position-info mt-1">
-                                                                                                    <small class="text-muted">Your position: {{ stock.CurrentShares|round|int }} shares
-                                                                                                    {% if current_prices.get(stock.Symbol) %}
-                                                                                                        (~${{ (stock.CurrentShares * current_prices.get(stock.Symbol))|round|int }})
-                                                                                                    {% endif %}
-                                                                                                    </small>
-                                                                                                </div>
-                                                                                            {% endif %}
-                                                                                        {% endfor %}
-                                                                                    {% endif %}
-                                                                                </div>
-                                                                            {% endif %}
-                                                                            <div class="earnings-actions">
-                                                                                <button class="btn btn-sm btn-primary research-btn" 
-                                                                                        data-symbol="{{ earning.symbol }}" 
-                                                                                        data-date="{{ earning.earnings_date }}"
-                                                                                        data-toggle="modal" 
-                                                                                        data-target="#researchModal">
-                                                                                    Research
-                                                                                </button>
-                                                                            </div>
-                                                                        </div>
-                                                                    {% endfor %}
-                                                                </div>
-                                                            </div>
-                                                        {% endif %}
-                                                    {% endfor %}
-                                                    
-                                                    {% if not found %}
-                                                        <div class="calendar-day">
-                                                            <div class="day-header">
-                                                                <div>{{ weekday }}</div>
-                                                                <div>-</div>
-                                                            </div>
-                                                            <div class="day-content">
-                                                                <div class="no-earnings">No earnings</div>
-                                                            </div>
-                                                        </div>
-                                                    {% endif %}
-                                                {% endfor %}
+                                        {% else %}
+                                            <div class="alert alert-info">
+                                                No upcoming earnings found. Try refreshing the calendar.
                                             </div>
-                                            
-                                            <!-- Render weekend (Sat-Sun) -->
-                                            <div class="calendar-weekend">
-                                                {% set weekend_days = ['Saturday', 'Sunday'] %}
-                                                {% for weekday in weekend_days %}
-                                                    {% set found = False %}
-                                                    {% for date, day_earnings in dates_in_week.items() %}
-                                                        {% set date_parts = date.split('-') %}
-                                                        {% set year = date_parts[0]|int %}
-                                                        {% set month = date_parts[1]|int %}
-                                                        {% set day = date_parts[2]|int %}
-                                                        {% set date_obj = date|strptime('%Y-%m-%d') %}
-                                                        {% set weekday_idx = date_obj.weekday() %}
-                                                        {% set weekday_name = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][weekday_idx] %}
-                                                        
-                                                        {% if weekday_name == weekday and weekday_idx >= 5 %}
-                                                            {% set found = True %}
-                                                            {% set is_today = date == today %}
-                                                            <div class="calendar-day">
-                                                                <div class="day-header weekend {% if is_today %}today{% endif %}">
-                                                                    <div>{{ weekday }}</div>
-                                                                    <div>{{ month_names[month-1] }} {{ day }}</div>
-                                                                </div>
-                                                                <div class="day-content">
-                                                                    {% for earning in day_earnings %}
-                                                                        {% set in_portfolio = earning.symbol in portfolio_symbols %}
-                                                                        <div class="earnings-item {% if in_portfolio %}earnings-item-portfolio{% endif %}" data-symbol="{{ earning.symbol }}" data-in-portfolio="{{ in_portfolio|lower }}">
-                                                                            <div class="stock-info">
-                                                                                <img src="https://storage.googleapis.com/iex/api/logos/{{ earning.symbol }}.png" 
-                                                                                     alt="{{ earning.symbol }} logo" 
-                                                                                     class="stock-logo"
-                                                                                     onerror="this.onerror=null;this.src='https://g.foolcdn.com/art/companylogos/mark/{{ earning.symbol|lower }}.png';">
-                                                                                <div class="stock-details">
-                                                                                    <div class="stock-symbol">
-                                                                                        {{ earning.symbol }}
-                                                                                        {% if in_portfolio %}
-                                                                                            <span class="portfolio-indicator">Portfolio</span>
-                                                                                        {% endif %}
-                                                                                        {% if earning.time_of_day %}
-                                                                                            <span class="earnings-time {% if earning.time_of_day == 'BMO' %}bmo{% elif earning.time_of_day == 'AMC' %}amc{% endif %}">
-                                                                                                {{ earning.time_of_day }}
-                                                                                            </span>
-                                                                                        {% endif %}
-                                                                                    </div>
-                                                                                    <div class="stock-name">{{ earning.company_name }}</div>
-                                                                                </div>
-                                                                            </div>
-                                                                            {% if earning.eps_estimate %}
-                                                                                <div class="earnings-metrics">
-                                                                                    EPS Est: ${% if earning.eps_estimate is string %}{{ earning.eps_estimate }}{% else %}{{ "%.2f"|format(earning.eps_estimate) }}{% endif %}
-                                                                                    {% if in_portfolio %}
-                                                                                        {% for stock in portfolio %}
-                                                                                            {% if stock.Symbol == earning.symbol %}
-                                                                                                <div class="position-info mt-1">
-                                                                                                    <small class="text-muted">Your position: {{ stock.CurrentShares|round|int }} shares
-                                                                                                    {% if current_prices.get(stock.Symbol) %}
-                                                                                                        (~${{ (stock.CurrentShares * current_prices.get(stock.Symbol))|round|int }})
-                                                                                                    {% endif %}
-                                                                                                    </small>
-                                                                                                </div>
-                                                                                            {% endif %}
-                                                                                        {% endfor %}
-                                                                                    {% endif %}
-                                                                                </div>
-                                                                            {% endif %}
-                                                                            <div class="earnings-actions">
-                                                                                <button class="btn btn-sm btn-primary research-btn" 
-                                                                                        data-symbol="{{ earning.symbol }}" 
-                                                                                        data-date="{{ earning.earnings_date }}"
-                                                                                        data-toggle="modal" 
-                                                                                        data-target="#researchModal">
-                                                                                    Research
-                                                                                </button>
-                                                                            </div>
-                                                                        </div>
-                                                                    {% endfor %}
-                                                                </div>
-                                                            </div>
-                                                        {% endif %}
-                                                    {% endfor %}
-                                                    
-                                                    {% if not found %}
-                                                        <div class="calendar-day">
-                                                            <div class="day-header weekend">
-                                                                <div>{{ weekday }}</div>
-                                                                <div>-</div>
-                                                            </div>
-                                                            <div class="day-content">
-                                                                <div class="no-earnings">No earnings</div>
-                                                            </div>
-                                                        </div>
-                                                    {% endif %}
-                                                {% endfor %}
-                                            </div>
-                                        </div>
+                                        {% endif %}
                                     </div>
-                                {% endfor %}
-                            {% else %}
-                                <div class="alert alert-info">
-                                    No upcoming earnings found. Try refreshing the calendar.
                                 </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Right Column - AI Research Jobs -->
-            <div class="col-lg-4">
-                <div class="research-card">
-                    <div class="research-card-header">
-                        <h5 class="mb-0">Earnings Research</h5>
-                    </div>
-                    <div class="earnings-card-body">
-                        <p>Request detailed AI research on a company's upcoming earnings report to get insights on:</p>
-                        
-                        <ul class="mb-4">
-                            <li>Recent company performance and key metrics</li>
-                            <li>Analyst expectations for the upcoming report</li>
-                            <li>Market sentiment and trading patterns</li>
-                            <li>Potential impact on stock price post-earnings</li>
-                        </ul>
-                        
-                        <div class="research-jobs">
-                            <h6 class="mb-3">Recent Research</h6>
-                            {% if earnings_jobs %}
-                                {% for job in earnings_jobs %}
-                                    <div class="job-item">
-                                        <div class="job-details">
-                                            <div class="job-symbol">{{ job.symbol }}</div>
-                                            <div class="job-date">Earnings: {{ job.earnings_date }}</div>
-                                        </div>
-                                        <div class="job-status">
-                                            <span class="status-badge status-{{ job.status }}">{{ job.status|title }}</span>
-                                            {% if job.status == 'completed' %}
-                                                <button class="btn btn-sm btn-outline-primary ml-2 view-research-btn" 
-                                                       data-job-id="{{ job.job_id }}" 
-                                                       data-symbol="{{ job.symbol }}" 
-                                                       data-date="{{ job.earnings_date }}"
-                                                       data-toggle="modal" 
-                                                       data-target="#researchResultModal">View</button>
-                                            {% elif job.status == 'failed' %}
-                                                <button class="btn btn-sm btn-outline-danger ml-2" data-toggle="tooltip" title="Research failed, try again">!</button>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                {% endfor %}
-                            {% else %}
-                                <div class="alert alert-light text-center">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-search mb-3" viewBox="0 0 16 16">
-                                        <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
-                                    </svg>
-                                    <p>No research jobs yet. Start by clicking "Research" on any upcoming earnings.</p>
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Research Modal -->
-    <div class="modal fade" id="researchModal" tabindex="-1" role="dialog" aria-labelledby="researchModalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="researchModalLabel">Request Earnings Research</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <form action="{{ url_for('earnings_companion') }}" method="post">
-                    <div class="modal-body">
-                        <div id="stockInfo" class="mb-3 p-3 bg-light rounded">
-                            <div class="d-flex align-items-center mb-2">
-                                <img id="stockLogo" src="" alt="Stock Logo" class="mr-2" style="width: 30px; height: 30px;">
-                                <h5 id="stockTitle" class="mb-0"></h5>
                             </div>
-                            <div id="earningsDate" class="text-muted"></div>
-                            <div id="portfolioStatus" class="mt-2"></div>
                         </div>
                         
-                        <p>Request detailed AI analysis on the upcoming earnings report. The analysis will include:</p>
-                        
-                        <ul class="mb-3">
-                            <li>Recent company performance metrics</li>
-                            <li>Analyst expectations and whisper numbers</li>
-                            <li>Key focus areas for this report</li>
-                            <li>Recent news that might impact results</li>
-                            <li>Potential price movement scenarios</li>
-                        </ul>
-                        
-                        <div class="form-group">
-                            <input type="hidden" class="form-control" id="symbol" name="symbol">
-                            <input type="hidden" class="form-control" id="earnings_date" name="earnings_date">
-                        </div>
-                        
-                        <p class="text-muted">
-                            <small>
-                                Analysis is generated using Perplexity's {{ settings.perplexity_model }} model. 
-                                Research will be available within 1-2 minutes after submission.
-                            </small>
-                        </p>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Request Research</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Research Result Modal -->
-    <div class="modal fade" id="researchResultModal" tabindex="-1" role="dialog" aria-labelledby="researchResultModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document" style="max-width: 90vw;">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="researchResultModalLabel">Earnings Research Report</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div id="researchContent" class="p-3">
-                        <div class="d-flex justify-content-center">
-                            <div class="spinner-border text-primary" role="status">
-                                <span class="sr-only">Loading...</span>
+                        <!-- Right Column - AI Research Jobs -->
+                        <div class="col-lg-4">
+                            <div class="research-card">
+                                <div class="research-card-header">
+                                    <h5 class="mb-0">Earnings Research</h5>
+                                </div>
+                                <div class="earnings-card-body">
+                                    <p>Request detailed AI research on a company's upcoming earnings report to get insights on:</p>
+                                    
+                                    <ul class="mb-4">
+                                        <li>Recent company performance and key metrics</li>
+                                        <li>Analyst expectations for the upcoming report</li>
+                                        <li>Market sentiment and trading patterns</li>
+                                        <li>Potential impact on stock price post-earnings</li>
+                                    </ul>
+                                    
+                                    <div class="research-jobs">
+                                        <h6 class="mb-3">Recent Research</h6>
+                                        {% if earnings_jobs %}
+                                            {% for job in earnings_jobs %}
+                                                <div class="job-item">
+                                                    <div class="job-details">
+                                                        <div class="job-symbol">{{ job.symbol }}</div>
+                                                        <div class="job-date">Earnings: {{ job.earnings_date }}</div>
+                                                    </div>
+                                                    <div class="job-status">
+                                                        <span class="status-badge status-{{ job.status }}">{{ job.status|title }}</span>
+                                                        {% if job.status == 'completed' %}
+                                                            <button class="btn btn-sm btn-outline-primary ml-2 view-research-btn" 
+                                                                   data-job-id="{{ job.job_id }}" 
+                                                                   data-symbol="{{ job.symbol }}" 
+                                                                   data-date="{{ job.earnings_date }}"
+                                                                   data-toggle="modal" 
+                                                                   data-target="#researchResultModal">View</button>
+                                                        {% elif job.status == 'failed' %}
+                                                            <button class="btn btn-sm btn-outline-danger ml-2" data-toggle="tooltip" title="Research failed, try again">!</button>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            {% endfor %}
+                                        {% else %}
+                                            <div class="alert alert-light text-center">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-search mb-3" viewBox="0 0 16 16">
+                                                    <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+                                                </svg>
+                                                <p>No research jobs yet. Start by clicking "Research" on any upcoming earnings.</p>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <div class="text-center w-100">
-                        <small class="text-muted">Powered by Perplexity DeepResearch — Sources fully cited and verified</small>
+            </div>
+            
+            <!-- Research Modal -->
+            <div class="modal fade" id="researchModal" tabindex="-1" role="dialog" aria-labelledby="researchModalLabel" aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="researchModalLabel">Request Earnings Research</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <form action="{{ url_for('earnings_companion') }}" method="post">
+                            <div class="modal-body">
+                                <div id="stockInfo" class="mb-3 p-3 bg-light rounded">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <img id="stockLogo" src="" alt="Stock Logo" class="mr-2" style="width: 30px; height: 30px;">
+                                        <h5 id="stockTitle" class="mb-0"></h5>
+                                    </div>
+                                    <div id="earningsDate" class="text-muted"></div>
+                                    <div id="portfolioStatus" class="mt-2"></div>
+                                </div>
+                                
+                                <p>Request detailed AI analysis on the upcoming earnings report. The analysis will include:</p>
+                                
+                                <ul class="mb-3">
+                                    <li>Recent company performance metrics</li>
+                                    <li>Analyst expectations and whisper numbers</li>
+                                    <li>Key focus areas for this report</li>
+                                    <li>Recent news that might impact results</li>
+                                    <li>Potential price movement scenarios</li>
+                                </ul>
+                                
+                                <div class="form-group">
+                                    <input type="hidden" class="form-control" id="symbol" name="symbol">
+                                    <input type="hidden" class="form-control" id="earnings_date" name="earnings_date">
+                                </div>
+                                
+                                <p class="text-muted">
+                                    <small>
+                                        Analysis is generated using Perplexity's {{ settings.perplexity_model }} model. 
+                                        Research will be available within 1-2 minutes after submission.
+                                    </small>
+                                </p>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-primary">Request Research</button>
+                            </div>
+                        </form>
                     </div>
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
                 </div>
             </div>
-        </div>
-    </div>
-    
-    <!-- Chart.js for interactive charts -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
-    
-    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-    <script>
-        $(document).ready(function() {
-            // Handle filter clicks
-            $('.filter-item').click(function() {
-                $('.filter-item').removeClass('active');
-                $(this).addClass('active');
-                
-                const filter = $(this).data('filter');
-                
-                if (filter === 'all') {
-                    $('.earnings-item').show();
-                } else if (filter === 'portfolio') {
-                    $('.earnings-item').hide();
-                    $('.earnings-item[data-in-portfolio="true"]').show();
-                }
-            });
             
-            // Handle research button clicks with enhanced info
-            $('.research-btn').click(function() {
-                const symbol = $(this).data('symbol');
-                const date = $(this).data('date');
-                const inPortfolio = $(this).closest('.earnings-item').data('in-portfolio');
-                const companyName = $(this).closest('.earnings-item').find('.stock-name').text();
-                const logoUrl = $(this).closest('.earnings-item').find('.stock-logo').attr('src');
-                
-                // Format date for display
-                const dateObj = new Date(date);
-                const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-                const formattedDate = dateObj.toLocaleDateString('en-US', options);
-                
-                // Update the modal with enhanced information
-                $('#symbol').val(symbol);
-                $('#earnings_date').val(date);
-                $('#stockLogo').attr('src', logoUrl);
-                $('#stockTitle').text(`${symbol} - ${companyName}`);
-                $('#earningsDate').text(`Earnings Date: ${formattedDate}`);
-                $('#researchModalLabel').text(`Earnings Research: ${symbol}`);
-                
-                // Add portfolio status if applicable
-                if (inPortfolio) {
-                    let portfolioHtml = '<span class="badge badge-success">In Your Portfolio</span>';
-                    
-                    // Try to find position info
-                    const positionInfo = $(this).closest('.earnings-item').find('.position-info').text();
-                    if (positionInfo) {
-                        portfolioHtml += `<div class="mt-1"><small>${positionInfo}</small></div>`;
-                    }
-                    
-                    $('#portfolioStatus').html(portfolioHtml);
-                } else {
-                    $('#portfolioStatus').html('<span class="badge badge-secondary">Not In Portfolio</span>');
-                }
-            });
-            
-            // Handle view research button clicks
-            $('.view-research-btn').click(function() {
-                const jobId = $(this).data('job-id');
-                const symbol = $(this).data('symbol');
-                const date = $(this).data('date');
-                
-                // Update modal title
-                $('#researchResultModalLabel').text(`Earnings Research: ${symbol} (${date})`);
-                
-                // Show loading spinner
-                $('#researchContent').html(`
-                    <div class="d-flex justify-content-center">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="sr-only">Loading...</span>
+            <!-- Research Result Modal -->
+            <div class="modal fade" id="researchResultModal" tabindex="-1" role="dialog" aria-labelledby="researchResultModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document" style="max-width: 90vw;">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="researchResultModalLabel">Earnings Research Report</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <div id="researchContent" class="p-3">
+                                <div class="d-flex justify-content-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="sr-only">Loading...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <div class="text-center w-100">
+                                <small class="text-muted">Powered by Perplexity DeepResearch — Sources fully cited and verified</small>
+                            </div>
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
                         </div>
                     </div>
-                `);
-                
-                // Fetch job data from API
-                $.ajax({
-                    url: `{{ url_for('api_earnings_job', job_id='') }}${jobId}`,
-                    method: 'GET',
-                    success: function(response) {
-                        if (response && response.result) {
-                            // Convert markdown to HTML
-                            const converter = new showdown.Converter({
-                                tables: true,
-                                simplifiedAutoLink: true,
-                                strikethrough: true,
-                                tasklists: true
-                            });
-                            const html = converter.makeHtml(response.result);
+                </div>
+            </div>
+            
+            <!-- Chart.js for interactive charts -->
+            <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+            
+            <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+            <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+            <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+            <script>
+                $(document).ready(function() {
+                    // Handle filter clicks
+                    $('.filter-item').click(function() {
+                        $('.filter-item').removeClass('active');
+                        $(this).addClass('active');
+                        
+                        const filter = $(this).data('filter');
+                        
+                        if (filter === 'all') {
+                            $('.earnings-item').show();
+                        } else if (filter === 'portfolio') {
+                            $('.earnings-item').hide();
+                            $('.earnings-item[data-in-portfolio="true"]').show();
+                        }
+                    });
+                    
+                    // Handle research button clicks with enhanced info
+                    $('.research-btn').click(function() {
+                        const symbol = $(this).data('symbol');
+                        const date = $(this).data('date');
+                        const inPortfolio = $(this).closest('.earnings-item').data('in-portfolio');
+                        const companyName = $(this).closest('.earnings-item').find('.stock-name').text();
+                        
+                        // Format date for display
+                        const dateObj = new Date(date);
+                        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                        const formattedDate = dateObj.toLocaleDateString('en-US', options);
+                        
+                        // Get the logo URL from our cached system
+                        const logoUrl = "{{ url_for('company_logo', symbol='') }}" + symbol;
+                        
+                        // Update the modal with enhanced information
+                        $('#symbol').val(symbol);
+                        $('#earnings_date').val(date);
+                        $('#stockLogo').attr('src', logoUrl);
+                        $('#stockTitle').text(`${symbol} - ${companyName}`);
+                        $('#earningsDate').text(`Earnings Date: ${formattedDate}`);
+                        $('#researchModalLabel').text(`Earnings Research: ${symbol}`);
+                        
+                        // Add portfolio status if applicable
+                        if (inPortfolio) {
+                            let portfolioHtml = '<span class="badge badge-success">In Your Portfolio</span>';
                             
-                            // Add CSS for better markdown rendering and prepare for chart rendering
-                            $('#researchContent').html(`
-                                <style>
-                                    .markdown-content h1 { font-size: 2rem; margin-bottom: 1rem; }
-                                    .markdown-content h2 { font-size: 1.6rem; margin-top: 1.5rem; margin-bottom: 0.8rem; border-bottom: 1px solid #eee; padding-bottom: 0.3rem; }
-                                    .markdown-content h3 { font-size: 1.3rem; margin-top: 1.2rem; margin-bottom: 0.6rem; }
-                                    .markdown-content h4 { font-size: 1.1rem; margin-top: 1rem; margin-bottom: 0.5rem; }
-                                    .markdown-content ul, .markdown-content ol { padding-left: 1.5rem; margin-bottom: 1rem; }
-                                    .markdown-content blockquote { padding: 0.5rem 1rem; border-left: 3px solid #ddd; background-color: #f8f9fa; }
-                                    .markdown-content table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
-                                    .markdown-content table th, .markdown-content table td { padding: 0.5rem; border: 1px solid #ddd; }
-                                    .markdown-content table th { background-color: #f0f0f0; }
-                                    .markdown-content p { margin-bottom: 0.8rem; }
-                                    .markdown-content code { font-family: monospace; background-color: #f0f0f0; padding: 0.1rem 0.3rem; border-radius: 3px; }
-                                    .markdown-content pre { background-color: #f5f5f5; padding: 1rem; border-radius: 5px; overflow-x: auto; margin-bottom: 1rem; }
-                                    
-                                    /* Sources styling */
-                                    .sources-section { 
-                                        background-color: #f8f9fa; 
-                                        border: 1px solid #eaeaea; 
-                                        border-radius: 8px; 
-                                        padding: 15px; 
-                                        margin-top: 25px;
-                                    }
-                                    .sources-section h2 { 
-                                        color: #4a6cfd; 
-                                        margin-top: 0 !important;
-                                        padding-bottom: 0.5rem;
-                                        border-bottom: 2px solid #e9ecef;
-                                    }
-                                    .source-item { 
-                                        padding: 8px 0; 
-                                        border-bottom: 1px dashed #e9ecef;
-                                    }
-                                    .source-item:last-child {
-                                        border-bottom: none;
-                                    }
-                                    
-                                    /* Chart controls */
-                                    .charts-control {
-                                        display: flex;
-                                        justify-content: flex-end;
-                                        margin-bottom: 15px;
-                                    }
-                                    .toggle-all-charts-btn {
-                                        background-color: #f8f9fa;
-                                        border: 1px solid #dee2e6;
-                                        border-radius: 4px;
-                                        padding: 5px 10px;
-                                        font-size: 0.9rem;
-                                        cursor: pointer;
-                                        transition: all 0.2s ease;
-                                    }
-                                    .toggle-all-charts-btn:hover {
-                                        background-color: #e9ecef;
-                                    }
-                                </style>
-                                <div class="charts-control">
-                                    <button class="toggle-all-charts-btn" id="toggleAllCharts">Collapse All Charts</button>
-                                </div>
-                                <div class="markdown-content">${html}</div>
-                            `);
-                            
-                            // Format sources section with better styling
-                            if ($('#researchContent .markdown-content h2:contains("Sources")').length) {
-                                const sourcesHeader = $('#researchContent .markdown-content h2:contains("Sources")');
-                                const sourcesContent = sourcesHeader.nextUntil('h2');
-                                
-                                // Wrap the sources in a styled container
-                                sourcesHeader.wrap('<div class="sources-section"></div>');
-                                sourcesContent.appendTo(sourcesHeader.parent());
-                                
-                                // Transform source links to be more readable
-                                const sourcesList = sourcesHeader.parent().find('li, p');
-                                sourcesList.each(function() {
-                                    $(this).addClass('source-item');
-                                });
+                            // Try to find position info
+                            const positionInfo = $(this).closest('.earnings-item').find('.position-info').text();
+                            if (positionInfo) {
+                                portfolioHtml += `<div class="mt-1"><small>${positionInfo}</small></div>`;
                             }
                             
-                            // Insert charts after relevant sections
-                            setTimeout(renderCharts, 100, symbol);
-                            
-                            // Add toggle all charts functionality
-                            $('#toggleAllCharts').click(function() {
-                                const allCharts = $('.chart-container');
-                                const areAllCollapsed = allCharts.first().hasClass('collapsed');
-                                
-                                if (areAllCollapsed) {
-                                    // Expand all
-                                    allCharts.removeClass('collapsed');
-                                    $('.chart-collapse-btn').text('−');
-                                    $(this).text('Collapse All Charts');
-                                } else {
-                                    // Collapse all
-                                    allCharts.addClass('collapsed');
-                                    $('.chart-collapse-btn').text('+');
-                                    $(this).text('Expand All Charts');
-                                }
-                            });
+                            $('#portfolioStatus').html(portfolioHtml);
                         } else {
-                            $('#researchContent').html(`
-                                <div class="alert alert-danger">
-                                    Error loading research results. Please try again.
-                                </div>
-                            `);
+                            $('#portfolioStatus').html('<span class="badge badge-secondary">Not In Portfolio</span>');
                         }
-                    },
-                    error: function() {
+                    });
+                    
+                    // Handle view research button clicks
+                    $('.view-research-btn').click(function() {
+                        const jobId = $(this).data('job-id');
+                        const symbol = $(this).data('symbol');
+                        const date = $(this).data('date');
+                        
+                        // Update modal title
+                        $('#researchResultModalLabel').text(`Earnings Research: ${symbol} (${date})`);
+                        
+                        // Show loading spinner
                         $('#researchContent').html(`
-                            <div class="alert alert-danger">
-                                Error loading research results. Please try again.
+                            <div class="d-flex justify-content-center">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="sr-only">Loading...</span>
+                                </div>
                             </div>
                         `);
-                    }
-                });
-            });
-            
-            // Render interactive charts based on research content
-            function renderCharts(symbol) {
-                // Create price history chart
-                insertPriceChart(symbol, 'Technical Analysis');
-                
-                // Create earnings comparison chart
-                insertEarningsChart(symbol, 'Previous Earnings Performance');
-                
-                // Create sentiment pie chart
-                insertSentimentChart('Investment Thesis');
-                
-                // Create industry comparison chart
-                insertIndustryChart('Industry & Competitive Landscape');
-            }
-            
-            // Function to insert a stock price chart with earnings dates
-            function insertPriceChart(symbol, sectionTitle) {
-                const section = $('#researchContent .markdown-content h2:contains("' + sectionTitle + '")');
-                if (section.length) {
-                    // Create chart container
-                    const chartContainer = $('<div class="chart-container"><button class="chart-collapse-btn" title="Toggle chart visibility">−</button><div class="chart-title">Price History with Earnings Dates</div><canvas id="priceChart" height="220"></canvas></div>');
-                    section.after(chartContainer);
-                    
-                    // Add collapse functionality
-                    chartContainer.find('.chart-collapse-btn').click(function() {
-                        $(this).parent().toggleClass('collapsed');
-                        $(this).text($(this).parent().hasClass('collapsed') ? '+' : '−');
+                        
+                        // Fetch job data from API
+                        $.ajax({
+                            url: `{{ url_for('api_earnings_job', job_id='') }}${jobId}`,
+                            method: 'GET',
+                            success: function(response) {
+                                if (response && response.result) {
+                                    // Convert markdown to HTML
+                                    const converter = new showdown.Converter({
+                                        tables: true,
+                                        simplifiedAutoLink: true,
+                                        strikethrough: true,
+                                        tasklists: true
+                                    });
+                                    const html = converter.makeHtml(response.result);
+                                    
+                                    // Add CSS for better markdown rendering and prepare for chart rendering
+                                    $('#researchContent').html(`
+                                        <style>
+                                            .markdown-content h1 { font-size: 2rem; margin-bottom: 1rem; }
+                                            .markdown-content h2 { font-size: 1.6rem; margin-top: 1.5rem; margin-bottom: 0.8rem; border-bottom: 1px solid #eee; padding-bottom: 0.3rem; }
+                                            .markdown-content h3 { font-size: 1.3rem; margin-top: 1.2rem; margin-bottom: 0.6rem; }
+                                            .markdown-content h4 { font-size: 1.1rem; margin-top: 1rem; margin-bottom: 0.5rem; }
+                                            .markdown-content ul, .markdown-content ol { padding-left: 1.5rem; margin-bottom: 1rem; }
+                                            .markdown-content blockquote { padding: 0.5rem 1rem; border-left: 3px solid #ddd; background-color: #f8f9fa; }
+                                            .markdown-content table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
+                                            .markdown-content table th, .markdown-content table td { padding: 0.5rem; border: 1px solid #ddd; }
+                                            .markdown-content table th { background-color: #f0f0f0; }
+                                            .markdown-content p { margin-bottom: 0.8rem; }
+                                            .markdown-content code { font-family: monospace; background-color: #f0f0f0; padding: 0.1rem 0.3rem; border-radius: 3px; }
+                                            .markdown-content pre { background-color: #f5f5f5; padding: 1rem; border-radius: 5px; overflow-x: auto; margin-bottom: 1rem; }
+                                            
+                                            /* Sources styling */
+                                            .sources-section { 
+                                                background-color: #f8f9fa; 
+                                                border: 1px solid #eaeaea; 
+                                                border-radius: 8px; 
+                                                padding: 15px; 
+                                                margin-top: 25px;
+                                            }
+                                            .sources-section h2 { 
+                                                color: #4a6cfd; 
+                                                margin-top: 0 !important;
+                                                padding-bottom: 0.5rem;
+                                                border-bottom: 2px solid #e9ecef;
+                                            }
+                                            .source-item { 
+                                                padding: 8px 0; 
+                                                border-bottom: 1px dashed #e9ecef;
+                                            }
+                                            .source-item:last-child {
+                                                border-bottom: none;
+                                            }
+                                            
+                                            /* Chart controls */
+                                            .charts-control {
+                                                display: flex;
+                                                justify-content: flex-end;
+                                                margin-bottom: 15px;
+                                            }
+                                            .toggle-all-charts-btn {
+                                                background-color: #f8f9fa;
+                                                border: 1px solid #dee2e6;
+                                                border-radius: 4px;
+                                                padding: 5px 10px;
+                                                font-size: 0.9rem;
+                                                cursor: pointer;
+                                                transition: all 0.2s ease;
+                                            }
+                                            .toggle-all-charts-btn:hover {
+                                                background-color: #e9ecef;
+                                            }
+                                        </style>
+                                        <div class="charts-control">
+                                            <button class="toggle-all-charts-btn" id="toggleAllCharts">Collapse All Charts</button>
+                                        </div>
+                                        <div class="markdown-content">${html}</div>
+                                    `);
+                                    
+                                    // Format sources section with better styling
+                                    if ($('#researchContent .markdown-content h2:contains("Sources")').length) {
+                                        const sourcesHeader = $('#researchContent .markdown-content h2:contains("Sources")');
+                                        const sourcesContent = sourcesHeader.nextUntil('h2');
+                                        
+                                        // Wrap the sources in a styled container
+                                        sourcesHeader.wrap('<div class="sources-section"></div>');
+                                        sourcesContent.appendTo(sourcesHeader.parent());
+                                        
+                                        // Transform source links to be more readable
+                                        const sourcesList = sourcesHeader.parent().find('li, p');
+                                        sourcesList.each(function() {
+                                            $(this).addClass('source-item');
+                                        });
+                                    }
+                                    
+                                    // Insert charts after relevant sections
+                                    setTimeout(renderCharts, 100, symbol);
+                                    
+                                    // Add toggle all charts functionality
+                                    $('#toggleAllCharts').click(function() {
+                                        const allCharts = $('.chart-container');
+                                        const areAllCollapsed = allCharts.first().hasClass('collapsed');
+                                        
+                                        if (areAllCollapsed) {
+                                            // Expand all
+                                            allCharts.removeClass('collapsed');
+                                            $('.chart-collapse-btn').text('−');
+                                            $(this).text('Collapse All Charts');
+                                        } else {
+                                            // Collapse all
+                                            allCharts.addClass('collapsed');
+                                            $('.chart-collapse-btn').text('+');
+                                            $(this).text('Expand All Charts');
+                                        }
+                                    });
+                                } else {
+                                    $('#researchContent').html(`
+                                        <div class="alert alert-danger">
+                                            Error loading research results. Please try again.
+                                        </div>
+                                    `);
+                                }
+                            },
+                            error: function() {
+                                $('#researchContent').html(`
+                                    <div class="alert alert-danger">
+                                        Error loading research results. Please try again.
+                                    </div>
+                                `);
+                            }
+                        });
                     });
                     
-                    // Sample data - in a real app, you would fetch this from an API
-                    const ctx = document.getElementById('priceChart').getContext('2d');
-                    
-                    // Create a simulated price chart (this would typically use real data)
-                    const labels = [];
-                    const priceData = [];
-                    const earningsPoints = [];
-                    
-                    // Generate 90 days of simulated data
-                    const today = new Date();
-                    for (let i = 90; i >= 0; i--) {
-                        const date = new Date();
-                        date.setDate(today.getDate() - i);
-                        labels.push(date.toLocaleDateString('en-US', {month: 'short', day: 'numeric'}));
+                    // Render interactive charts based on research content
+                    function renderCharts(symbol) {
+                        // Create price history chart
+                        insertPriceChart(symbol, 'Technical Analysis');
                         
-                        // Generate semi-realistic looking price data
-                        const basePrice = 150 + Math.sin(i/10) * 20;
-                        const randomFactor = (Math.random() - 0.5) * 10;
-                        priceData.push(basePrice + randomFactor);
+                        // Create earnings comparison chart
+                        insertEarningsChart(symbol, 'Previous Earnings Performance');
                         
-                        // Mark simulated earnings dates
-                        if (i === 60 || i === 0) {
-                            earningsPoints.push({
-                                x: date.toLocaleDateString('en-US', {month: 'short', day: 'numeric'}),
-                                y: basePrice + randomFactor
+                        // Create sentiment pie chart
+                        insertSentimentChart('Investment Thesis');
+                        
+                        // Create industry comparison chart
+                        insertIndustryChart('Industry & Competitive Landscape');
+                    }
+                    
+                    // Function to insert a stock price chart with earnings dates
+                    function insertPriceChart(symbol, sectionTitle) {
+                        const section = $('#researchContent .markdown-content h2:contains("' + sectionTitle + '")');
+                        if (section.length) {
+                            // Create chart container
+                            const chartContainer = $('<div class="chart-container"><button class="chart-collapse-btn" title="Toggle chart visibility">−</button><div class="chart-title">Price History with Earnings Dates</div><canvas id="priceChart" height="220"></canvas></div>');
+                            section.after(chartContainer);
+                            
+                            // Add collapse functionality
+                            chartContainer.find('.chart-collapse-btn').click(function() {
+                                $(this).parent().toggleClass('collapsed');
+                                $(this).text($(this).parent().hasClass('collapsed') ? '+' : '−');
+                            });
+                            
+                            // Sample data - in a real app, you would fetch this from an API
+                            const ctx = document.getElementById('priceChart').getContext('2d');
+                            
+                            // Create a simulated price chart (this would typically use real data)
+                            const labels = [];
+                            const priceData = [];
+                            const earningsPoints = [];
+                            
+                            // Generate 90 days of simulated data
+                            const today = new Date();
+                            for (let i = 90; i >= 0; i--) {
+                                const date = new Date();
+                                date.setDate(today.getDate() - i);
+                                labels.push(date.toLocaleDateString('en-US', {month: 'short', day: 'numeric'}));
+                                
+                                // Generate semi-realistic looking price data
+                                const basePrice = 150 + Math.sin(i/10) * 20;
+                                const randomFactor = (Math.random() - 0.5) * 10;
+                                priceData.push(basePrice + randomFactor);
+                                
+                                // Mark simulated earnings dates
+                                if (i === 60 || i === 0) {
+                                    earningsPoints.push({
+                                        x: date.toLocaleDateString('en-US', {month: 'short', day: 'numeric'}),
+                                        y: basePrice + randomFactor
+                                    });
+                                }
+                            }
+                            
+                            new Chart(ctx, {
+                                type: 'line',
+                                data: {
+                                    labels: labels,
+                                    datasets: [
+                                        {
+                                            label: symbol + ' Price',
+                                            data: priceData,
+                                            borderColor: '#4a6cfd',
+                                            backgroundColor: 'rgba(74, 108, 253, 0.1)',
+                                            borderWidth: 2,
+                                            tension: 0.3,
+                                            fill: true
+                                        },
+                                        {
+                                            label: 'Earnings Dates',
+                                            data: earningsPoints,
+                                            pointStyle: 'rectRot',
+                                            pointRadius: 8,
+                                            pointBackgroundColor: '#e74c3c',
+                                            pointBorderColor: '#fff',
+                                            showLine: false,
+                                            parsing: false
+                                        }
+                                    ]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: {
+                                        legend: {
+                                            position: 'top',
+                                        },
+                                        tooltip: {
+                                            callbacks: {
+                                                label: function(context) {
+                                                    if (context.dataset.label === 'Earnings Dates') {
+                                                        return 'Earnings Announcement';
+                                                    }
+                                                    return context.dataset.label + ': $' + context.raw.toFixed(2);
+                                                }
+                                            }
+                                        }
+                                    },
+                                    scales: {
+                                        x: {
+                                            ticks: {
+                                                maxTicksLimit: 12
+                                            },
+                                            grid: {
+                                                display: false
+                                            }
+                                        },
+                                        y: {
+                                            title: {
+                                                display: true,
+                                                text: 'Price ($)'
+                                            }
+                                        }
+                                    }
+                                }
                             });
                         }
                     }
                     
-                    new Chart(ctx, {
-                        type: 'line',
-                        data: {
-                            labels: labels,
-                            datasets: [
-                                {
-                                    label: symbol + ' Price',
-                                    data: priceData,
-                                    borderColor: '#4a6cfd',
-                                    backgroundColor: 'rgba(74, 108, 253, 0.1)',
-                                    borderWidth: 2,
-                                    tension: 0.3,
-                                    fill: true
+                    // Function to insert an earnings comparison chart
+                    function insertEarningsChart(symbol, sectionTitle) {
+                        const section = $('#researchContent .markdown-content h2:contains("' + sectionTitle + '")');
+                        if (section.length) {
+                            // Create chart container
+                            const chartContainer = $('<div class="chart-container"><button class="chart-collapse-btn" title="Toggle chart visibility">−</button><div class="chart-title">Quarterly EPS: Estimates vs Actual</div><canvas id="earningsChart" height="180"></canvas></div>');
+                            section.after(chartContainer);
+                            
+                            // Add collapse functionality
+                            chartContainer.find('.chart-collapse-btn').click(function() {
+                                $(this).parent().toggleClass('collapsed');
+                                $(this).text($(this).parent().hasClass('collapsed') ? '+' : '−');
+                            });
+                            
+                            const ctx = document.getElementById('earningsChart').getContext('2d');
+                            
+                            // Sample data - in a real app, you would extract this from the research text or API
+                            const quarters = ['Q2 2024', 'Q3 2024', 'Q4 2024', 'Q1 2025'];
+                            const estimatedEPS = [1.65, 1.72, 1.85, 1.95];
+                            const actualEPS = [1.78, 1.69, 1.92, null]; // Last quarter is upcoming
+                            
+                            new Chart(ctx, {
+                                type: 'bar',
+                                data: {
+                                    labels: quarters,
+                                    datasets: [
+                                        {
+                                            label: 'Estimated EPS',
+                                            data: estimatedEPS,
+                                            backgroundColor: 'rgba(255, 193, 7, 0.7)',
+                                            borderColor: 'rgba(255, 193, 7, 1)',
+                                            borderWidth: 1
+                                        },
+                                        {
+                                            label: 'Actual EPS',
+                                            data: actualEPS,
+                                            backgroundColor: 'rgba(74, 108, 253, 0.7)',
+                                            borderColor: 'rgba(74, 108, 253, 1)',
+                                            borderWidth: 1
+                                        }
+                                    ]
                                 },
-                                {
-                                    label: 'Earnings Dates',
-                                    data: earningsPoints,
-                                    pointStyle: 'rectRot',
-                                    pointRadius: 8,
-                                    pointBackgroundColor: '#e74c3c',
-                                    pointBorderColor: '#fff',
-                                    showLine: false,
-                                    parsing: false
-                                }
-                            ]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: {
-                                    position: 'top',
-                                },
-                                tooltip: {
-                                    callbacks: {
-                                        label: function(context) {
-                                            if (context.dataset.label === 'Earnings Dates') {
-                                                return 'Earnings Announcement';
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: {
+                                        legend: {
+                                            position: 'top',
+                                        },
+                                        tooltip: {
+                                            callbacks: {
+                                                label: function(context) {
+                                                    let label = context.dataset.label || '';
+                                                    if (context.raw !== null) {
+                                                        label += ': $' + context.raw.toFixed(2);
+                                                    } else {
+                                                        label += ': Not reported yet';
+                                                    }
+                                                    return label;
+                                                }
                                             }
-                                            return context.dataset.label + ': $' + context.raw.toFixed(2);
+                                        },
+                                        datalabels: {
+                                            align: 'center',
+                                            anchor: 'center',
+                                            formatter: function(value) {
+                                                if (value !== null) {
+                                                    return '$' + value.toFixed(2);
+                                                } else {
+                                                    return '';
+                                                }
+                                            },
+                                            font: {
+                                                weight: 'bold'
+                                            },
+                                            color: '#333'
                                         }
-                                    }
-                                }
-                            },
-                            scales: {
-                                x: {
-                                    ticks: {
-                                        maxTicksLimit: 12
                                     },
-                                    grid: {
-                                        display: false
-                                    }
-                                },
-                                y: {
-                                    title: {
-                                        display: true,
-                                        text: 'Price ($)'
-                                    }
-                                }
-                            }
-                        }
-                    });
-                }
-            }
-            
-            // Function to insert an earnings comparison chart
-            function insertEarningsChart(symbol, sectionTitle) {
-                const section = $('#researchContent .markdown-content h2:contains("' + sectionTitle + '")');
-                if (section.length) {
-                    // Create chart container
-                    const chartContainer = $('<div class="chart-container"><button class="chart-collapse-btn" title="Toggle chart visibility">−</button><div class="chart-title">Quarterly EPS: Estimates vs Actual</div><canvas id="earningsChart" height="180"></canvas></div>');
-                    section.after(chartContainer);
-                    
-                    // Add collapse functionality
-                    chartContainer.find('.chart-collapse-btn').click(function() {
-                        $(this).parent().toggleClass('collapsed');
-                        $(this).text($(this).parent().hasClass('collapsed') ? '+' : '−');
-                    });
-                    
-                    const ctx = document.getElementById('earningsChart').getContext('2d');
-                    
-                    // Sample data - in a real app, you would extract this from the research text or API
-                    const quarters = ['Q2 2024', 'Q3 2024', 'Q4 2024', 'Q1 2025'];
-                    const estimatedEPS = [1.65, 1.72, 1.85, 1.95];
-                    const actualEPS = [1.78, 1.69, 1.92, null]; // Last quarter is upcoming
-                    
-                    new Chart(ctx, {
-                        type: 'bar',
-                        data: {
-                            labels: quarters,
-                            datasets: [
-                                {
-                                    label: 'Estimated EPS',
-                                    data: estimatedEPS,
-                                    backgroundColor: 'rgba(255, 193, 7, 0.7)',
-                                    borderColor: 'rgba(255, 193, 7, 1)',
-                                    borderWidth: 1
-                                },
-                                {
-                                    label: 'Actual EPS',
-                                    data: actualEPS,
-                                    backgroundColor: 'rgba(74, 108, 253, 0.7)',
-                                    borderColor: 'rgba(74, 108, 253, 1)',
-                                    borderWidth: 1
-                                }
-                            ]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: {
-                                    position: 'top',
-                                },
-                                tooltip: {
-                                    callbacks: {
-                                        label: function(context) {
-                                            let label = context.dataset.label || '';
-                                            if (context.raw !== null) {
-                                                label += ': $' + context.raw.toFixed(2);
-                                            } else {
-                                                label += ': Not reported yet';
+                                    scales: {
+                                        x: {
+                                            grid: {
+                                                display: false
                                             }
-                                            return label;
-                                        }
-                                    }
-                                },
-                                datalabels: {
-                                    align: 'center',
-                                    anchor: 'center',
-                                    formatter: function(value) {
-                                        if (value !== null) {
-                                            return '$' + value.toFixed(2);
-                                        } else {
-                                            return '';
-                                        }
-                                    },
-                                    font: {
-                                        weight: 'bold'
-                                    },
-                                    color: '#333'
-                                }
-                            },
-                            scales: {
-                                x: {
-                                    grid: {
-                                        display: false
-                                    }
-                                },
-                                y: {
-                                    title: {
-                                        display: true,
-                                        text: 'EPS ($)'
-                                    },
-                                    beginAtZero: true
-                                }
-                            }
-                        }
-                    });
-                }
-            }
-            
-            // Function to insert a sentiment analysis pie chart
-            function insertSentimentChart(sectionTitle) {
-                const section = $('#researchContent .markdown-content h2:contains("' + sectionTitle + '")');
-                if (section.length) {
-                    // Create chart container
-                    const chartContainer = $('<div class="chart-container"><button class="chart-collapse-btn" title="Toggle chart visibility">−</button><div class="chart-title">Investment Sentiment Analysis</div><canvas id="sentimentChart" height="180"></canvas></div>');
-                    section.after(chartContainer);
-                    
-                    // Add collapse functionality
-                    chartContainer.find('.chart-collapse-btn').click(function() {
-                        $(this).parent().toggleClass('collapsed');
-                        $(this).text($(this).parent().hasClass('collapsed') ? '+' : '−');
-                    });
-                    
-                    const ctx = document.getElementById('sentimentChart').getContext('2d');
-                    
-                    // Sample data - in a real app, you would extract this from the NLP analysis
-                    new Chart(ctx, {
-                        type: 'pie',
-                        data: {
-                            labels: ['Bullish', 'Neutral', 'Bearish'],
-                            datasets: [{
-                                data: [55, 30, 15],
-                                backgroundColor: [
-                                    'rgba(39, 174, 96, 0.8)',  // Brighter green for bullish
-                                    'rgba(52, 152, 219, 0.8)', // Blue for neutral (instead of gray)
-                                    'rgba(231, 76, 60, 0.8)'   // Brighter red for bearish
-                                ],
-                                borderColor: [
-                                    'rgba(39, 174, 96, 1)',
-                                    'rgba(52, 152, 219, 1)',
-                                    'rgba(231, 76, 60, 1)'
-                                ],
-                                borderWidth: 1
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: {
-                                    position: 'right',
-                                },
-                                tooltip: {
-                                    callbacks: {
-                                        label: function(context) {
-                                            return context.label + ': ' + context.raw + '%';
-                                        }
-                                    }
-                                },
-                                datalabels: {
-                                    formatter: function(value) {
-                                        return value + '%';
-                                    },
-                                    color: '#fff',
-                                    font: {
-                                        weight: 'bold',
-                                        size: 14
-                                    }
-                                }
-                            }
-                        }
-                    });
-                }
-            }
-            
-            // Function to insert an industry comparison chart
-            function insertIndustryChart(sectionTitle) {
-                const section = $('#researchContent .markdown-content h2:contains("' + sectionTitle + '")');
-                if (section.length) {
-                    // Create chart container
-                    const chartContainer = $('<div class="chart-container"><button class="chart-collapse-btn" title="Toggle chart visibility">−</button><div class="chart-title">Industry Revenue Growth Comparison</div><canvas id="industryChart" height="180"></canvas></div>');
-                    section.after(chartContainer);
-                    
-                    // Add collapse functionality
-                    chartContainer.find('.chart-collapse-btn').click(function() {
-                        $(this).parent().toggleClass('collapsed');
-                        $(this).text($(this).parent().hasClass('collapsed') ? '+' : '−');
-                    });
-                    
-                    const ctx = document.getElementById('industryChart').getContext('2d');
-                    
-                    // Sample data - in a real app, you would extract this from the research or API
-                    new Chart(ctx, {
-                        type: 'radar',
-                        data: {
-                            labels: ['Revenue Growth', 'Profit Margin', 'Market Share', 'R&D Investment', 'Customer Retention'],
-                            datasets: [
-                                {
-                                    label: 'Company',
-                                    data: [75, 82, 68, 90, 85],
-                                    backgroundColor: 'rgba(74, 108, 253, 0.2)',
-                                    borderColor: 'rgba(74, 108, 253, 1)',
-                                    borderWidth: 2,
-                                    pointBackgroundColor: 'rgba(74, 108, 253, 1)',
-                                    pointRadius: 4
-                                },
-                                {
-                                    label: 'Industry Average',
-                                    data: [65, 70, 60, 65, 75],
-                                    backgroundColor: 'rgba(173, 181, 189, 0.2)',
-                                    borderColor: 'rgba(173, 181, 189, 1)',
-                                    borderWidth: 2,
-                                    pointBackgroundColor: 'rgba(173, 181, 189, 1)',
-                                    pointRadius: 4
-                                }
-                            ]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: {
-                                    position: 'top',
-                                },
-                                tooltip: {
-                                    callbacks: {
-                                        label: function(context) {
-                                            return context.dataset.label + ': ' + context.raw + '/100';
+                                        },
+                                        y: {
+                                            title: {
+                                                display: true,
+                                                text: 'EPS ($)'
+                                            },
+                                            beginAtZero: true
                                         }
                                     }
                                 }
-                            },
-                            scales: {
-                                r: {
-                                    angleLines: {
-                                        display: true
-                                    },
-                                    suggestedMin: 0,
-                                    suggestedMax: 100
-                                }
-                            }
+                            });
                         }
-                    });
-                }
-            }
-            
-            // Handle calendar refresh
-            $('#refreshCalendar').click(function() {
-                $('#refreshSpinner').show();
-                
-                // Call API to refresh the calendar
-                $.ajax({
-                    url: '{{ url_for("api_update_earnings_calendar") }}',
-                    method: 'POST',
-                    success: function(response) {
-                        if (response.status === 'success') {
-                            // Reload the page to show updated calendar
-                            location.reload();
-                        } else {
-                            alert('Failed to update calendar. Please try again.');
-                            $('#refreshSpinner').hide();
-                        }
-                    },
-                    error: function() {
-                        alert('Failed to update calendar. Please try again.');
-                        $('#refreshSpinner').hide();
                     }
+                    
+                    // Function to insert a sentiment analysis pie chart
+                    function insertSentimentChart(sectionTitle) {
+                        const section = $('#researchContent .markdown-content h2:contains("' + sectionTitle + '")');
+                        if (section.length) {
+                            // Create chart container
+                            const chartContainer = $('<div class="chart-container"><button class="chart-collapse-btn" title="Toggle chart visibility">−</button><div class="chart-title">Investment Sentiment Analysis</div><canvas id="sentimentChart" height="180"></canvas></div>');
+                            section.after(chartContainer);
+                            
+                            // Add collapse functionality
+                            chartContainer.find('.chart-collapse-btn').click(function() {
+                                $(this).parent().toggleClass('collapsed');
+                                $(this).text($(this).parent().hasClass('collapsed') ? '+' : '−');
+                            });
+                            
+                            const ctx = document.getElementById('sentimentChart').getContext('2d');
+                            
+                            // Sample data - in a real app, you would extract this from the NLP analysis
+                            new Chart(ctx, {
+                                type: 'pie',
+                                data: {
+                                    labels: ['Bullish', 'Neutral', 'Bearish'],
+                                    datasets: [{
+                                        data: [55, 30, 15],
+                                        backgroundColor: [
+                                            'rgba(39, 174, 96, 0.8)',  // Brighter green for bullish
+                                            'rgba(52, 152, 219, 0.8)', // Blue for neutral (instead of gray)
+                                            'rgba(231, 76, 60, 0.8)'   // Brighter red for bearish
+                                        ],
+                                        borderColor: [
+                                            'rgba(39, 174, 96, 1)',
+                                            'rgba(52, 152, 219, 1)',
+                                            'rgba(231, 76, 60, 1)'
+                                        ],
+                                        borderWidth: 1
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: {
+                                        legend: {
+                                            position: 'right',
+                                        },
+                                        tooltip: {
+                                            callbacks: {
+                                                label: function(context) {
+                                                    return context.label + ': ' + context.raw + '%';
+                                                }
+                                            }
+                                        },
+                                        datalabels: {
+                                            formatter: function(value) {
+                                                return value + '%';
+                                            },
+                                            color: '#fff',
+                                            font: {
+                                                weight: 'bold',
+                                                size: 14
+                                            }
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    }
+                    
+                    // Function to insert an industry comparison chart
+                    function insertIndustryChart(sectionTitle) {
+                        const section = $('#researchContent .markdown-content h2:contains("' + sectionTitle + '")');
+                        if (section.length) {
+                            // Create chart container
+                            const chartContainer = $('<div class="chart-container"><button class="chart-collapse-btn" title="Toggle chart visibility">−</button><div class="chart-title">Industry Revenue Growth Comparison</div><canvas id="industryChart" height="180"></canvas></div>');
+                            section.after(chartContainer);
+                            
+                            // Add collapse functionality
+                            chartContainer.find('.chart-collapse-btn').click(function() {
+                                $(this).parent().toggleClass('collapsed');
+                                $(this).text($(this).parent().hasClass('collapsed') ? '+' : '−');
+                            });
+                            
+                            const ctx = document.getElementById('industryChart').getContext('2d');
+                            
+                            // Sample data - in a real app, you would extract this from the research or API
+                            new Chart(ctx, {
+                                type: 'radar',
+                                data: {
+                                    labels: ['Revenue Growth', 'Profit Margin', 'Market Share', 'R&D Investment', 'Customer Retention'],
+                                    datasets: [
+                                        {
+                                            label: 'Company',
+                                            data: [75, 82, 68, 90, 85],
+                                            backgroundColor: 'rgba(74, 108, 253, 0.2)',
+                                            borderColor: 'rgba(74, 108, 253, 1)',
+                                            borderWidth: 2,
+                                            pointBackgroundColor: 'rgba(74, 108, 253, 1)',
+                                            pointRadius: 4
+                                        },
+                                        {
+                                            label: 'Industry Average',
+                                            data: [65, 70, 60, 65, 75],
+                                            backgroundColor: 'rgba(173, 181, 189, 0.2)',
+                                            borderColor: 'rgba(173, 181, 189, 1)',
+                                            borderWidth: 2,
+                                            pointBackgroundColor: 'rgba(173, 181, 189, 1)',
+                                            pointRadius: 4
+                                        }
+                                    ]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: {
+                                        legend: {
+                                            position: 'top',
+                                        },
+                                        tooltip: {
+                                            callbacks: {
+                                                label: function(context) {
+                                                    return context.dataset.label + ': ' + context.raw + '/100';
+                                                }
+                                            }
+                                        }
+                                    },
+                                    scales: {
+                                        r: {
+                                            angleLines: {
+                                                display: true
+                                            },
+                                            suggestedMin: 0,
+                                            suggestedMax: 100
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    }
+                    
+                    // Handle calendar refresh
+                    $('#refreshCalendar').click(function() {
+                        $('#refreshSpinner').show();
+                        
+                        // Call API to refresh the calendar
+                        $.ajax({
+                            url: '{{ url_for("api_update_earnings_calendar") }}',
+                            method: 'POST',
+                            success: function(response) {
+                                if (response.status === 'success') {
+                                    // Reload the page to show updated calendar
+                                    location.reload();
+                                } else {
+                                    alert('Failed to update calendar. Please try again.');
+                                    $('#refreshSpinner').hide();
+                                }
+                            },
+                            error: function() {
+                                alert('Failed to update calendar. Please try again.');
+                                $('#refreshSpinner').hide();
+                            }
+                        });
+                    });
+                    
+                    // Set auto-refresh for job status
+                    function checkPendingJobs() {
+                        const pendingJobs = $('.status-pending, .status-processing').length;
+                        if (pendingJobs > 0) {
+                            setTimeout(function() {
+                                location.reload();
+                            }, 30000); // Refresh every 30 seconds if there are pending jobs
+                        }
+                    }
+                    
+                    checkPendingJobs();
+                    
+                    // Initialize tooltips
+                    $('[data-toggle="tooltip"]').tooltip();
+                    
+                    // Preload all company logos for stocks with upcoming earnings
+                    function preloadCompanyLogos() {
+                        // Get all unique stock symbols from earnings items
+                        const symbols = [];
+                        
+                        $('.earnings-item').each(function() {
+                            const symbol = $(this).data('symbol');
+                            if (symbol && !symbols.includes(symbol)) {
+                                symbols.push(symbol);
+                            }
+                        });
+                        
+                        // Preload each logo
+                        symbols.forEach(symbol => {
+                            $.get(`/company-logo/${symbol}`).then(() => {
+                                console.log(`Preloaded logo for ${symbol}`);
+                            }).catch(error => {
+                                console.error(`Error preloading logo for ${symbol}:`, error);
+                            });
+                        });
+                    }
+                    
+                    // Run the preload function when the page loads
+                    preloadCompanyLogos();
                 });
-            });
-            
-            // Set auto-refresh for job status
-            function checkPendingJobs() {
-                const pendingJobs = $('.status-pending, .status-processing').length;
-                if (pendingJobs > 0) {
-                    setTimeout(function() {
-                        location.reload();
-                    }, 30000); // Refresh every 30 seconds if there are pending jobs
-                }
-            }
-            
-            checkPendingJobs();
-            
-            // Initialize tooltips
-            $('[data-toggle="tooltip"]').tooltip();
-        });
-    </script>
+            </script>
+        </div>
+    </div>
 </body>
 </html> 

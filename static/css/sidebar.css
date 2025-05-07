@@ -1,0 +1,76 @@
+/* OrgLens-style Sidebar */
+.orglens-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 240px;
+  min-width: 240px;
+  background-color: #0F131A;
+  color: #FFFFFF;
+  height: 100vh;
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 1000;
+  overflow-y: auto;
+  transition: all 0.3s ease;
+}
+
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  padding: 24px 20px;
+}
+
+.sidebar-logo img {
+  width: 32px;
+  height: 32px;
+}
+
+.sidebar-logo-text {
+  margin-left: 12px;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #FFFFFF;
+}
+
+.sidebar-nav {
+  padding: 0;
+  margin-top: 20px;
+}
+
+.sidebar-nav-item {
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: none;
+  transition: all 0.2s ease;
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+.sidebar-nav-item:hover {
+  background-color: #223044;
+  color: #FFFFFF;
+}
+
+.sidebar-nav-item.active {
+  background: linear-gradient(90deg, #00D4FF 0%, #2E5BFF 100%);
+  color: #FFFFFF;
+  font-weight: 600;
+  border-radius: 24px;
+}
+
+.sidebar-nav-item svg {
+  margin-right: 12px;
+}
+
+.main-content {
+  flex: 1;
+  margin-left: 240px;
+  padding: 20px;
+  transition: all 0.3s ease;
+} 
