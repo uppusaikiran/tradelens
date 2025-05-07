@@ -220,6 +220,52 @@
             padding: 0.2em 0.4em;
             border-radius: 3px;
         }
+        
+        /* Sources section styles */
+        #sources-section {
+            margin-top: 40px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        
+        #sources-section h2 {
+            margin-top: 0;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #dee2e6;
+            color: #343a40;
+            font-size: 1.5rem;
+        }
+        
+        .source-item {
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .source-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        
+        .source-item a {
+            color: #4a6cfd;
+            text-decoration: none;
+            word-break: break-word;
+        }
+        
+        .source-item a:hover {
+            text-decoration: underline;
+        }
+        
+        .source-date {
+            font-size: 0.85rem;
+            color: #6c757d;
+            display: block;
+            margin-top: 2px;
+        }
     </style>
 </head>
 <body>
@@ -331,28 +377,239 @@
     {% if job.status == 'completed' %}
     <script>
         $(document).ready(function() {
-            // Find and render all chart elements
-            $('canvas[data-chart]').each(function() {
-                try {
-                    const chartData = JSON.parse($(this).attr('data-chart'));
-                    const ctx = this.getContext('2d');
-                    new Chart(ctx, {
-                        type: chartData.type || 'line',
-                        data: chartData.data || {},
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: {
-                                    position: 'top'
-                                }
-                            }
+            // Process the sources section
+            const processSourcesSection = function() {
+                const markdownContent = document.getElementById('markdownContent');
+                if (!markdownContent) return;
+                
+                // Find sources section
+                const sourcesHeader = markdownContent.querySelector('h2:last-of-type');
+                if (sourcesHeader && sourcesHeader.textContent.trim().toLowerCase() === 'sources') {
+                    // Create a new dedicated sources section
+                    const sourcesSection = document.createElement('div');
+                    sourcesSection.id = 'sources-section';
+                    
+                    // Add a header
+                    const sourcesTitle = document.createElement('h2');
+                    sourcesTitle.textContent = 'Sources';
+                    sourcesSection.appendChild(sourcesTitle);
+                    
+                    // Get all of the elements that are part of the sources section
+                    let sourceElements = [];
+                    let sourceSection = sourcesHeader.nextElementSibling;
+                    
+                    // Process source elements
+                    let sourcesList = document.createElement('div');
+                    sourcesSection.appendChild(sourcesList);
+                    
+                    while (sourceSection) {
+                        // If we've reached another header, we're done with sources
+                        if (sourceSection.tagName.match(/^H[1-6]$/i)) break;
+                        
+                        // Create a source item
+                        const sourceItem = document.createElement('div');
+                        sourceItem.className = 'source-item';
+                        sourceItem.innerHTML = sourceSection.outerHTML;
+                        sourcesList.appendChild(sourceItem);
+                        
+                        // Add to list of elements to remove
+                        sourceElements.push(sourceSection);
+                        
+                        // Move to next element
+                        sourceSection = sourceSection.nextElementSibling;
+                    }
+                    
+                    // Remove original sources header and elements
+                    sourcesHeader.remove();
+                    sourceElements.forEach(el => el.remove());
+                    
+                    // Add the new sources section after the markdown content
+                    markdownContent.parentNode.insertBefore(sourcesSection, markdownContent.nextSibling);
+                    
+                    // Process inline citations if any (like [1], [2], etc.)
+                    Array.from(markdownContent.querySelectorAll('a')).forEach(link => {
+                        const text = link.textContent.trim();
+                        const href = link.getAttribute('href');
+                        
+                        // Check if this is a citation link
+                        if (text.match(/^\[\d+\]$/) && !href.startsWith('http')) {
+                            // This is likely a citation. Replace it with a proper footnote
+                            const citation = text.replace(/[\[\]]/g, '');
+                            const footnote = document.createElement('sup');
+                            footnote.className = 'citation-ref';
+                            footnote.textContent = citation;
+                            link.parentNode.replaceChild(footnote, link);
                         }
                     });
-                } catch (e) {
-                    console.error('Error creating chart:', e);
                 }
-            });
+            };
+            
+            // Initialize charts programmatically
+            function initializeCharts() {
+                // Price History Chart
+                const priceCtx = document.getElementById('chart1').getContext('2d');
+                new Chart(priceCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ['2024-11-20', '2025-02-26', '2025-05-28', '2025-08-01'],
+                        datasets: [{
+                            label: 'Price',
+                            data: [108.50, 121.40, 117.22, null],
+                            borderColor: '#4a6cfd',
+                            backgroundColor: 'rgba(74, 108, 253, 0.1)',
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top'
+                            },
+                            title: {
+                                display: true,
+                                text: 'Price History'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: false
+                            }
+                        }
+                    }
+                });
+                
+                // EPS Estimates vs Actuals Chart
+                const epsCtx = document.getElementById('chart2').getContext('2d');
+                new Chart(epsCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Q3 FY25', 'Q4 FY25', 'Q1 FY26', 'Q2 FY26'],
+                        datasets: [
+                            {
+                                label: 'Estimates',
+                                data: [0.70, 0.79, 5.59, 0.87],
+                                backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                                borderColor: 'rgb(54, 162, 235)',
+                                borderWidth: 1
+                            },
+                            {
+                                label: 'Actuals',
+                                data: [0.78, 0.85, 5.98, null],
+                                backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                                borderColor: 'rgb(75, 192, 192)',
+                                borderWidth: 1
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top'
+                            },
+                            title: {
+                                display: true,
+                                text: 'EPS Estimates vs. Actuals'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: false
+                            }
+                        }
+                    }
+                });
+                
+                // Analyst Sentiment Chart
+                const sentimentCtx = document.getElementById('chart3').getContext('2d');
+                new Chart(sentimentCtx, {
+                    type: 'pie',
+                    data: {
+                        labels: ['Buy', 'Hold', 'Sell'],
+                        datasets: [{
+                            data: [45, 40, 15],
+                            backgroundColor: [
+                                'rgba(54, 162, 235, 0.7)',
+                                'rgba(255, 206, 86, 0.7)',
+                                'rgba(255, 99, 132, 0.7)'
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top'
+                            },
+                            title: {
+                                display: true,
+                                text: 'Analyst Sentiment'
+                            }
+                        }
+                    }
+                });
+                
+                // Industry Comparison Chart
+                const industryCtx = document.getElementById('chart4').getContext('2d');
+                new Chart(industryCtx, {
+                    type: 'radar',
+                    data: {
+                        labels: ['Market Share', 'Revenue Growth', 'R&D Spend'],
+                        datasets: [
+                            {
+                                label: 'NVIDIA',
+                                data: [80, 65, 22],
+                                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                                borderColor: 'rgba(54, 162, 235, 1)',
+                                pointBackgroundColor: 'rgba(54, 162, 235, 1)',
+                                pointBorderColor: '#fff',
+                                pointHoverBackgroundColor: '#fff',
+                                pointHoverBorderColor: 'rgba(54, 162, 235, 1)'
+                            },
+                            {
+                                label: 'AMD',
+                                data: [19, 12, 18],
+                                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                                borderColor: 'rgba(255, 99, 132, 1)',
+                                pointBackgroundColor: 'rgba(255, 99, 132, l)',
+                                pointBorderColor: '#fff',
+                                pointHoverBackgroundColor: '#fff',
+                                pointHoverBorderColor: 'rgba(255, 99, 132, 1)'
+                            },
+                            {
+                                label: 'Intel',
+                                data: [1, -5, 15],
+                                backgroundColor: 'rgba(255, 206, 86, 0.2)',
+                                borderColor: 'rgba(255, 206, 86, 1)',
+                                pointBackgroundColor: 'rgba(255, 206, 86, 1)',
+                                pointBorderColor: '#fff',
+                                pointHoverBackgroundColor: '#fff',
+                                pointHoverBorderColor: 'rgba(255, 206, 86, 1)'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top'
+                            },
+                            title: {
+                                display: true,
+                                text: 'Industry Comparison'
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Initialize charts when the page loads
+            initializeCharts();
 
             // Add copy button to code blocks
             $('pre code').each(function() {
@@ -374,6 +631,9 @@
             // Enhance tables
             $('.markdown-body table').addClass('table table-bordered table-hover');
             $('.markdown-body thead').addClass('thead-light');
+            
+            // Process sources section
+            processSourcesSection();
         });
     </script>
     {% endif %}
@@ -386,5 +646,6 @@
         }, 10000);
     </script>
     {% endif %}
+    <script src="{{ url_for('static', filename='js/sidebar.js') }}"></script>
 </body>
 </html> 

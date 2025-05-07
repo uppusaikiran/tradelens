@@ -23,6 +23,7 @@ from itertools import groupby
 from dateutil.relativedelta import relativedelta
 import shutil
 from concurrent.futures import ThreadPoolExecutor, TimeoutError
+import re
 
 # Configure logging
 logging.basicConfig(
@@ -233,11 +234,35 @@ def strftime_filter(date_obj, format_str):
 # Add markdown filter for rendering markdown content
 @app.template_filter('markdown')
 def markdown_filter(text):
-    """Convert markdown text to HTML"""
+    """Convert markdown text to HTML with better handling of citations and sources"""
     try:
         # Install markdown package if not present
         import markdown
-        return markdown.markdown(text)
+        import re
+        
+        # Check if there's a sources section and properly format it
+        if "## Sources" in text:
+            # Handle citation references
+            def replace_citation_refs(match):
+                citation_num = match.group(1)
+                return f'<sup class="citation-ref">{citation_num}</sup>'
+            
+            # Replace citations like [1], [2], etc. with proper superscript
+            text = re.sub(r'\[(\d+)\](?!\()', replace_citation_refs, text)
+            
+            # Convert markdown to HTML
+            html = markdown.markdown(
+                text, 
+                extensions=['tables', 'fenced_code', 'nl2br', 'extra']
+            )
+            
+            return html
+        else:
+            # If no sources section, just convert normally
+            return markdown.markdown(
+                text, 
+                extensions=['tables', 'fenced_code', 'nl2br', 'extra']
+            )
     except ImportError:
         # Fallback if markdown package is not installed
         return text.replace('\n', '<br>')
@@ -2803,13 +2828,7 @@ Please structure your analysis with the following sections and provide visualiza
 
 Format your response using proper Markdown syntax with clear section headings, bullet points, and emphasis where appropriate. Provide specific numbers, dates, and data points whenever possible. Be objective and balanced in presenting both bullish and bearish perspectives.
 
-IMPORTANT: For visualizations, provide exact numerical data that can be rendered into interactive charts. The frontend will display your data as:
-1. Price history chart with earnings dates marked
-2. EPS estimates vs. actuals comparison chart
-3. Investment sentiment pie chart
-4. Industry comparison radar chart
-
-Make sure to include all relevant numerical data for these visualizations.
+When providing sources, DO NOT include them inline like [1] or [1,2,3]. Instead, collect all sources at the end under the Sources section with proper URLs.
 """
         
         # Call Perplexity API using the OpenAI client interface
@@ -2824,16 +2843,90 @@ Make sure to include all relevant numerical data for these visualizations.
         )
         
         if response and response.choices and len(response.choices) > 0:
-            result = response.choices[0].message.content
+            content = response.choices[0].message.content
             
-            # Ensure the result contains proper markdown formatting
-            # Add a main heading if not present
-            if not result.startswith('# '):
-                result = f"# Earnings Preview: {symbol} ({company_name}) - {earnings_date}\n\n{result}"
-            
-            # Ensure sources are properly formatted
-            if "Sources:" in result and not "\n## Sources" in result:
-                result = result.replace("Sources:", "\n## Sources\n")
+            try:
+                # Process the content to enhance with chart HTML
+                import re
+                
+                # First, remove any JSON blocks from the content
+                cleaned_content = re.sub(r'```json.*?```', '', content, flags=re.DOTALL)
+                
+                # Remove the data attributes from the chart tags to avoid rendering problems
+                cleaned_content = re.sub(r'data-chart=.*?\}\'', 'data-type="placeholder"', cleaned_content)
+                
+                # Create a new document with visualization placeholders
+                if "## Sources" in cleaned_content:
+                    main_content, sources_section = cleaned_content.split("## Sources", 1)
+                    main_content = main_content.strip()
+                    sources_section = sources_section.strip()
+                    
+                    # The HTML for the charts without JSON to avoid escaping issues
+                    result = f"""# Earnings Preview: {symbol} ({company_name}) - {earnings_date}
+
+{main_content}
+
+<div class="visualization-section mt-4 mb-4">
+<h2>Data Visualizations</h2>
+
+<div id="chart-container-1" class="chart-container" style="position: relative; height:400px; width:100%; margin-bottom: 30px;">
+    <h4 class="chart-title">Price History</h4>
+    <canvas id="chart1"></canvas>
+</div>
+
+<div id="chart-container-2" class="chart-container" style="position: relative; height:400px; width:100%; margin-bottom: 30px;">
+    <h4 class="chart-title">EPS Estimates vs. Actuals</h4>
+    <canvas id="chart2"></canvas>
+</div>
+
+<div id="chart-container-3" class="chart-container" style="position: relative; height:400px; width:100%; margin-bottom: 30px;">
+    <h4 class="chart-title">Analyst Sentiment</h4>
+    <canvas id="chart3"></canvas>
+</div>
+
+<div id="chart-container-4" class="chart-container" style="position: relative; height:400px; width:100%; margin-bottom: 30px;">
+    <h4 class="chart-title">Industry Comparison</h4>
+    <canvas id="chart4"></canvas>
+</div>
+</div>
+
+## Sources
+
+{sources_section}"""
+                else:
+                    # If no sources section, add charts at the end
+                    result = f"""# Earnings Preview: {symbol} ({company_name}) - {earnings_date}
+
+{cleaned_content.strip()}
+
+<div class="visualization-section mt-4 mb-4">
+<h2>Data Visualizations</h2>
+
+<div id="chart-container-1" class="chart-container" style="position: relative; height:400px; width:100%; margin-bottom: 30px;">
+    <h4 class="chart-title">Price History</h4>
+    <canvas id="chart1"></canvas>
+</div>
+
+<div id="chart-container-2" class="chart-container" style="position: relative; height:400px; width:100%; margin-bottom: 30px;">
+    <h4 class="chart-title">EPS Estimates vs. Actuals</h4>
+    <canvas id="chart2"></canvas>
+</div>
+
+<div id="chart-container-3" class="chart-container" style="position: relative; height:400px; width:100%; margin-bottom: 30px;">
+    <h4 class="chart-title">Analyst Sentiment</h4>
+    <canvas id="chart3"></canvas>
+</div>
+
+<div id="chart-container-4" class="chart-container" style="position: relative; height:400px; width:100%; margin-bottom: 30px;">
+    <h4 class="chart-title">Industry Comparison</h4>
+    <canvas id="chart4"></canvas>
+</div>
+</div>"""
+                
+            except Exception as e:
+                print(f"Error processing content: {e}")
+                # Use original content if processing fails
+                result = content
             
             update_earnings_job(job_id, 'completed', result)
         else:
@@ -2997,15 +3090,8 @@ def earnings_job(job_id):
     
     # If job is completed, convert markdown to HTML
     if job['status'] == 'completed' and job['result']:
-        # Use the Python markdown library to convert markdown to HTML
-        import markdown
-        try:
-            job['result'] = markdown.markdown(
-                job['result'], 
-                extensions=['tables', 'fenced_code', 'nl2br', 'extra']
-            )
-        except Exception as e:
-            logger.error(f"Error converting markdown: {e}")
+        # Use our custom markdown filter to convert markdown to HTML
+        job['result'] = markdown_filter(job['result'])
     
     # Restore user's original model selection before rendering
     settings['perplexity_model'] = original_model
@@ -3700,6 +3786,12 @@ def api_check_openai():
             "status": "error",
             "error": f"Error checking API health: {str(e)}"
         }), 500
+
+# Add route for favicon
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(os.path.join(app.root_path, 'static', 'img', 'logos'),
+                               'tradelens-logo.svg', mimetype='image/svg+xml')
 
 if __name__ == '__main__':
     # Make sure the database exists
