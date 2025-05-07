@@ -8,6 +8,10 @@ TradeLens emerged as a solution to the challenges faced by investors in navigati
 
 ## 📸 Screenshots & Features
 
+### Platform Overview
+![TradeLens Platform Overview](static/img/tradelens.png)
+A comprehensive view of the TradeLens platform, showing the portfolio management interface with interactive charts, transaction data, and AI-powered analytics in a unified dashboard experience.
+
 ### Main Dashboard
 ![TradeLens Dashboard](static/img/Tradelens_Dashboard_with_chat_powered_by_Perplexity.png)
 The comprehensive dashboard provides an at-a-glance view of your entire portfolio. The interface includes interactive charts for visualizing stock performance, transaction history, and portfolio composition. The right panel features the Perplexity-powered chat assistant that allows natural language queries about your investments.
