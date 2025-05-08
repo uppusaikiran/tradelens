@@ -15,26 +15,36 @@ tradelens/
 │   │   └── logos/           # Company logos
 │   └── js/                  # JavaScript files
 ├── templates/               # HTML templates
+├── utils/                   # Utility scripts
+│   ├── add_sidebar_script.sh # Script to add sidebar to templates
+│   ├── check_earnings.py    # Script to check for upcoming earnings
+│   ├── clean.sh             # Cleanup script
+│   ├── cleanup.sh           # Another cleanup script
+│   ├── cleanup_logos.py     # Script to clean up logo files
+│   ├── fix_earnings_dates.py # Script to fix earnings dates in the database
+│   ├── populate_earnings_data.py # Script to populate earnings data
+│   ├── rebuild_db.sh        # Script to rebuild the database
+│   └── setup_env.sh         # Script to set up environment
+├── docs/                    # Documentation
+│   ├── api/                 # API documentation
+│   ├── css/                 # Documentation CSS
+│   ├── database/            # Database documentation
+│   ├── deployment/          # Deployment guides
+│   ├── development/         # Development guides
+│   └── user_guide/          # User guides
 ├── venv/                    # Python virtual environment
 ├── .env                     # Environment variables (API keys, etc.)
 ├── .gitignore               # Git ignore rules
-├── add_sidebar_script.sh    # Script to add sidebar to templates
 ├── app.log                  # Application log file
 ├── app.py                   # Main application file
-├── check_earnings.py        # Script to check for upcoming earnings
-├── clean.sh                 # Cleanup script
-├── cleanup.sh               # Another cleanup script
-├── cleanup_logos.py         # Script to clean up logo files
-├── fix_earnings_dates.py    # Script to fix earnings dates in the database
+├── build_docs.sh            # Script to build documentation
 ├── init_db.py               # Database initialization script
-├── package-lock.json        # npm package lock file
+├── mkdocs.yml               # MkDocs configuration
 ├── package.json             # npm package file
-├── populate_earnings_data.py # Script to populate earnings data
+├── package-lock.json        # npm package lock file
 ├── README.md                # Project readme
-├── rebuild_db.sh            # Script to rebuild the database
 ├── requirements.txt         # Python dependencies
 ├── run_server.sh            # Script to run the server
-├── setup_env.sh             # Script to set up environment
 ├── stock_orders.csv         # Sample stock order data
 └── stock_transactions.db    # SQLite database
 ```
@@ -52,12 +62,11 @@ tradelens/
 
 - **init_db.py**: Initializes the SQLite database and sets up the schema.
 
-### Utility Scripts
+### Documentation
 
-- **check_earnings.py**: Checks for upcoming earnings announcements for stocks in the portfolio.
-- **populate_earnings_data.py**: Populates earnings data from external sources.
-- **fix_earnings_dates.py**: Utility to fix earnings dates in the database.
-- **cleanup_logos.py**: Cleans up and organizes company logo files.
+- **build_docs.sh**: Script to build the documentation site using MkDocs.
+- **mkdocs.yml**: Configuration file for the documentation system.
+- **docs/**: Documentation content in Markdown format.
 
 ### Configuration
 
@@ -68,10 +77,19 @@ tradelens/
 ### Shell Scripts
 
 - **run_server.sh**: Script to start the Flask server.
-- **rebuild_db.sh**: Rebuilds the database from scratch.
-- **setup_env.sh**: Sets up the development environment.
-- **clean.sh** / **cleanup.sh**: Cleanup scripts for development.
-- **add_sidebar_script.sh**: Utility script to add navigation sidebars to templates.
+- **utils/rebuild_db.sh**: Rebuilds the database from scratch.
+- **utils/setup_env.sh**: Sets up the development environment.
+- **utils/clean.sh** / **utils/cleanup.sh**: Cleanup scripts for development.
+- **utils/add_sidebar_script.sh**: Utility script to add navigation sidebars to templates.
+
+## Utility Scripts
+
+The `utils/` directory contains various utility scripts:
+
+- **check_earnings.py**: Checks for upcoming earnings announcements for stocks in the portfolio.
+- **populate_earnings_data.py**: Populates earnings data from external sources.
+- **fix_earnings_dates.py**: Utility to fix earnings dates in the database.
+- **cleanup_logos.py**: Cleans up and organizes company logo files.
 
 ## Templates
 
@@ -120,7 +138,7 @@ When adding new features to the project:
 
 1. **Backend changes**:
    - Add new routes and functionality to `app.py`
-   - Create new utility scripts if needed
+   - Create new utility scripts in the `utils/` directory if needed
    - Update database schema in `init_db.py` if required
 
 2. **Frontend changes**:
