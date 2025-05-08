@@ -1295,8 +1295,9 @@ def chat():
         data = request.get_json()
         message = data.get('message', '')
         current_stock = data.get('stock', None)  # Get the current stock from the request
-        
-        logger.info(f"[{request_id}] Message: '{message[:50]}...' for stock: {current_stock}")
+        source_page = data.get('source', None) # Get the source of the chat request
+
+        logger.info(f"[{request_id}] Message: '{message[:50]}...' for stock: {current_stock}, source: {source_page}")
         
         # Get current settings
         settings = get_settings()
@@ -1472,21 +1473,24 @@ def chat():
                             # Get the selected model from settings
                             selected_model = settings.get('perplexity_model', 'sonar')
                             
-                            # Map names to actual model IDs
-                            PERPLEXITY_MODELS = {
-                                'sonar': 'sonar',
-                                'mixtral': 'mixtral-8x7b-instruct',
-                                'claude': 'claude-3-sonnet-20240229',
-                                'sonar-medium': 'sonar-medium-online',
-                                'sonar-small': 'sonar-small-online',
-                                'codellama': 'codellama-70b-instruct',
-                                'sonar-deep-research': 'deepseek-research-1.3b'
-                            }
+                            # If the request is from strategy backtesting, override to sonar-pro
+                            if source_page == 'strategy_backtesting':
+                                selected_model = 'sonar-pro'
+                                logger.info(f"[{request_id}] Overriding Perplexity model to 'sonar-pro' for strategy backtesting.")
                             
-                            # Use model ID from mapping or fallback to sonar
-                            model_id = PERPLEXITY_MODELS.get(selected_model, 'sonar')
+                            # Use the global PERPLEXITY_MODELS definition
+                            model_id = PERPLEXITY_MODELS.get(selected_model) 
+
+                            if not model_id:
+                                logger.warning(f"[{request_id}] Model '{selected_model}' not found in PERPLEXITY_MODELS. Falling back to default.")
+                                # Fallback to a default model key that exists in PERPLEXITY_MODELS
+                                # Or handle error appropriately
+                                default_model_key = next(iter(PERPLEXITY_MODELS)) # get first key as a default
+                                model_id = PERPLEXITY_MODELS.get(default_model_key, 'sonar') # Default to 'sonar' if even that fails
+                                selected_model = default_model_key if PERPLEXITY_MODELS.get(default_model_key) else 'sonar'
+
                             logger.info(f"[{request_id}] Using Perplexity model: {selected_model} (ID: {model_id})")
-                            
+
                             perplexity_start = time.time()
                             # Call Perplexity API using the OpenAI client interface
                             response = perplexity_client.chat.completions.create(
@@ -1652,8 +1656,16 @@ def handle_simple_chat(message, current_stock=None):
     logger.info(f"[{request_id}] Starting handle_simple_chat fallback with message: '{message[:50]}...'")
     
     # Make sure we're in an application context
-    if not app.app_context.top:
-        logger.info(f"[{request_id}] Creating app context for handle_simple_chat")
+    try:
+        # Check if we're already in an app context
+        from flask import has_app_context
+        if not has_app_context():
+            logger.info(f"[{request_id}] Creating app context for handle_simple_chat")
+            ctx = app.app_context()
+            ctx.push()
+    except Exception as e:
+        logger.warning(f"[{request_id}] Error checking app context: {str(e)}")
+        # Push a new context to be safe
         ctx = app.app_context()
         ctx.push()
     
