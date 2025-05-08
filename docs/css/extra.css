@@ -1,0 +1,134 @@
+/* TradeLens Documentation - Custom Styles */
+
+/* Logo sizing */
+.md-logo img {
+  height: 2rem;
+}
+
+/* Custom color for links */
+a {
+  color: #4051b5;
+}
+
+/* Code blocks styling */
+.highlight pre {
+  padding: 1em;
+  border-radius: 4px;
+}
+
+/* Table styling */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+}
+
+th {
+  background-color: #f5f5f5;
+  font-weight: bold;
+}
+
+th, td {
+  padding: 8px 12px;
+  border: 1px solid #e0e0e0;
+}
+
+tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+/* Admonition blocks */
+.admonition {
+  border-radius: 4px;
+  margin: 1.5em 0;
+}
+
+.admonition-title {
+  font-weight: bold;
+}
+
+/* Custom container for API endpoints */
+.api-endpoint {
+  background-color: #f5f7ff;
+  border-left: 4px solid #4051b5;
+  padding: 1em;
+  margin: 1em 0;
+  border-radius: 0 4px 4px 0;
+}
+
+/* Custom styling for API method badges */
+.http-method {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 0.85em;
+  margin-right: 8px;
+}
+
+.get {
+  background-color: #61affe;
+  color: white;
+}
+
+.post {
+  background-color: #49cc90;
+  color: white;
+}
+
+.put {
+  background-color: #fca130;
+  color: white;
+}
+
+.delete {
+  background-color: #f93e3e;
+  color: white;
+}
+
+/* Feature cards on main page */
+.feature-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 1em;
+  margin: 1em 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.feature-card:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+/* Dark mode adjustments */
+[data-md-color-scheme="slate"] .feature-card {
+  border-color: #2d3748;
+  background-color: #1a202c;
+}
+
+[data-md-color-scheme="slate"] th {
+  background-color: #2d3748;
+}
+
+[data-md-color-scheme="slate"] tr:nth-child(even) {
+  background-color: #1a202c;
+}
+
+/* Make headings stand out a bit more */
+h1, h2, h3, h4 {
+  font-weight: 600;
+  margin-top: 1.5em;
+}
+
+h1 {
+  font-size: 2em;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 0.3em;
+}
+
+h2 {
+  font-size: 1.5em;
+} 

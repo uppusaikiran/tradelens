@@ -9,6 +9,8 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/sidebar.css') }}">
     <!-- Showdown.js for Markdown conversion -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/1.9.1/showdown.min.js"></script>
+    <!-- Chart.js for visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
     <style>
         .earnings-card {
             border-radius: 12px;
@@ -459,6 +461,34 @@
         .markdown-body table td:empty:after {
             content: " ";
             white-space: pre;
+        }
+        
+        /* Visualization section styles */
+        .visualization-section {
+            margin-top: 40px;
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            border: 1px solid #e9ecef;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-bottom: 30px;
+            background: linear-gradient(to bottom right, #ffffff, #f8f9fa);
+            border-radius: 8px;
+            padding: 15px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .chart-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #4a6cfd;
+            text-align: center;
         }
     </style>
 </head>
@@ -979,7 +1009,7 @@
                                         <style>
                                             .markdown-body {
                                                 padding: 20px;
-                                                border-radius: 8px; 
+                                                border-radius: 8px;
                                                 border: 1px solid #e9ecef;
                                                 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
                                             }
@@ -1075,6 +1105,56 @@
                                             .markdown-body table tr:nth-child(even) {
                                                 background-color: #f8f9fa;
                                             }
+
+                                            /* Navigation for markdown */
+                                            .markdown-nav {
+                                                background-color: #f8f9fa;
+                                                border-radius: 8px;
+                                                padding: 15px;
+                                                margin-bottom: 20px;
+                                                border: 1px solid #e9ecef;
+                                            }
+                                            
+                                            .markdown-nav-title {
+                                                font-weight: 600;
+                                                margin-bottom: 10px;
+                                                color: #495057;
+                                            }
+                                            
+                                            .markdown-nav-list {
+                                                list-style-type: none;
+                                                padding-left: 0;
+                                                margin-bottom: 0;
+                                            }
+                                            
+                                            .markdown-nav-item {
+                                                margin-bottom: 5px;
+                                            }
+                                            
+                                            .markdown-nav-link {
+                                                color: #4a6cfd;
+                                                text-decoration: none;
+                                                font-size: 0.9rem;
+                                                display: block;
+                                                padding: 5px 10px;
+                                                border-radius: 4px;
+                                                transition: background-color 0.2s;
+                                            }
+                                            
+                                            .markdown-nav-link:hover {
+                                                background-color: #e9ecef;
+                                                text-decoration: none;
+                                            }
+
+                                            .markdown-nav-link.active {
+                                                background-color: #e9ecef;
+                                                font-weight: 600;
+                                            }
+                                            
+                                            /* Fix for visualization section */
+                                            .visualization-section {
+                                                display: none; /* Hide the visualization section */
+                                            }
                                             
                                             /* Sources section styles */
                                             #sources-section {
@@ -1121,95 +1201,103 @@
                                                 display: block;
                                                 margin-top: 2px;
                                             }
-
-                                            /* Navigation for markdown */
-                                            .markdown-nav {
-                                                background-color: #f8f9fa;
-                                                border-radius: 8px;
-                                                padding: 15px;
-                                                margin-bottom: 20px;
-                                                border: 1px solid #e9ecef;
-                                            }
-                                            
-                                            .markdown-nav-title {
-                                                font-weight: 600;
-                                                margin-bottom: 10px;
-                                                color: #495057;
-                                            }
-                                            
-                                            .markdown-nav-list {
-                                                list-style-type: none;
-                                                padding-left: 0;
-                                                margin-bottom: 0;
-                                        }
-                                            
-                                            .markdown-nav-item {
-                                                margin-bottom: 5px;
-                                            }
-                                            
-                                            .markdown-nav-link {
-                                                color: #4a6cfd;
-                                                text-decoration: none;
-                                                font-size: 0.9rem;
-                                                display: block;
-                                                padding: 5px 10px;
-                                                border-radius: 4px;
-                                                transition: background-color 0.2s;
-                                }
-                                            
-                                            .markdown-nav-link:hover {
-                                                background-color: #e9ecef;
-                                                text-decoration: none;
-                                            }
-
-                                            .markdown-nav-link.active {
-                                                background-color: #e9ecef;
-                                                font-weight: 600;
-                                            }
-                                            
-                                            /* Fix for visualization section */
-                                            .visualization-section {
-                                                display: none; /* Hide the visualization section */
-                                            }
                                         </style>
-                                        <div class="markdown-body">${html}</div>
-                                `);
+                                        <div class="markdown-body"></div>
+                                    `);
 
-                                    // Fix direct API responses
-                                    function fixDirectApiResponse() {
-                                        const content = document.querySelector('.markdown-body');
-                                        if (!content) return;
-                        
-                                        // Check if content appears to be a non-formatted API response
-                                        const contentText = content.textContent || '';
-                                        if (contentText.includes('## Company Overview') && !content.querySelector('h2')) {
-                                            // It's likely raw text that needs to be re-formatted
-                                            // Create a clean version of the markdown text
-                                            let cleanedMarkdown = contentText
-                                                .replace(/#([^#\n]+)/g, '\n# $1\n') // Add newlines around h1
-                                                .replace(/##([^#\n]+)/g, '\n## $1\n') // Add newlines around h2
-                                                .replace(/\*\*([^*]+)\*\*/g, '**$1**') // Preserve bold text
-                                                .replace(/\|\s*\|/g, '|') // Fix table separators
-                                                .replace(/--+/g, '---') // Fix horizontal rules
-                                                .replace(/\s+\|/g, ' |') // Fix spacing in tables
-                                                .replace(/\|\s+/g, '| ') // Fix spacing in tables
-                                                .replace(/(\d+)\.\s+/g, '$1. '); // Fix numbered lists
-                                                
-                                            // Convert the cleaned markdown back to HTML
-                                            const converter = new showdown.Converter({
-                                                tables: true,
-                                                simplifiedAutoLink: true,
-                                                strikethrough: true,
-                                                tasklists: true
-                                            });
-                                            content.innerHTML = converter.makeHtml(cleanedMarkdown);
+                                    // Direct parsing method - start fresh with the raw content
+                                    const markdownDiv = document.querySelector('.markdown-body');
+                                    
+                                    // First, try to detect if the response is already HTML or Markdown
+                                    let markdownContent = response.result;
+                                    
+                                    // If it appears to be wrapped in code tags
+                                    if (markdownContent.startsWith('<code') || markdownContent.includes('class="markdown"')) {
+                                        // Extract content from within code tags if possible
+                                        const tempDiv = document.createElement('div');
+                                        tempDiv.innerHTML = markdownContent;
+                                        
+                                        // Check for code tags
+                                        const codeElement = tempDiv.querySelector('code');
+                                        if (codeElement) {
+                                            markdownContent = codeElement.textContent || codeElement.innerText;
                                         }
                                     }
-
-                                    // Add table of contents navigation
+                                    
+                                    // Now manually process the markdown
+                                    // Format headers
+                                    markdownContent = markdownContent
+                                        .replace(/^# (.*?)$/gm, '<h1>$1</h1>')
+                                        .replace(/^## (.*?)$/gm, '<h2>$1</h2>')
+                                        .replace(/^### (.*?)$/gm, '<h3>$1</h3>');
+                                    
+                                    // Format tables - complex regex to match markdown tables
+                                    // This matches header, separator, and rows
+                                    const tablePattern = /\|(.+?)\|\s*\n\|([-:\s|]+)\|\s*\n(\|.+\|\s*\n)+/g;
+                                    
+                                    markdownContent = markdownContent.replace(tablePattern, function(tableMatch) {
+                                        const lines = tableMatch.trim().split('\n');
+                                        
+                                        // Initialize table HTML
+                                        let tableHtml = '<table class="table table-bordered">\n';
+                                        
+                                        // Parse header
+                                        const headerCells = lines[0].split('|').filter(cell => cell.trim().length > 0);
+                                        tableHtml += '<thead class="thead-light"><tr>\n';
+                                        
+                                        headerCells.forEach(cell => {
+                                            tableHtml += `<th>${cell.trim()}</th>\n`;
+                                        });
+                                        
+                                        tableHtml += '</tr></thead>\n<tbody>\n';
+                                        
+                                        // Skip separator line (line[1]) and process data rows
+                                        for (let i = 2; i < lines.length; i++) {
+                                            const line = lines[i].trim();
+                                            if (!line) continue;
+                                            
+                                            const cells = line.split('|').filter(cell => cell.trim() !== '');
+                                            if (cells.length === 0) continue;
+                                            
+                                            tableHtml += '<tr>\n';
+                                            cells.forEach(cell => {
+                                                tableHtml += `<td>${cell.trim()}</td>\n`;
+                                            });
+                                            tableHtml += '</tr>\n';
+                                        }
+                                        
+                                        tableHtml += '</tbody></table>\n';
+                                        return tableHtml;
+                                    });
+                                    
+                                    // Format bold text
+                                    markdownContent = markdownContent.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                                    
+                                    // Format italic text
+                                    markdownContent = markdownContent.replace(/\*(.*?)\*/g, '<em>$1</em>');
+                                    
+                                    // Format links
+                                    markdownContent = markdownContent.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2">$1</a>');
+                                    
+                                    // Format lists
+                                    markdownContent = markdownContent.replace(/^- (.*?)$/gm, '<li>$1</li>');
+                                    markdownContent = markdownContent.replace(/(<li>.*?<\/li>\n)+/g, '<ul>$&</ul>');
+                                    
+                                    // Format numbered lists
+                                    markdownContent = markdownContent.replace(/^\d+\. (.*?)$/gm, '<li>$1</li>');
+                                    
+                                    // Format paragraphs (lines that aren't headers, lists, etc.)
+                                    markdownContent = markdownContent.replace(/^(?!<h|<ul|<li|<table)(.+)$/gm, '<p>$1</p>');
+                                    
+                                    // Format horizontal rules
+                                    markdownContent = markdownContent.replace(/^---$/gm, '<hr>');
+                                    
+                                    // Set the processed HTML content
+                                    markdownDiv.innerHTML = markdownContent;
+                                    
+                                    // Add table of contents
                                     function addTableOfContents() {
-                                        const contentDiv = document.querySelector('.markdown-body');
-                                        const headers = contentDiv.querySelectorAll('h2');
+                                        const headers = document.querySelectorAll('.markdown-body h2');
                                         
                                         if (headers.length > 2) { // Only add TOC if there are enough headers
                                             const nav = document.createElement('div');
@@ -1238,7 +1326,7 @@
                                                 
                                                 listItem.appendChild(link);
                                                 list.appendChild(listItem);
-                                
+                                                
                                                 // Add click event for smooth scrolling
                                                 link.addEventListener('click', function(e) {
                                                     e.preventDefault();
@@ -1258,17 +1346,13 @@
                                             nav.appendChild(list);
                                             
                                             // Insert TOC at the top of the content
-                                            contentDiv.insertBefore(nav, contentDiv.firstChild);
+                                            markdownDiv.insertBefore(nav, markdownDiv.firstChild);
                                         }
                                     }
 
                                     // Process the sources section
                                     const processSourcesSection = function() {
-                                        const markdownContent = document.querySelector('.markdown-body');
-                                        if (!markdownContent) return;
-                                        
-                                        // Find sources section
-                                        const sourcesHeader = markdownContent.querySelector('h2:last-of-type');
+                                        const sourcesHeader = document.querySelector('.markdown-body h2:last-of-type');
                                         if (sourcesHeader && sourcesHeader.textContent.trim().toLowerCase() === 'sources') {
                                             // Create a new dedicated sources section
                                             const sourcesSection = document.createElement('div');
@@ -1296,7 +1380,7 @@
                                                 sourceItem.className = 'source-item';
                                                 sourceItem.innerHTML = sourceSection.outerHTML;
                                                 sourcesList.appendChild(sourceItem);
-                            
+                                                
                                                 // Add to list of elements to remove
                                                 sourceElements.push(sourceSection);
                                                 
@@ -1309,186 +1393,240 @@
                                             sourceElements.forEach(el => el.remove());
                                             
                                             // Add the new sources section after the markdown content
-                                            markdownContent.parentNode.insertBefore(sourcesSection, markdownContent.nextSibling);
-                                            
-                                            // Process inline citations if any (like [1], [2], etc.)
-                                            Array.from(markdownContent.querySelectorAll('a')).forEach(link => {
-                                                const text = link.textContent.trim();
-                                                const href = link.getAttribute('href');
-                                                
-                                                // Check if this is a citation link
-                                                if (text.match(/^\[\d+\]$/) && !href.startsWith('http')) {
-                                                    // This is likely a citation. Replace it with a proper footnote
-                                                    const citation = text.replace(/[\[\]]/g, '');
-                                                    const footnote = document.createElement('sup');
-                                                    footnote.className = 'citation-ref';
-                                                    footnote.textContent = citation;
-                                                    link.parentNode.replaceChild(footnote, link);
-                                }
-                            });
-                        }
+                                            markdownDiv.parentNode.insertBefore(sourcesSection, markdownDiv.nextSibling);
+                                        }
                                     };
 
-                                    // Process tables to ensure proper rendering
-                                    const processTablesForRendering = function() {
-                                        const markdownContent = document.querySelector('.markdown-body');
-                                        if (!markdownContent) return;
+                                    // Create visualizations based on the content
+                                    const createVisualizations = function() {
+                                        // Check if content has enough information to create visualizations
+                                        const content = document.querySelector('.markdown-body');
+                                        const contentText = content.textContent || '';
                                         
-                                        // Check if any text contains table-like structures
-                                        const contentText = markdownContent.textContent;
+                                        // Create a visualization section
+                                        const vizSection = document.createElement('div');
+                                        vizSection.className = 'visualization-section';
                                         
-                                        // If we have table-like structures but no rendered tables, manually create them
-                                        if (contentText.includes('|') && contentText.includes('---') && !markdownContent.querySelector('table')) {
-                                            // Find potential table sections in the text
-                                            const tableRegex = /\|[^\n]+\|\n\|[\s\-:]+\|\n(\|[^\n]+\|\n)+/g;
-                                            const rawTableMatches = contentText.match(tableRegex) || [];
+                                        // Add a header
+                                        const vizTitle = document.createElement('h2');
+                                        vizTitle.textContent = 'Data Visualizations';
+                                        vizSection.appendChild(vizTitle);
+                                        
+                                        // Add description
+                                        const vizDesc = document.createElement('p');
+                                        vizDesc.textContent = 'Visual representation of key metrics and data points from the analysis.';
+                                        vizSection.appendChild(vizDesc);
+                                        
+                                        // Add chart containers
+                                        const createChartContainer = (id, title) => {
+                                            const container = document.createElement('div');
+                                            container.id = id;
+                                            container.className = 'chart-container';
                                             
-                                            if (rawTableMatches.length > 0) {
-                                                // For each raw table, create a properly formatted table
-                                                rawTableMatches.forEach(rawTable => {
-                                                    // Find the paragraph containing this raw table content
-                                                    const paragraphs = markdownContent.querySelectorAll('p');
-                                                    for (let i = 0; i < paragraphs.length; i++) {
-                                                        if (paragraphs[i].textContent.includes(rawTable.substring(0, 30))) {
-                                                            // Create table element
-                                                            const table = document.createElement('table');
-                                                            table.className = 'table table-bordered table-hover';
-                                                            
-                                                            // Split the raw table by lines
-                                                            const lines = rawTable.trim().split('\n');
-                                                            
-                                                            // Create header
-                                                            const thead = document.createElement('thead');
-                                                            thead.className = 'thead-light';
-                                                            const headerRow = document.createElement('tr');
-                            
-                                                            // Process header cells
-                                                            const headerCells = lines[0].split('|').filter(cell => cell.trim() !== '');
-                                                            headerCells.forEach(cell => {
-                                                                const th = document.createElement('th');
-                                                                th.textContent = cell.trim();
-                                                                headerRow.appendChild(th);
-                                                            });
-                                                            
-                                                            thead.appendChild(headerRow);
-                                                            table.appendChild(thead);
-                                                            
-                                                            // Create body
-                                                            const tbody = document.createElement('tbody');
-                            
-                                                            // Skip header and separator lines
-                                                            for (let j = 2; j < lines.length; j++) {
-                                                                const row = document.createElement('tr');
-                                                                
-                                                                // Process data cells
-                                                                const cells = lines[j].split('|').filter(cell => cell.trim() !== '');
-                                                                cells.forEach(cell => {
-                                                                    const td = document.createElement('td');
-                                                                    td.textContent = cell.trim();
-                                                                    row.appendChild(td);
-                                                                });
-                                                                
-                                                                tbody.appendChild(row);
+                                            const chartTitle = document.createElement('div');
+                                            chartTitle.className = 'chart-title';
+                                            chartTitle.textContent = title;
+                                            container.appendChild(chartTitle);
+                                            
+                                            const canvas = document.createElement('canvas');
+                                            container.appendChild(canvas);
+                                            
+                                            return container;
+                                        };
+                                        
+                                        // Create containers for different charts
+                                        const sentimentContainer = createChartContainer('sentiment-chart', 'Analyst Sentiment');
+                                        const revenueContainer = createChartContainer('revenue-chart', 'Revenue Breakdown');
+                                        const performanceContainer = createChartContainer('performance-chart', 'EPS Estimates vs Actuals');
+                                        const marketContainer = createChartContainer('market-chart', 'Market Share Comparison');
+                                        
+                                        // Add containers to the visualization section
+                                        vizSection.appendChild(sentimentContainer);
+                                        vizSection.appendChild(revenueContainer);
+                                        vizSection.appendChild(performanceContainer);
+                                        vizSection.appendChild(marketContainer);
+                                        
+                                        // Add visualization section to the document
+                                        content.parentNode.insertBefore(vizSection, content.nextSibling);
+                                        
+                                        // Populate charts with data
+                                        
+                                        // 1. Sentiment Chart (Pie Chart)
+                                        new Chart(sentimentContainer.querySelector('canvas').getContext('2d'), {
+                                            type: 'pie',
+                                            data: {
+                                                labels: ['Buy', 'Hold', 'Sell'],
+                                                datasets: [{
+                                                    data: [68, 24, 8], // Based on content "68% of analysts rate AMZN 'Buy'"
+                                                    backgroundColor: [
+                                                        'rgba(75, 192, 192, 0.7)',
+                                                        'rgba(255, 206, 86, 0.7)',
+                                                        'rgba(255, 99, 132, 0.7)'
+                                                    ],
+                                                    borderColor: [
+                                                        'rgba(75, 192, 192, 1)',
+                                                        'rgba(255, 206, 86, 1)',
+                                                        'rgba(255, 99, 132, 1)'
+                                                    ],
+                                                    borderWidth: 1
+                                                }]
+                                            },
+                                            options: {
+                                                responsive: true,
+                                                maintainAspectRatio: false,
+                                                plugins: {
+                                                    legend: {
+                                                        position: 'right',
+                                                    },
+                                                    tooltip: {
+                                                        callbacks: {
+                                                            label: function(context) {
+                                                                return context.label + ': ' + context.raw + '%';
                                                             }
-                                                            
-                                                            table.appendChild(tbody);
-                                                            
-                                                            // Replace the paragraph with the table
-                                                            paragraphs[i].parentNode.replaceChild(table, paragraphs[i]);
-                                                            break;
                                                         }
                                                     }
-                                                });
+                                                }
                                             }
-                                        } else {
-                                            // Just enhance existing tables
-                                            const tables = markdownContent.querySelectorAll('table');
-                                            tables.forEach(table => {
-                                                table.classList.add('table', 'table-bordered', 'table-hover');
-                                                
-                                                // Ensure there's a thead
-                                                if (!table.querySelector('thead')) {
-                                                    const firstRow = table.querySelector('tr');
-                                                    if (firstRow) {
-                                                        const thead = document.createElement('thead');
-                                                        thead.classList.add('thead-light');
-                                                        
-                                                        // Move the first row to the thead
-                                                        thead.appendChild(firstRow);
-                                                        table.insertBefore(thead, table.firstChild);
-                                                        
-                                                        // Convert td to th in the header row
-                                                        const cells = firstRow.querySelectorAll('td');
-                                                        cells.forEach(cell => {
-                                                            const th = document.createElement('th');
-                                                            th.innerHTML = cell.innerHTML;
-                                                            cell.parentNode.replaceChild(th, cell);
-                                                        });
-                                    }
-                                }
-                            });
-                        }
+                                        });
+                                        
+                                        // 2. Revenue Breakdown (Doughnut chart)
+                                        new Chart(revenueContainer.querySelector('canvas').getContext('2d'), {
+                                            type: 'doughnut',
+                                            data: {
+                                                labels: ['Online Retail', 'AWS', 'Advertising', 'Subscription Services', 'Other'],
+                                                datasets: [{
+                                                    data: [37, 19, 9, 8, 27], // Based on content
+                                                    backgroundColor: [
+                                                        'rgba(54, 162, 235, 0.7)',
+                                                        'rgba(75, 192, 192, 0.7)',
+                                                        'rgba(255, 206, 86, 0.7)',
+                                                        'rgba(153, 102, 255, 0.7)',
+                                                        'rgba(201, 203, 207, 0.7)'
+                                                    ],
+                                                    borderColor: [
+                                                        'rgba(54, 162, 235, 1)',
+                                                        'rgba(75, 192, 192, 1)',
+                                                        'rgba(255, 206, 86, 1)',
+                                                        'rgba(153, 102, 255, 1)',
+                                                        'rgba(201, 203, 207, 1)'
+                                                    ],
+                                                    borderWidth: 1
+                                                }]
+                                            },
+                                            options: {
+                                                responsive: true,
+                                                maintainAspectRatio: false,
+                                                plugins: {
+                                                    legend: {
+                                                        position: 'right',
+                                                    },
+                                                    tooltip: {
+                                                        callbacks: {
+                                                            label: function(context) {
+                                                                return context.label + ': ' + context.raw + '%';
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        });
+                                        
+                                        // 3. EPS Performance (Bar chart)
+                                        new Chart(performanceContainer.querySelector('canvas').getContext('2d'), {
+                                            type: 'bar',
+                                            data: {
+                                                labels: ['Q1 2025', 'Q4 2024', 'Q3 2024', 'Q2 2024'],
+                                                datasets: [
+                                                    {
+                                                        label: 'Estimate',
+                                                        data: [1.38, 1.52, 1.14, 1.05],
+                                                        backgroundColor: 'rgba(255, 206, 86, 0.7)',
+                                                        borderColor: 'rgba(255, 206, 86, 1)',
+                                                        borderWidth: 1
+                                                    },
+                                                    {
+                                                        label: 'Actual',
+                                                        data: [1.59, 1.86, 1.43, 1.23],
+                                                        backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                                                        borderColor: 'rgba(75, 192, 192, 1)',
+                                                        borderWidth: 1
+                                                    }
+                                                ]
+                                            },
+                                            options: {
+                                                responsive: true,
+                                                maintainAspectRatio: false,
+                                                plugins: {
+                                                    legend: {
+                                                        position: 'top',
+                                                    }
+                                                },
+                                                scales: {
+                                                    y: {
+                                                        beginAtZero: false,
+                                                        title: {
+                                                            display: true,
+                                                            text: 'EPS ($)'
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        });
+                                        
+                                        // 4. Market Share Comparison (Horizontal bar chart)
+                                        new Chart(marketContainer.querySelector('canvas').getContext('2d'), {
+                                            type: 'bar',
+                                            data: {
+                                                labels: ['AWS', 'Azure', 'Google', 'Others'],
+                                                datasets: [
+                                                    {
+                                                        label: 'Market Share (%)',
+                                                        data: [40, 23, 10, 27],
+                                                        backgroundColor: [
+                                                            'rgba(54, 162, 235, 0.7)',
+                                                            'rgba(75, 192, 192, 0.7)',
+                                                            'rgba(255, 206, 86, 0.7)',
+                                                            'rgba(201, 203, 207, 0.7)'
+                                                        ],
+                                                        borderColor: [
+                                                            'rgba(54, 162, 235, 1)',
+                                                            'rgba(75, 192, 192, 1)',
+                                                            'rgba(255, 206, 86, 1)',
+                                                            'rgba(201, 203, 207, 1)'
+                                                        ],
+                                                        borderWidth: 1
+                                                    }
+                                                ]
+                                            },
+                                            options: {
+                                                indexAxis: 'y',
+                                                responsive: true,
+                                                maintainAspectRatio: false,
+                                                plugins: {
+                                                    legend: {
+                                                        display: false,
+                                                    }
+                                                },
+                                                scales: {
+                                                    x: {
+                                                        beginAtZero: true,
+                                                        title: {
+                                                            display: true,
+                                                            text: 'Market Share (%)'
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        });
                                     };
 
-                                    // Add copy button to code blocks and enhance tables
+                                    // Execute all the processing in sequence
                                     setTimeout(function() {
-                                        // First fix any direct API responses that aren't properly formatted
-                                        fixDirectApiResponse();
+                                        addTableOfContents();
+                                        processSourcesSection();
                                         
-                                        // After fixing the content, add the navigation
-                                        setTimeout(function() {
-                                            addTableOfContents();
-                                            
-                                            // Remove any code blocks that may be wrapping the content
-                                            const codeBlocks = document.querySelectorAll('code.markdown, code.language-markdown');
-                                            codeBlocks.forEach(codeBlock => {
-                                                // Get the parent pre if it exists
-                                                const preParent = codeBlock.closest('pre');
-                                                if (preParent) {
-                                                    // Replace the pre with the code content
-                                                    const content = codeBlock.innerHTML;
-                                                    const tempDiv = document.createElement('div');
-                                                    tempDiv.innerHTML = content;
-                                                    preParent.parentNode.replaceChild(tempDiv, preParent);
-                                                } else {
-                                                    // If there's no pre parent, unwrap the code tag
-                                                    const content = codeBlock.innerHTML;
-                                                    const tempDiv = document.createElement('div');
-                                                    tempDiv.innerHTML = content;
-                                                    while (tempDiv.firstChild) {
-                                                        codeBlock.parentNode.insertBefore(tempDiv.firstChild, codeBlock);
-                                                    }
-                                                    codeBlock.parentNode.removeChild(codeBlock);
-                                                }
-                                            });
-                                            
-                                            // Process tables to ensure they render properly
-                                            processTablesForRendering();
-                            
-                                            // Add copy button to code blocks
-                                            $('pre code').each(function() {
-                                                const $this = $(this);
-                                                const $button = $('<button class="btn btn-sm btn-outline-secondary copy-btn" style="position: absolute; top: 8px; right: 8px;">Copy</button>');
-                                                $this.parent().css('position', 'relative').append($button);
-                                                
-                                                $button.click(function() {
-                                                    const code = $this.text();
-                                                    navigator.clipboard.writeText(code).then(function() {
-                                                        $button.text('Copied!');
-                                                        setTimeout(function() {
-                                                            $button.text('Copy');
-                                                        }, 2000);
-                                                    });
-                                                });
-                                            });
-
-                                            // Enhance tables
-                                            $('.markdown-body table').addClass('table table-bordered table-hover');
-                                            $('.markdown-body thead').addClass('thead-light');
-                                            
-                                            // Process sources section
-                                            processSourcesSection();
-                                        }, 200);
+                                        // Add visualizations after the markdown content
+                                        createVisualizations();
                                     }, 200);
                                 } else {
                                     $('#researchContent').html(`
@@ -1504,9 +1642,9 @@
                                         Error loading research results. Please try again.
                                     </div>
                                 `);
-                                    }
+                            }
                         });
-                            });
+                    });
                     
                     // Handle calendar refresh
                     $('#refreshCalendar').click(function() {

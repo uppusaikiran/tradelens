@@ -1,0 +1,59 @@
+site_name: TradeLens Documentation
+site_description: Documentation for the TradeLens AI-powered stock portfolio analysis tool
+site_author: TradeLens Team
+repo_url: https://github.com/yourusername/tradelens
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  palette:
+    primary: indigo
+    accent: blue
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.expand
+    - navigation.indexes
+    - content.code.copy
+    - content.tabs.link
+
+nav:
+  - Home: index.md
+  - User Guide:
+    - user_guide/index.md
+    - Getting Started: user_guide/getting_started.md
+  - API Documentation: api/index.md
+  - Database Schema: database/schema.md
+  - Development Guide:
+    - development/index.md
+    - Project Structure: development/project_structure.md
+    - AI Integration: development/ai_integration.md
+  - Deployment Guide: deployment/index.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - toc:
+      permalink: true
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_source: true
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/yourusername/tradelens
+
+extra_css:
+  - css/extra.css 
