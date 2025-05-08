@@ -22,12 +22,25 @@ nav:
   - User Guide:
     - user_guide/index.md
     - Getting Started: user_guide/getting_started.md
+    - Dashboard Overview: user_guide/dashboard.md
+    - Portfolio Analysis: user_guide/portfolio_analysis.md
+    - AI-Powered Features: user_guide/ai_features.md
+    - Earnings Analysis: user_guide/earnings_analysis.md
+    - Risk Assessment: user_guide/risk_assessment.md
+    - Strategy Backtesting: user_guide/strategy_backtesting.md
+    - Event Risk Calendar: user_guide/event_risk_calendar.md
+    - Settings and Configuration: user_guide/settings.md
+    - FAQ: user_guide/faq.md
   - API Documentation: api/index.md
   - Database Schema: database/schema.md
   - Development Guide:
     - development/index.md
     - Project Structure: development/project_structure.md
+    - Environment Setup: development/environment_setup.md
+    - Coding Standards: development/coding_standards.md
+    - Testing Guidelines: development/testing.md
     - AI Integration: development/ai_integration.md
+    - Contributing Guidelines: development/contributing.md
   - Deployment Guide: deployment/index.md
 
 markdown_extensions:
