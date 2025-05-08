@@ -183,6 +183,18 @@ http://localhost:5000
 - **Data Storage**: SQLite
 - **Data Processing**: Pandas, NumPy
 
+## Documentation
+
+Detailed documentation for TradeLens is available in the `docs/` directory:
+
+- [User Guide](docs/user_guide/index.md) - Comprehensive user documentation
+- [API Documentation](docs/api/index.md) - API reference and usage examples
+- [Database Schema](docs/database/schema.md) - Database structure and relationships
+- [Development Guide](docs/development/index.md) - Setup and contribution guidelines
+- [Deployment Guide](docs/deployment/index.md) - Instructions for deploying TradeLens
+
+For project structure and organization, see the [Project Structure](docs/development/project_structure.md) document.
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
