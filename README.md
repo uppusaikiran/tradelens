@@ -4,10 +4,23 @@
   <img src="static/img/logos/tradelens-logo.svg" alt="TradeLens Logo" width="150" height="150">
 </div>
 
+TradeLens – Smarter Portfolio Insights with ESG Focus
 
-TradeLens emerged as a solution to the challenges faced by investors in navigating the complexities of tariffs, market volatility, and the constant need to sift through news for portfolio-related information. This sophisticated web-based tool leverages advanced AI capabilities from Perplexity to provide a comprehensive platform for analyzing and visualizing stock portfolios. By uploading your stock transactions, you can gain valuable insights through interactive visualizations, risk assessments, and AI-driven analysis, making it easier to manage and optimize your investments amidst ever-changing market conditions.
+TradeLens is a powerful web-based platform that helps investors manage their stock portfolios with ease. Simply upload your transaction history, and the platform uses AI-powered analysis (from Perplexity) to deliver:
+- 📊 Interactive visualizations
+- ⚠️ Risk assessments
+- 🤖 AI-driven investment insights
 
-What sets TradeLens apart is its balanced approach to investment management—optimizing not just for financial returns but also for environmental, social, and governance (ESG) considerations. By integrating comprehensive ESG scoring and analysis, TradeLens allows investors to align their portfolios with their values while still pursuing strong financial performance. The platform continuously monitors sustainability metrics and provides actionable recommendations to improve your portfolio's ESG profile without sacrificing potential returns, creating a truly forward-looking investment management experience.
+It’s designed to help you navigate market volatility, tariff changes, and financial news—all in one place.
+
+🌱 ESG-Driven Investing
+
+What makes TradeLens unique is its focus on both performance and purpose. The platform includes:
+- ESG (Environmental, Social, Governance) scoring and analysis
+- Real-time monitoring of sustainability metrics
+- Actionable suggestions to improve your portfolio’s ESG impact
+
+Stay aligned with your values without compromising on returns.
 
 <div align="center">
   <img src="static/img/tradelens.png" alt="TradeLens Dashboard" width="800">
