@@ -7,6 +7,7 @@ This user guide provides detailed instructions on how to use the TradeLens platf
 - [Getting Started](getting_started.md)
 - [Dashboard Overview](dashboard.md)
 - [Portfolio Analysis](portfolio_analysis.md)
+- [ESG Analysis](esg_analysis.md)
 - [AI-Powered Features](ai_features.md)
 - [Earnings Analysis](earnings_analysis.md)
 - [Risk Assessment](risk_assessment.md)
@@ -31,6 +32,10 @@ The main dashboard provides a comprehensive view of your portfolio performance, 
 ### Transaction History
 
 A detailed view of all your transactions with sortable columns, allowing you to track your investment history and analyze your trading patterns over time.
+
+### ESG Analysis
+
+Comprehensive evaluation of your portfolio's Environmental, Social, and Governance factors, helping you align investments with your values while identifying sustainability risks and opportunities.
 
 ### Perplexity AI Integration
 

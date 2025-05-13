@@ -7,6 +7,8 @@
 
 TradeLens emerged as a solution to the challenges faced by investors in navigating the complexities of tariffs, market volatility, and the constant need to sift through news for portfolio-related information. This sophisticated web-based tool leverages advanced AI capabilities from Perplexity to provide a comprehensive platform for analyzing and visualizing stock portfolios. By uploading your stock transactions, you can gain valuable insights through interactive visualizations, risk assessments, and AI-driven analysis, making it easier to manage and optimize your investments amidst ever-changing market conditions.
 
+What sets TradeLens apart is its balanced approach to investment management—optimizing not just for financial returns but also for environmental, social, and governance (ESG) considerations. By integrating comprehensive ESG scoring and analysis, TradeLens allows investors to align their portfolios with their values while still pursuing strong financial performance. The platform continuously monitors sustainability metrics and provides actionable recommendations to improve your portfolio's ESG profile without sacrificing potential returns, creating a truly forward-looking investment management experience.
+
 <div align="center">
   <img src="static/img/tradelens.png" alt="TradeLens Dashboard" width="800">
 </div>
@@ -17,6 +19,10 @@ TradeLens emerged as a solution to the challenges faced by investors in navigati
 ### Dashboard Overview
 ![TradeLens Dashboard](static/img/dashboard_images/Dashboard%20Page.png)
 The main dashboard provides a comprehensive view of your portfolio performance, with interactive charts, transaction summaries, and key metrics to help you monitor your investments at a glance.
+
+### ESG Analysis Dashboard
+![ESG Dashboard](static/img/dashboard_images/ESG_Dashboard.png)
+Comprehensive ESG (Environmental, Social, Governance) analysis of your portfolio, offering detailed sustainability metrics, company-specific ratings, and actionable recommendations to align your investments with your values and reduce long-term ESG risks.
 
 ### Stock Performance Visualization
 ![Stock Buy and Sell Plot](static/img/dashboard_images/Stock%20Buy%20and%20Sell%20Plot.png)
@@ -73,6 +79,12 @@ Configure your API providers and settings to customize the platform according to
 - 💡 **Investment Thesis Validation**: Test your investment hypotheses with AI analysis
 - 📊 **Earnings Season Companion**: AI-driven earnings preparation and analysis
 - ⚠️ **Portfolio Risk Assessment**: Identify and analyze risk factors
+
+### ESG Insights
+- 🌱 **ESG Dashboard**: Comprehensive analysis of environmental, social, and governance factors
+- 🔄 **Sustainable Portfolio Alignment**: Recommendations to improve your portfolio's ESG profile
+- 📊 **Sector-Specific ESG Benchmarking**: Compare holdings against industry ESG baselines
+- 📝 **ESG Notes and Monitoring**: Track sustainability developments for your investments
 
 ### Advanced Features
 - 📅 **Event Risk Calendar**: Track market-moving events that could impact your portfolio  

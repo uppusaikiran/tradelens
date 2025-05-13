@@ -27,6 +27,7 @@ TradeLens is an AI-powered stock portfolio analysis tool that helps investors na
 
 - Interactive portfolio visualization
 - Transaction history tracking
+- ESG (Environmental, Social, Governance) analysis
 - AI-powered investment analysis
 - Earnings analysis and calendar
 - Risk assessment tools

@@ -13,7 +13,8 @@ The dashboard is divided into several sections:
 3. **Portfolio Composition**: Breakdown of your assets by category
 4. **Transaction History**: Recent stock transactions
 5. **Stock Performance Chart**: Visual representation of your portfolio performance
-6. **AI Chat Interface**: Ask questions about your portfolio
+6. **ESG Summary**: Environmental, Social, and Governance metrics for your portfolio
+7. **AI Chat Interface**: Ask questions about your portfolio
 
 ## Portfolio Summary
 
@@ -57,6 +58,20 @@ The stock performance chart visualizes your portfolio's performance over time:
 
 Use the time range selector above the chart to adjust the time period displayed.
 
+## ESG Analysis Overview
+
+The ESG section provides a snapshot of your portfolio's sustainability profile:
+
+![ESG Dashboard](../../static/img/dashboard_images/ESG_Dashboard.png)
+
+- **Overall ESG Score**: Weighted average of your holdings' ESG performance
+- **Environmental Score**: Assessment of environmental impact and policies
+- **Social Score**: Evaluation of social responsibility and practices
+- **Governance Score**: Analysis of corporate governance structures
+- **Top ESG Recommendations**: High-priority sustainability considerations
+
+Click on "View Full ESG Analysis" to access the detailed ESG dashboard with comprehensive metrics and company-specific ratings. For more information, see the [ESG Analysis](esg_analysis.md) guide.
+
 ## AI Chat Interface
 
 The AI chat interface lets you ask questions about your portfolio in natural language:
@@ -65,6 +80,7 @@ The AI chat interface lets you ask questions about your portfolio in natural lan
 - Get portfolio insights: "What are my biggest winners and losers?"
 - Request analysis: "Which of my stocks have the highest dividend yield?"
 - Get recommendations: "Should I consider diversifying my portfolio more?"
+- Inquire about ESG: "What companies in my portfolio have the best environmental scores?"
 
 ## Customizing the Dashboard
 
@@ -74,11 +90,13 @@ You can customize your dashboard experience:
 2. Choose your preferred AI model for analysis
 3. Set your default time range for charts
 4. Select which metrics to display in the summary
+5. Configure ESG data sources and update frequency
 
 ## Next Steps
 
 Now that you understand the dashboard, explore these related features:
 
 - [Portfolio Analysis](portfolio_analysis.md): Deeper analysis of your portfolio
+- [ESG Analysis](esg_analysis.md): Comprehensive sustainability evaluation
 - [AI-Powered Features](ai_features.md): Advanced AI-driven insights
 - [Risk Assessment](risk_assessment.md): Evaluate portfolio risks 
