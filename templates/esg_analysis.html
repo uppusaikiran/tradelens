@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESG Analysis - TradeLens</title>
+    <link rel="icon" href="{{ url_for('static', filename='img/logos/tradelens-logo.svg') }}" type="image/svg+xml">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/sidebar.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <style>
+        /* Fix content container to ensure proper layout */
+        .content {
+            width: calc(100% - 250px);
+            min-height: 100vh;
+            transition: all 0.3s;
+            margin-left: 250px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-bottom: 40px;
+            background-color: #f8f9fa;
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+        
+        .content.expanded {
+            width: calc(100% - 60px);
+            margin-left: 60px;
+        }
+        
+        /* Make sure main container has proper spacing */
+        .container-fluid {
+            padding: 1.5rem;
+            max-width: 100%;
+        }
+        
+        /* Ensure charts have proper height and responsive behavior */
+        .chart-container {
+            height: 300px;
+            width: 100%;
+            margin-bottom: 20px;
+            position: relative;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 10px;
+            padding: 10px;
+        }
+        
+        /* Improve mobile responsiveness */
+        @media (max-width: 768px) {
+            .content {
+                width: 100%;
+                margin-left: 0;
+            }
+            
+            .content.expanded {
+                width: 100%;
+                margin-left: 0;
+            }
+            
+            .chart-container {
+                height: 250px;
+            }
+            
+            .esg-summary-value {
+                font-size: 1.5rem !important;
+            }
+            
+            .esg-grade {
+                font-size: 2rem !important;
+            }
+        }
+        
+        /* Enhanced card styling */
+        .esg-card {
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05), 0 6px 6px rgba(0, 0, 0, 0.05);
+            margin-bottom: 24px;
+            border: none;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            background-color: white;
+        }
+        
+        .esg-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        }
+        
+        .esg-card-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: white;
+            background-size: cover;
+            background-position: center;
+            position: relative;
+        }
+
+        .esg-card-header::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.3);
+            z-index: 0;
+        }
+
+        .esg-card-header > div {
+            position: relative;
+            z-index: 1;
+        }
+        
+        .esg-card-body {
+            padding: 20px;
+            background-color: white;
+            overflow: auto;
+        }
+        
+        .environmental {
+            background-color: #2ecc71;
+            background-image: url("{{ url_for('static', filename='img/esg/backgrounds/environment-bg.png') }}");
+        }
+        
+        .environmental::before {
+            background-color: rgba(0, 0, 0, 0.3);
+        }
+        
+        .social {
+            background-color: #3498db;
+            background-image: url("{{ url_for('static', filename='img/esg/backgrounds/social-bg.png') }}");
+        }
+        
+        .social::before {
+            background-color: rgba(0, 0, 0, 0.3);
+        }
+        
+        .governance {
+            background-color: #9b59b6;
+            background-image: url("{{ url_for('static', filename='img/esg/backgrounds/governance-bg.png') }}");
+        }
+        
+        .governance::before {
+            background-color: rgba(0, 0, 0, 0.3);
+        }
+        
+        .overall {
+            background-color: #1abc9c;
+            background-image: url("{{ url_for('static', filename='img/esg/backgrounds/overall-bg.png') }}") !important;
+        }
+        
+        .overall::before {
+            background-color: rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Give the main four ESG cards a specific class to ensure they show backgrounds */
+        .dashboard-card .esg-card-header {
+            background-size: cover !important;
+            background-position: center !important;
+        }
+        
+        /* Add specific class to target only overall cards in the main dashboard section */
+        .esg-card-header.dashboard-overall {
+            background-image: url("{{ url_for('static', filename='img/esg/backgrounds/overall-bg.png') }}") !important;
+        }
+        
+        /* Charts and other sections don't need background images */
+        .chart-header, .table-header {
+            background-image: none !important;
+        }
+        
+        .esg-card-header.overall:not(.environmental):not(.social):not(.governance):not(.dashboard-overall) {
+            background-image: none;
+            background-color: #1abc9c;
+        }
+        
+        .recommendation {
+            background-color: #f39c12;
+            background-image: none;
+        }
+        
+        .esg-grade {
+            font-size: 3rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 10px;
+            line-height: 1;
+        }
+        
+        .esg-grade.A-plus, .esg-grade.A, .esg-grade.A-minus {
+            color: #27ae60;
+        }
+        
+        .esg-grade.B-plus, .esg-grade.B, .esg-grade.B-minus {
+            color: #2980b9;
+        }
+        
+        .esg-grade.C-plus, .esg-grade.C, .esg-grade.C-minus {
+            color: #f39c12;
+        }
+        
+        .esg-grade.D-plus, .esg-grade.D, .esg-grade.D-minus {
+            color: #e67e22;
+        }
+        
+        .esg-grade.F {
+            color: #e74c3c;
+        }
+        
+        .esg-score {
+            font-size: 1.2rem;
+            text-align: center;
+            color: #7f8c8d;
+            margin-bottom: 15px;
+        }
+        
+        .esg-detail {
+            margin-bottom: 15px;
+        }
+        
+        .esg-detail-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #2c3e50;
+        }
+        
+        .esg-detail-content {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+        
+        .esg-recommendation {
+            background-color: rgba(243, 156, 18, 0.1);
+            border-left: 4px solid #f39c12;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+        }
+        
+        .esg-recommendation-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #e67e22;
+        }
+        
+        .esg-recommendation-content {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+
+        .esg-recommendation.high {
+            border-left-color: #e74c3c;
+        }
+        
+        .esg-recommendation.high .esg-recommendation-title {
+            color: #e74c3c;
+        }
+        
+        .esg-recommendation.medium {
+            border-left-color: #f39c12;
+        }
+        
+        .esg-recommendation.medium .esg-recommendation-title {
+            color: #f39c12;
+        }
+        
+        .esg-recommendation.low {
+            border-left-color: #2ecc71;
+        }
+        
+        .esg-recommendation.low .esg-recommendation-title {
+            color: #2ecc71;
+        }
+        
+        .esg-notes {
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .esg-note {
+            border-bottom: 1px solid #eee;
+            padding: 10px 0;
+        }
+        
+        .esg-note:last-child {
+            border-bottom: none;
+        }
+        
+        .esg-note-symbol {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .esg-note-date {
+            font-size: 0.8rem;
+            color: #95a5a6;
+        }
+        
+        .esg-note-content {
+            margin-top: 5px;
+            font-size: 0.9rem;
+        }
+        
+        .esg-holdings-table {
+            width: 100%;
+        }
+        
+        .esg-holdings-table th {
+            background-color: #f8f9fa;
+            color: #2c3e50;
+            font-weight: 600;
+            padding: 10px;
+        }
+        
+        .esg-holdings-table td {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            vertical-align: middle;
+        }
+        
+        .esg-holdings-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .esg-grade-badge {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            line-height: 30px;
+            text-align: center;
+            border-radius: 50%;
+            color: white;
+            font-weight: 600;
+            font-size: 0.8rem;
+        }
+        
+        .grade-a-plus, .grade-a, .grade-a-minus {
+            background-color: #27ae60;
+        }
+        
+        .grade-b-plus, .grade-b, .grade-b-minus {
+            background-color: #2980b9;
+        }
+        
+        .grade-c-plus, .grade-c, .grade-c-minus {
+            background-color: #f39c12;
+        }
+        
+        .grade-d-plus, .grade-d, .grade-d-minus {
+            background-color: #e67e22;
+        }
+        
+        .grade-f {
+            background-color: #e74c3c;
+        }
+        
+        .esg-summary-item {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .esg-summary-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        
+        .esg-summary-label {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+        
+        .esg-coverage-indicator {
+            height: 8px;
+            background-color: #ecf0f1;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .esg-coverage-progress {
+            height: 100%;
+            background-color: #2ecc71;
+        }
+        
+        .add-note-form {
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .add-note-form textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .refresh-btn {
+            margin-left: 10px;
+            cursor: pointer;
+            color: #3498db;
+            transition: transform 0.3s ease;
+        }
+        
+        .refresh-btn:hover {
+            transform: rotate(180deg);
+        }
+        
+        /* Fix table overflow on mobile */
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+    </style>
+</head>
+<body>
+    <!-- Include sidebar -->
+    {% include 'sidebar.html' %}
+    
+    <div class="content">
+        <div class="container-fluid">
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card bg-gradient-success text-white" style="border-radius: 15px; background: linear-gradient(135deg, #1abc9c 0%, #27ae60 100%); box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
+                        <div class="card-body py-4">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h1 class="mb-0 text-white d-flex align-items-center">
+                                        <img src="{{ url_for('static', filename='img/esg/carbon-footprint.svg') }}" alt="ESG" class="mr-3" style="width: 40px; height: 40px; filter: brightness(0) invert(1);">
+                                        ESG Analysis
+                                    </h1>
+                                    <p class="mt-2 mb-0 text-white-50">Environmental, Social, and Governance performance analysis</p>
+                                </div>
+                                <div class="text-white-50 text-right">
+                                    <h5 class="mb-0 text-white">Analysis Date</h5>
+                                    <p class="mb-0">{{ analysis_date }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            {% if error %}
+                <div class="alert alert-danger">
+                    <strong>Error:</strong> {{ error }}
+                </div>
+            {% else %}
+                <!-- ESG Summary Cards -->
+                <div class="row mb-4">
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <div class="esg-card dashboard-card">
+                            <div class="esg-card-header environmental">
+                                <div class="d-flex align-items-center">
+                                    <img src="{{ url_for('static', filename='img/esg/environmental-icon.svg') }}" alt="Environmental" class="mr-2" style="width: 24px; height: 24px;">
+                                    Environmental
+                                </div>
+                            </div>
+                            <div class="esg-card-body">
+                                <div class="esg-grade">{{ esg_summary.portfolio_environmental_grade }}</div>
+                                <div class="esg-score">Score: {{ esg_summary.weighted_environmental_score }}</div>
+                                <div class="esg-detail">
+                                    <div class="esg-detail-title">Key Factors</div>
+                                    <div class="esg-detail-content">
+                                        Carbon emissions, resource use, pollution, and climate impact.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <div class="esg-card dashboard-card">
+                            <div class="esg-card-header social">
+                                <div class="d-flex align-items-center">
+                                    <img src="{{ url_for('static', filename='img/esg/social-icon.svg') }}" alt="Social" class="mr-2" style="width: 24px; height: 24px;">
+                                    Social
+                                </div>
+                            </div>
+                            <div class="esg-card-body">
+                                <div class="esg-grade">{{ esg_summary.portfolio_social_grade }}</div>
+                                <div class="esg-score">Score: {{ esg_summary.weighted_social_score }}</div>
+                                <div class="esg-detail">
+                                    <div class="esg-detail-title">Key Factors</div>
+                                    <div class="esg-detail-content">
+                                        Human rights, labor standards, community relations, and data privacy.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <div class="esg-card dashboard-card">
+                            <div class="esg-card-header governance">
+                                <div class="d-flex align-items-center">
+                                    <img src="{{ url_for('static', filename='img/esg/governance-icon.svg') }}" alt="Governance" class="mr-2" style="width: 24px; height: 24px;">
+                                    Governance
+                                </div>
+                            </div>
+                            <div class="esg-card-body">
+                                <div class="esg-grade">{{ esg_summary.portfolio_governance_grade }}</div>
+                                <div class="esg-score">Score: {{ esg_summary.weighted_governance_score }}</div>
+                                <div class="esg-detail">
+                                    <div class="esg-detail-title">Key Factors</div>
+                                    <div class="esg-detail-content">
+                                        Board diversity, executive compensation, business ethics, and transparency.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <div class="esg-card dashboard-card">
+                            <div class="esg-card-header overall dashboard-overall">
+                                <div class="d-flex align-items-center">
+                                    <img src="{{ url_for('static', filename='img/esg/overall-icon.svg') }}" alt="Overall ESG" class="mr-2" style="width: 24px; height: 24px;">
+                                    Overall ESG
+                                </div>
+                            </div>
+                            <div class="esg-card-body">
+                                <div class="esg-grade">{{ esg_summary.portfolio_total_esg_grade }}</div>
+                                <div class="esg-score">Score: {{ esg_summary.weighted_total_esg_score }}</div>
+                                <div class="esg-detail">
+                                    <div class="esg-detail-title">ESG Coverage</div>
+                                    <div class="esg-coverage-indicator">
+                                        <div class="esg-coverage-progress" style="width: {{ esg_summary.esg_coverage_percentage }}%"></div>
+                                    </div>
+                                    <div class="esg-detail-content text-center">
+                                        {{ esg_summary.esg_coverage_percentage }}% of portfolio with ESG data
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- ESG Visualization Section -->
+                <div class="row mb-4">
+                    <div class="col-lg-6 col-md-12 mb-3">
+                        <div class="esg-card">
+                            <div class="esg-card-header overall chart-header">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center">
+                                        <img src="{{ url_for('static', filename='img/esg/distribution-icon.svg') }}" alt="Distribution" class="mr-2" style="width: 24px; height: 24px;">
+                                        ESG Grade Distribution
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="esg-card-body">
+                                <div id="esgGradeDistributionChart" class="chart-container"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6 col-md-12 mb-3">
+                        <div class="esg-card">
+                            <div class="esg-card-header overall chart-header">
+                                <div class="d-flex align-items-center">
+                                    <img src="{{ url_for('static', filename='img/esg/radar-icon.svg') }}" alt="Radar" class="mr-2" style="width: 24px; height: 24px;">
+                                    ESG Performance Radar
+                                </div>
+                            </div>
+                            <div class="esg-card-body">
+                                <div id="esgRadarChart" class="chart-container"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- ESG Holdings Table -->
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <div class="esg-card">
+                            <div class="esg-card-header overall table-header">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center">
+                                        <img src="{{ url_for('static', filename='img/esg/holdings-icon.svg') }}" alt="Holdings" class="mr-2" style="width: 24px; height: 24px;">
+                                        ESG Ratings by Holding
+                                    </div>
+                                    <div class="refresh-btn" id="refreshESGData" title="Refresh ESG Data">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-refresh-cw"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="esg-card-body">
+                                <div class="table-responsive">
+                                    <table class="table esg-holdings-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Symbol</th>
+                                                <th>Company</th>
+                                                <th>Environmental</th>
+                                                <th>Social</th>
+                                                <th>Governance</th>
+                                                <th>Overall</th>
+                                                <th>Position Value</th>
+                                                <th>Weight</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="esgHoldingsTableBody">
+                                            {% for holding in esg_summary.portfolio_esg_data %}
+                                                <tr>
+                                                    <td class="font-weight-bold">{{ holding.symbol }}</td>
+                                                    <td>{{ holding.company_name }}</td>
+                                                    <td>
+                                                        <div class="esg-grade-badge grade-{{ holding.environmental_grade|lower|replace('+', '-plus')|replace('-', '-minus') }}">
+                                                            {{ holding.environmental_grade }}
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div class="esg-grade-badge grade-{{ holding.social_grade|lower|replace('+', '-plus')|replace('-', '-minus') }}">
+                                                            {{ holding.social_grade }}
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div class="esg-grade-badge grade-{{ holding.governance_grade|lower|replace('+', '-plus')|replace('-', '-minus') }}">
+                                                            {{ holding.governance_grade }}
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div class="esg-grade-badge grade-{{ holding.overall_esg_grade|lower|replace('+', '-plus')|replace('-', '-minus') }}">
+                                                            {{ holding.overall_esg_grade }}
+                                                        </div>
+                                                    </td>
+                                                    <td>${{ '{:,.2f}'.format(holding.position_value) }}</td>
+                                                    <td>{{ '{:.1f}%'.format((holding.position_value / esg_summary.total_portfolio_value) * 100) }}</td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- ESG Recommendations -->
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <div class="esg-card">
+                            <div class="esg-card-header recommendation table-header">
+                                <div class="d-flex align-items-center">
+                                    <img src="{{ url_for('static', filename='img/esg/recommendation-icon.svg') }}" alt="Recommendations" class="mr-2" style="width: 24px; height: 24px;">
+                                    ESG Improvement Recommendations
+                                </div>
+                            </div>
+                            <div class="esg-card-body">
+                                {% for rec in recommendations %}
+                                    <div class="esg-recommendation {{ rec.impact }}">
+                                        <div class="esg-recommendation-title">{{ rec.title }}</div>
+                                        <div class="esg-recommendation-content">{{ rec.description }}</div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- ESG Notes Section -->
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <div class="esg-card">
+                            <div class="esg-card-header overall table-header">
+                                <div class="d-flex align-items-center">
+                                    <img src="{{ url_for('static', filename='img/esg/notes-icon.svg') }}" alt="Notes" class="mr-2" style="width: 24px; height: 24px;">
+                                    ESG Notes
+                                </div>
+                            </div>
+                            <div class="esg-card-body">
+                                <!-- Add Note Form -->
+                                <div class="add-note-form mb-4">
+                                    <h5 class="mb-3">Add ESG Note</h5>
+                                    <form id="addNoteForm">
+                                        <div class="form-group">
+                                            <label for="noteSymbol">Symbol</label>
+                                            <input type="text" class="form-control" id="noteSymbol" placeholder="E.g., AAPL" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="noteContent">Note</label>
+                                            <textarea class="form-control" id="noteContent" placeholder="Enter your ESG notes here..." required></textarea>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">Save Note</button>
+                                    </form>
+                                </div>
+                                
+                                <!-- Notes List -->
+                                <div class="esg-notes">
+                                    <h5 class="mb-3">Recent Notes</h5>
+                                    <div id="esgNotesList">
+                                        {% if notes %}
+                                            {% for note in notes %}
+                                                <div class="esg-note">
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <div class="esg-note-symbol">{{ note.symbol }}</div>
+                                                        <div class="esg-note-date">{{ note.created_at }}</div>
+                                                    </div>
+                                                    <div class="esg-note-content">{{ note.note }}</div>
+                                                </div>
+                                            {% endfor %}
+                                        {% else %}
+                                            <div class="text-muted">No ESG notes have been added yet.</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- JavaScript Dependencies -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    
+    <!-- JavaScript for ESG Analysis Page -->
+    <script>
+        $(document).ready(function() {
+            // Initialize charts
+            renderESGGradeDistributionChart();
+            renderESGRadarChart();
+            
+            // Handle sidebar toggle
+            $('#sidebarToggle').on('click', function() {
+                $('.sidebar').toggleClass('collapsed');
+                $('.content').toggleClass('expanded');
+            });
+            
+            // Handle add note form submission
+            $('#addNoteForm').on('submit', function(e) {
+                e.preventDefault();
+                
+                const symbol = $('#noteSymbol').val().toUpperCase();
+                const note = $('#noteContent').val();
+                
+                $.ajax({
+                    url: '/api/esg-notes',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        symbol: symbol,
+                        note: note
+                    }),
+                    success: function(response) {
+                        if (response.success) {
+                            // Clear form
+                            $('#noteSymbol').val('');
+                            $('#noteContent').val('');
+                            
+                            // Refresh notes list
+                            refreshNotes();
+                            
+                            alert('Note saved successfully!');
+                        } else {
+                            alert('Error: ' + response.error);
+                        }
+                    },
+                    error: function(xhr) {
+                        alert('Error saving note: ' + (xhr.responseJSON ? xhr.responseJSON.error : 'Unknown error'));
+                    }
+                });
+            });
+            
+            // Handle refresh ESG data
+            $('#refreshESGData').on('click', function() {
+                if (confirm('This will refresh ESG data for all holdings. Continue?')) {
+                    refreshESGData();
+                }
+            });
+            
+            function refreshNotes() {
+                $.ajax({
+                    url: '/api/esg-notes',
+                    method: 'GET',
+                    success: function(response) {
+                        if (response.success) {
+                            renderNotes(response.data);
+                        } else {
+                            alert('Error: ' + response.error);
+                        }
+                    },
+                    error: function(xhr) {
+                        alert('Error refreshing notes: ' + (xhr.responseJSON ? xhr.responseJSON.error : 'Unknown error'));
+                    }
+                });
+            }
+            
+            function renderNotes(notes) {
+                const notesList = $('#esgNotesList');
+                notesList.empty();
+                
+                if (notes && notes.length > 0) {
+                    notes.forEach(function(note) {
+                        notesList.append(`
+                            <div class="esg-note">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="esg-note-symbol">${note.symbol}</div>
+                                    <div class="esg-note-date">${note.created_at}</div>
+                                </div>
+                                <div class="esg-note-content">${note.note}</div>
+                            </div>
+                        `);
+                    });
+                } else {
+                    notesList.append('<div class="text-muted">No ESG notes have been added yet.</div>');
+                }
+            }
+            
+            function refreshESGData() {
+                // Show loading indicator
+                $('#esgHoldingsTableBody').html('<tr><td colspan="8" class="text-center">Refreshing ESG data...</td></tr>');
+                
+                $.ajax({
+                    url: '/api/refresh-esg-data',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        clear_cache: true
+                    }),
+                    success: function(response) {
+                        if (response.success) {
+                            // Reload the page to show updated data
+                            location.reload();
+                        } else {
+                            alert('Error: ' + response.error);
+                        }
+                    },
+                    error: function(xhr) {
+                        alert('Error refreshing ESG data: ' + (xhr.responseJSON ? xhr.responseJSON.error : 'Unknown error'));
+                    }
+                });
+            }
+            
+            function renderESGGradeDistributionChart() {
+                const gradesData = {{ esg_grades_counts|tojson }};
+                
+                const labels = Object.keys(gradesData);
+                const data = Object.values(gradesData);
+                
+                const options = {
+                    series: [{
+                        name: 'Holdings',
+                        data: data
+                    }],
+                    chart: {
+                        type: 'bar',
+                        height: 300,
+                        toolbar: {
+                            show: false
+                        }
+                    },
+                    plotOptions: {
+                        bar: {
+                            distributed: true,
+                            borderRadius: 4,
+                            horizontal: false
+                        }
+                    },
+                    colors: [
+                        '#27ae60', '#27ae60', '#27ae60', 
+                        '#2980b9', '#2980b9', '#2980b9', 
+                        '#f39c12', '#f39c12', '#f39c12',
+                        '#e67e22', '#e67e22', '#e67e22',
+                        '#e74c3c'
+                    ],
+                    dataLabels: {
+                        enabled: true,
+                        formatter: function(val) {
+                            return val || "";
+                        },
+                        style: {
+                            fontSize: '12px'
+                        }
+                    },
+                    xaxis: {
+                        categories: labels,
+                        title: {
+                            text: 'ESG Grades'
+                        }
+                    },
+                    yaxis: {
+                        title: {
+                            text: 'Number of Holdings'
+                        }
+                    },
+                    title: {
+                        text: 'ESG Grade Distribution Across Portfolio',
+                        align: 'center',
+                        style: {
+                            fontSize: '14px'
+                        }
+                    }
+                };
+                
+                const chart = new ApexCharts(document.querySelector("#esgGradeDistributionChart"), options);
+                chart.render();
+            }
+            
+            function renderESGRadarChart() {
+                const options = {
+                    series: [{
+                        name: 'ESG Score',
+                        data: [
+                            {{ esg_summary.weighted_environmental_score }},
+                            {{ esg_summary.weighted_social_score }},
+                            {{ esg_summary.weighted_governance_score }},
+                            {{ esg_summary.weighted_total_esg_score }}
+                        ]
+                    }],
+                    chart: {
+                        height: 300,
+                        type: 'radar',
+                        toolbar: {
+                            show: false
+                        }
+                    },
+                    xaxis: {
+                        categories: ['Environmental', 'Social', 'Governance', 'Overall']
+                    },
+                    yaxis: {
+                        show: false,
+                        min: 0,
+                        max: 100
+                    },
+                    fill: {
+                        opacity: 0.4
+                    },
+                    markers: {
+                        size: 5
+                    },
+                    title: {
+                        text: 'ESG Performance Radar',
+                        align: 'center',
+                        style: {
+                            fontSize: '14px'
+                        }
+                    }
+                };
+                
+                const chart = new ApexCharts(document.querySelector("#esgRadarChart"), options);
+                chart.render();
+            }
+        });
+    </script>
+</body>
+</html> 
