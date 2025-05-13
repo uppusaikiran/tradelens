@@ -4,12 +4,7 @@
   <img src="static/img/logos/tradelens-logo.svg" alt="TradeLens Logo" width="150" height="150">
 </div>
 
-TradeLens – Smarter Portfolio Insights with ESG Focus
-
-TradeLens is a powerful web-based platform that helps investors manage their stock portfolios with ease. Simply upload your transaction history, and the platform uses AI-powered analysis (from Perplexity) to deliver:
-- 📊 Interactive visualizations
-- ⚠️ Risk assessments
-- 🤖 AI-driven investment insights
+TradeLens emerged as a solution to the challenges faced by investors in navigating the complexities of tariffs, market volatility, and the constant need to sift through news for portfolio-related information. This sophisticated web-based tool leverages advanced AI capabilities from Perplexity to provide a comprehensive platform for analyzing and visualizing stock portfolios. By uploading your stock transactions, you can gain valuable insights through interactive visualizations, risk assessments, and AI-driven analysis, making it easier to manage and optimize your investments amidst ever-changing market conditions.
 
 It’s designed to help you navigate market volatility, tariff changes, and financial news—all in one place.
 
