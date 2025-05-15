@@ -8,6 +8,8 @@ TradeLens emerged as a solution to the challenges faced by investors in navigati
 
 It’s designed to help you navigate market volatility, tariff changes, and financial news—all in one place.
 
+Live Demo : [Click here..](http://ec2-18-116-24-119.us-east-2.compute.amazonaws.com/)
+
 🌱 ESG-Driven Investing
 
 What makes TradeLens unique is its focus on both performance and purpose. The platform includes:
