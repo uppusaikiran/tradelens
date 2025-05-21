@@ -9,8 +9,7 @@ TradeLens emerged as a solution to the challenges faced by investors in navigati
 It’s designed to help you navigate market volatility, tariff changes, and financial news—all in one place.
 
 Live Demo : 
-http://34.105.116.215/settings
-[Click here - hosted on GCloud]([http://ec2-18-116-24-119.us-east-2.compute.amazonaws.com/](http://34.105.116.215/settings))
+[Click here - hosted on GCloud](http://34.105.116.215/settings),
 [Click here - hosted on AWS(Backup)](http://ec2-18-116-24-119.us-east-2.compute.amazonaws.com/)
 
 🌱 ESG-Driven Investing
